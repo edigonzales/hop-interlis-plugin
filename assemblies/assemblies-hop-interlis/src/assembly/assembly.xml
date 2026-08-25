@@ -1,0 +1,44 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.1"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.1 https://maven.apache.org/xsd/assembly-2.1.1.xsd">
+  <id>plugin</id>
+  <formats>
+    <format>zip</format>
+  </formats>
+  <includeBaseDirectory>false</includeBaseDirectory>
+
+  <dependencySets>
+    <!-- The transform plugin jar (carries the Jandex index) in the plugin root.
+         Hop only puts ONE jar per plugin folder on the plugin classloader; every other
+         project jar must go to lib/. -->
+    <dependencySet>
+      <useProjectArtifact>false</useProjectArtifact>
+      <useTransitiveDependencies>false</useTransitiveDependencies>
+      <outputDirectory>plugins/transforms/interlis</outputDirectory>
+      <scope>runtime</scope>
+      <unpack>false</unpack>
+      <includes>
+        <include>ch.so.agi:hop-interlis-transforms</include>
+      </includes>
+    </dependencySet>
+
+    <!-- Runtime dependencies in lib/. Hop automatically adds jars from a plugin's lib/
+         directory to its classloader. -->
+    <dependencySet>
+      <useProjectArtifact>false</useProjectArtifact>
+      <useTransitiveDependencies>true</useTransitiveDependencies>
+      <outputDirectory>plugins/transforms/interlis/lib</outputDirectory>
+      <scope>runtime</scope>
+      <unpack>false</unpack>
+      <excludes>
+        <exclude>ch.so.agi:hop-interlis-transforms</exclude>
+        <!-- Shared Hop geometry layer; provided by hop-geometry-type-plugin. -->
+        <exclude>ch.so.agi:hop-geometry-type</exclude>
+        <exclude>org.locationtech.jts:*</exclude>
+        <!-- Provided by Apache Hop itself. -->
+        <exclude>org.apache.hop:*</exclude>
+        <exclude>org.slf4j:*</exclude>
+      </excludes>
+    </dependencySet>
+  </dependencySets>
+</assembly>

@@ -1,5 +1,5 @@
 # Copy this file to .sdkmanrc and replace the value with the exact
-# Java 17 SDKMAN identifier installed on the development machine.
+# Java 21 SDKMAN identifier installed on the development machine.
 #
 # Discover installed JDKs with:
 #   source "$HOME/.sdkman/bin/sdkman-init.sh"
@@ -8,4 +8,4 @@
 #   ls -1 "$HOME/.sdkman/candidates/java"
 #
 # Example only; do not commit an identifier that is not actually available:
-java=17.0.XX-tem
+java=21.0.XX-tem

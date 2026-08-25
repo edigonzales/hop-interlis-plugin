@@ -1,6 +1,6 @@
 # Java- und Hop-Implementierungsspezifikation
 
-Dieses Dokument ist die implementierungsnahe Kern-Spezifikation. Klassennamen und Methodensignaturen sind als Soll-Architektur zu verstehen. Bei kleinen Anpassungen an tatsächliche Hop-2.17- oder iox-ili-Signaturen darf die Implementierung abweichen, solange Verantwortlichkeiten und Tests erhalten bleiben.
+Dieses Dokument ist die implementierungsnahe Kern-Spezifikation. Klassennamen und Methodensignaturen sind als Soll-Architektur zu verstehen. Bei kleinen Anpassungen an tatsächliche Hop-2.18- oder iox-ili-Signaturen darf die Implementierung abweichen, solange Verantwortlichkeiten und Tests erhalten bleiben.
 
 # 1. Maven-Module und Abhängigkeiten
 
@@ -8,8 +8,8 @@ Dieses Dokument ist die implementierungsnahe Kern-Spezifikation. Klassennamen un
 
 ```xml
 <properties>
-  <maven.compiler.release>17</maven.compiler.release>
-  <hop.version>2.17.0</hop.version>
+  <maven.compiler.release>21</maven.compiler.release>
+  <hop.version>2.18.1</hop.version>
   <iox.ili.version>1.24.4</iox.ili.version>
   <ili2c.version>5.6.8</ili2c.version>
   <hop.geometry.type.version>0.1.0-SNAPSHOT</hop.geometry.type.version>
@@ -825,7 +825,7 @@ public interface InterlisTransferWriter extends AutoCloseable {
 
 # 13. Hop Transform Pattern
 
-Alle Transforms folgen dem im bestehenden GeoTools-Plugin etablierten Hop-2.17-Muster:
+Alle Transforms folgen dem im bestehenden GeoTools-Plugin etablierten Hop-2.18-Muster:
 
 ```java
 @Transform(...)

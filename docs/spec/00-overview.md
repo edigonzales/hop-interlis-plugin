@@ -1,7 +1,7 @@
 # hop-interlis-plugin – Gesamtspezifikation
 
 Status: Entwurf für Implementierung  
-Zielplattform: Apache Hop 2.17.x, Java 17  
+Zielplattform: Apache Hop 2.18.1, Java 21  
 Primärformat Phase 1–4: INTERLIS 2 XTF 2.3/2.4  
 Spätere Erweiterung: INTERLIS 1 ITF, vollständiger Event-/Basket-Modus, zusätzliche Komfortfunktionen
 
@@ -87,6 +87,20 @@ JTS              1.20.0
 JUnit            5.12.0
 AssertJ          3.27.3
 ```
+
+Für `hop-interlis-plugin` ist die Ziel-Baseline **Apache Hop 2.18.1** (Java 21):
+
+```text
+Java             21       <- Hop 2.18-Artefakte sind Java-21-Bytecode
+Apache Hop       2.18.1   <- verbindliche Baseline, zentral im Parent-POM gepinnt
+iox-ili          1.24.4
+ili2c            5.6.8
+```
+
+Der Hop-Versions-Pin liegt ausschliesslich in der Property `hop.version` des Parent-POM; alle
+Module beziehen ihre Hop-Artefakte (`hop-core`, `hop-engine`, Test-Transforms) von dort.
+Ein Versionswechsel erfolgt nur über diese eine Stelle plus die unten referenzierten
+Spezifikationsstellen; es darf keinen zweiten hartkodierten Hop-Versionswert im Projekt geben.
 
 Für INTERLIS wird als initialer Baseline-Stand vorgeschlagen:
 
@@ -343,7 +357,7 @@ Jede Phase hat eigene Abnahmekriterien. Eine Phase wird erst begonnen, wenn Buil
 
 Technische Basis der Spezifikation:
 
-- Apache Hop 2.17 development/user manuals: https://hop.apache.org/
+- Apache Hop 2.18 development/user manuals: https://hop.apache.org/
 - Apache Hop repository: https://github.com/apache/hop
 - ili2fme: https://github.com/claeis/ili2fme
 - iox-ili: https://github.com/claeis/iox-ili

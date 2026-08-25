@@ -46,9 +46,9 @@ GeoTools und INTERLIS teilen sich damit dieselbe Hop-Geometrieklasse.
 Baseline der Spezifikation:
 
 ```text
-Java       17+
+Java       21+
 Maven      aktuelle 3.x-Version
-Apache Hop 2.17.x Baseline
+Apache Hop 2.18.1 Baseline (zentral im Parent-POM gepinnt, Property hop.version)
 iox-ili    aktuelle kompatible 1.24.x-Linie
 ili2c      dazu kompatible Version
 Python     3.x für Distribution Checks
@@ -62,8 +62,8 @@ Beispiel:
 
 ```xml
 <properties>
-  <maven.compiler.release>17</maven.compiler.release>
-  <hop.version>2.17.0</hop.version>
+  <maven.compiler.release>21</maven.compiler.release>
+  <hop.version>2.18.1</hop.version>
   <iox.ili.version>...</iox.ili.version>
   <ili2c.version>...</ili2c.version>
   <hop.geometry.type.version>0.1.0-SNAPSHOT</hop.geometry.type.version>
@@ -635,7 +635,7 @@ Nützlich für Logs:
 INTERLIS plugin 0.3.0-SNAPSHOT (commit abc1234)
 iox-ili 1.x
 ili2c 5.x
-Hop 2.17.0
+Hop 2.18.1
 ```
 
 Keine geheimen oder maschinenspezifischen Build-Pfade einbetten.
@@ -826,7 +826,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - checkout
-      - setup-java 17
+      - setup-java 21
       - build geometry dependency or restore artifact
       - mvn -B -ntp clean verify
       - python scripts/check-distribution.py
@@ -976,7 +976,7 @@ Dokumentation führt eine kleine Matrix:
 ```text
 hop-interlis-plugin | Apache Hop | geometry plugin
 --------------------+------------+----------------
-0.1.x               | 2.17.x     | 0.1.x
+0.1.x               | 2.18.x     | 0.1.x
 ...
 ```
 
@@ -1128,7 +1128,7 @@ Hop version
 Ausgabe etwa:
 
 ```text
-[OK] Java 17
+[OK] Java 21
 [OK] Maven
 [OK] Hop home: /Applications/hop
 [OK] hop-gui.sh

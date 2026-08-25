@@ -1,0 +1,21 @@
+INTERLIS 2.4;
+
+/** Test model covering the INTERLIS primitive types. */
+MODEL HopIli_Primitives_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-08-25" =
+  TOPIC Data =
+    CLASS Primitive =
+      Text : MANDATORY TEXT*80;
+      Mtext : MTEXT*200;
+      Label : NAME;
+      Link : URI;
+      Flag : BOOLEAN;
+      Count : 0 .. 9999999999;
+      Value : -9999999999.999 .. 9999999999.999;
+      At : INTERLIS.XMLDate;
+      Ts : INTERLIS.XMLTime;
+      Kind : MANDATORY (one, two, three);
+      Opt : TEXT*40;
+    END Primitive;
+  END Data;
+END HopIli_Primitives_V1.

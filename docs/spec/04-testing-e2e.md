@@ -815,7 +815,7 @@ static void initHop() throws Exception {
 }
 ```
 
-Die konkrete Initialisierung muss an die mit Hop 2.17 verwendete Testinfrastruktur angepasst werden.
+Die konkrete Initialisierung muss an die mit Hop 2.18 verwendete Testinfrastruktur angepasst werden.
 
 ## 19.2 Pipeline programmatisch ausführen
 
@@ -1303,13 +1303,13 @@ OS:
   - Windows
 
 Java:
-  - 17
+  - 21
 ```
 
 Hop-Baseline:
 
 ```text
-2.17.x
+2.18.1   (zentral im Parent-POM gepinnt, Property hop.version)
 ```
 
 Später kann zusätzlich eine Compatibility-Matrix eingeführt werden:

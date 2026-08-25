@@ -128,7 +128,7 @@ hop-interlis-plugin/
 ### Akzeptanzkriterien
 
 - `mvn clean verify` läuft.
-- Java 17.
+- Java 21.
 - Hop-Version zentral im Parent-POM.
 - iox-ili/ili2c-Version zentral im Parent-POM.
 - `hop-geometry-type` und `jts-core` sind `provided`.

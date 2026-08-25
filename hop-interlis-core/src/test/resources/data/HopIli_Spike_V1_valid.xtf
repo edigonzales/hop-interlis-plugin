@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="hop-interlis-plugin-tests" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="HopIli_Spike_V1" VERSION="2026-08-25" URI="https://hop.interlis.example/models"/>
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <HopIli_Spike_V1.Data BID="b1">
+      <HopIli_Spike_V1.Data.Building TID="g1">
+        <Note>inherited note</Note>
+        <Code>42</Code>
+        <Location>
+          <COORD>
+            <C1>2600000.000</C1>
+            <C2>1200000.000</C2>
+          </COORD>
+        </Location>
+        <Address>
+          <HopIli_Spike_V1.Data.Address>
+            <Street>Main Street</Street>
+            <Number>10</Number>
+          </HopIli_Spike_V1.Data.Address>
+        </Address>
+      </HopIli_Spike_V1.Data.Building>
+      <HopIli_Spike_V1.Data.Municipality TID="m1">
+        <Name>Springfield</Name>
+        <Code>7</Code>
+      </HopIli_Spike_V1.Data.Municipality>
+    </HopIli_Spike_V1.Data>
+  </DATASECTION>
+</TRANSFER>
