@@ -271,4 +271,80 @@ class RowToIomMapperTest {
         .isInstanceOf(InterlisMappingException.class)
         .hasMessageContaining("_ili_tid");
   }
+
+  @Test
+  void overlays_values_onto_carrier_without_duplicating_structures() throws Exception {
+    InterlisRowMappingPlan plan = buildingPlan();
+    IomObject carrier =
+        mapper.map(
+            new Object[] {"g1", "b1", 42L, null, "Main Street", "10", "m1", "note"},
+            plan,
+            RowWriteOptions.defaults());
+
+    // Change Code and Street; the existing Address structure must be reused, not duplicated.
+    Object[] overlay = {"g1", "b1", 7L, null, "Station Street", "4", "m1", "note"};
+    IomObject merged = mapper.map(carrier, overlay, plan, RowWriteOptions.defaults());
+
+    assertThat(merged.getobjectoid()).isEqualTo("g1");
+    assertThat(merged.getattrvalue("Code")).isEqualTo("7");
+    assertThat(merged.getattrvaluecount("Address")).isEqualTo(1);
+    assertThat(merged.getattrobj("Address", 0).getattrvalue("Street")).isEqualTo("Station Street");
+    assertThat(merged.getattrobj("Address", 0).getattrvalue("Number")).isEqualTo("4");
+    // The carrier itself was not mutated.
+    assertThat(carrier.getattrvalue("Code")).isEqualTo("42");
+    assertThat(carrier.getattrobj("Address", 0).getattrvalue("Street")).isEqualTo("Main Street");
+  }
+
+  @Test
+  void overlay_keeps_multi_valued_structures_from_carrier() throws Exception {
+    // A LIST structure on the carrier is not part of the row plan and must survive the overlay.
+    InterlisRowMappingPlan plan = buildingPlan();
+    IomObject carrier =
+        mapper.map(
+            new Object[] {"g1", "b1", 42L, null, "Main Street", "10", "m1", "note"},
+            plan,
+            RowWriteOptions.defaults());
+    carrier.addattrobj("Phones", new ch.interlis.iom_j.Iom_jObject("HopIli_Spike_V1.Data.Contact", null));
+
+    IomObject merged =
+        mapper.map(
+            carrier,
+            new Object[] {"g1", "b1", 42L, null, "Main Street", "10", "m1", "note"},
+            plan,
+            RowWriteOptions.defaults());
+
+    assertThat(merged.getattrvaluecount("Phones")).isEqualTo(1);
+  }
+
+  @Test
+  void overlay_with_changed_tid_creates_new_object_and_copies_children() throws Exception {
+    InterlisRowMappingPlan plan = buildingPlan();
+    IomObject carrier =
+        mapper.map(
+            new Object[] {"g1", "b1", 42L, null, "Main Street", "10", "m1", "note"},
+            plan,
+            RowWriteOptions.defaults());
+
+    IomObject merged =
+        mapper.map(
+            carrier,
+            new Object[] {"g2", "b1", 42L, null, "Main Street", "10", "m1", "note"},
+            plan,
+            RowWriteOptions.defaults());
+
+    assertThat(merged.getobjectoid()).isEqualTo("g2");
+    assertThat(merged.getobjecttag()).isEqualTo("HopIli_Spike_V1.Data.Building");
+    assertThat(merged.getattrvaluecount("Address")).isEqualTo(1);
+    assertThat(merged.getattrobj("Address", 0).getattrvalue("Street")).isEqualTo("Main Street");
+  }
+
+  @Test
+  void overlay_rejects_null_carrier() throws Exception {
+    InterlisRowMappingPlan plan = buildingPlan();
+    Object[] values = {"g1", "b1", 42L, null, "Main Street", "10", "m1", "note"};
+
+    assertThatThrownBy(() -> mapper.map(null, values, plan, RowWriteOptions.defaults()))
+        .isInstanceOf(InterlisMappingException.class)
+        .hasMessageContaining("null");
+  }
 }

@@ -76,6 +76,22 @@ class InterlisInputMetaTest {
   }
 
   @Test
+  void get_fields_appends_source_object_carrier_when_configured() throws Exception {
+    InterlisInputMeta meta = configuredMeta();
+    meta.setKeepSourceObject(true);
+    RowMeta rowMeta = new RowMeta();
+
+    meta.getFields(rowMeta, "origin", null, null, new Variables(), null);
+
+    assertThat(rowMeta.size()).isEqualTo(11);
+    assertThat(rowMeta.getValueMeta(10).getName()).isEqualTo("_ili_source_object");
+    assertThat(rowMeta.getValueMeta(10).getType())
+        .isEqualTo(
+            ch.so.agi.hop.interlis.transforms.value.ValueMetaInterlisObject
+                .TYPE_INTERLIS_OBJECT);
+  }
+
+  @Test
   void check_reports_errors_for_missing_configuration() throws Exception {
     List<ICheckResult> remarks = new ArrayList<>();
     new InterlisInputMeta().check(remarks, null, new TransformMeta("x", new InterlisInputMeta()),

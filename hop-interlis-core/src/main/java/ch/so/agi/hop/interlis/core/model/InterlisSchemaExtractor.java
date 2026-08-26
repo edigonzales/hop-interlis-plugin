@@ -153,6 +153,7 @@ public final class InterlisSchemaExtractor {
           null,
           false,
           structureName,
+          composition.isOrdered(),
           -1,
           -1);
     }
@@ -200,11 +201,11 @@ public final class InterlisSchemaExtractor {
       if (domain != null && domain.isBoolean()) {
         return attribute(
             attribute, scopedName, cardinality, mandatory, InterlisValueKind.BOOLEAN,
-            "BOOLEAN", inherited, null, null, false, null, -1, -1);
+            "BOOLEAN", inherited, null, null, false, null, false, -1, -1);
       }
       return attribute(
           attribute, scopedName, cardinality, mandatory, InterlisValueKind.ENUM,
-          "ENUMERATION", inherited, null, null, false, null, -1, -1);
+          "ENUMERATION", inherited, null, null, false, null, false, -1, -1);
     }
 
     if (type instanceof TextType textType) {
@@ -212,7 +213,7 @@ public final class InterlisSchemaExtractor {
       return attribute(
           attribute, scopedName, cardinality, mandatory, valueKind,
           valueKind + "*" + textType.getMaxLength(),
-          inherited, null, null, false, null, textType.getMaxLength(), -1);
+          inherited, null, null, false, null, false, textType.getMaxLength(), -1);
     }
 
     if (type instanceof NumericType numericType) {
@@ -224,7 +225,8 @@ public final class InterlisSchemaExtractor {
       return attribute(
           attribute, scopedName, cardinality, mandatory, valueKind,
           numericType.getMinimum() + " .. " + numericType.getMaximum(),
-          inherited, null, null, false, null, -1, valueKind == InterlisValueKind.DECIMAL ? decimalPlaces : -1);
+          inherited, null, null, false, null, false, -1,
+          valueKind == InterlisValueKind.DECIMAL ? decimalPlaces : -1);
     }
 
     if (type instanceof FormattedType formattedType) {
@@ -232,13 +234,13 @@ public final class InterlisSchemaExtractor {
       return attribute(
           attribute, scopedName, cardinality, mandatory, valueKind,
           "FORMAT " + String.valueOf(formattedType.getFormat()).trim(),
-          inherited, null, null, false, null, -1, -1);
+          inherited, null, null, false, null, false, -1, -1);
     }
 
     return attribute(
         attribute, scopedName, cardinality, mandatory, InterlisValueKind.TEXT,
         type == null ? "?" : type.getClass().getSimpleName(),
-        inherited, null, null, false, null, -1, -1);
+        inherited, null, null, false, null, false, -1, -1);
   }
 
   private InterlisValueKind textualKind(String aliasDomainName) {
@@ -288,6 +290,7 @@ public final class InterlisSchemaExtractor {
         dimension,
         allowsArcs,
         null,
+        false,
         -1,
         -1);
   }
@@ -304,6 +307,7 @@ public final class InterlisSchemaExtractor {
       Integer dimension,
       boolean allowsArcs,
       String structureScopedName,
+      boolean ordered,
       int textMaxLength,
       int decimalPlaces) {
     return new InterlisAttributeDescriptor(
@@ -318,6 +322,7 @@ public final class InterlisSchemaExtractor {
         dimension,
         allowsArcs,
         structureScopedName,
+        ordered,
         textMaxLength,
         decimalPlaces);
   }

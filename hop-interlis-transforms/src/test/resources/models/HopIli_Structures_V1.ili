@@ -1,0 +1,48 @@
+INTERLIS 2.4;
+
+/** Test model covering structures: nested single structures, LIST and BAG. */
+MODEL HopIli_Structures_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-08-26" =
+  DOMAIN
+    Coord = COORD 2460000.000 .. 2870000.000, 1045000.000 .. 1310000.000;
+  TOPIC Data =
+    STRUCTURE PostCode =
+      Code : MANDATORY TEXT*10;
+      Town : MANDATORY TEXT*40;
+    END PostCode;
+
+    STRUCTURE Address =
+      Street : MANDATORY TEXT*80;
+      Number : MANDATORY TEXT*10;
+      Location : Coord;
+      PostCode : PostCode;
+    END Address;
+
+    STRUCTURE Contact =
+      Kind : MANDATORY TEXT*20;
+      Value : MANDATORY TEXT*60;
+    END Contact;
+
+    STRUCTURE Country =
+      Name : MANDATORY TEXT*40;
+    END Country;
+
+    STRUCTURE Place =
+      Name : MANDATORY TEXT*40;
+      Country : Country;
+      Phones : LIST OF Contact;
+    END Place;
+
+    STRUCTURE Home =
+      Place : Place;
+      Since : INTERLIS.XMLDate;
+    END Home;
+
+    CLASS Person =
+      Name : MANDATORY TEXT*60;
+      Home : Home;
+      Addresses : LIST OF Address;
+      Contacts : BAG OF Contact;
+    END Person;
+  END Data;
+END HopIli_Structures_V1.

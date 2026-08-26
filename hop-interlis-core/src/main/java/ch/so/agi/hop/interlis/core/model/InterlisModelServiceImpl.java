@@ -25,6 +25,12 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class InterlisModelServiceImpl implements InterlisModelService {
 
+  /**
+   * ili2c uses shared static state internally and is not safe for concurrent compilation; all
+   * compiles are serialized through this lock (model compilation is a design-time operation).
+   */
+  private static final Object COMPILE_LOCK = new Object();
+
   private final ConcurrentHashMap<String, CompiledInterlisModel> cache =
       new ConcurrentHashMap<>();
   private final InterlisSchemaExtractor schemaExtractor = new InterlisSchemaExtractor();
@@ -38,7 +44,10 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
       return cached;
     }
 
-    CompiledInterlisModel compiled = doCompile(source, options);
+    CompiledInterlisModel compiled;
+    synchronized (COMPILE_LOCK) {
+      compiled = doCompile(source, options);
+    }
     cache.put(cacheKey, compiled);
     return compiled;
   }

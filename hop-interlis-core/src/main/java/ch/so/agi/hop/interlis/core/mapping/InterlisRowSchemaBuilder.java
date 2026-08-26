@@ -68,6 +68,36 @@ public final class InterlisRowSchemaBuilder {
     return new InterlisRowMappingPlan(classDescriptor, fields, warnings, options.defaultSrid());
   }
 
+  /**
+   * Builds the flattened child field list for a structure root. Used by INTERLIS Structure
+   * Explode and INTERLIS Structure Collect so the child row schema is produced by the same
+   * projection rules as class schemas (flattened single structures, collision checks, warnings
+   * for nested multi-valued structures).
+   *
+   * @param schema the model schema
+   * @param structure the structure whose attributes are projected
+   * @param options projection options (separator, selected paths, ...)
+   * @return the child fields in stable order with output indexes starting at 0
+   */
+  public InterlisStructureChildProjection buildStructureChildFields(
+      InterlisSchemaDescriptor schema,
+      InterlisStructureDescriptor structure,
+      ProjectionOptions options)
+      throws InterlisMappingException {
+    List<InterlisFieldPlan> fields = new ArrayList<>();
+    List<String> warnings = new ArrayList<>();
+    Set<String> usedNames = new HashSet<>();
+
+    int index = 0;
+    for (InterlisAttributeDescriptor attribute : structure.attributes()) {
+      index =
+          addAttribute(
+              schema, fields, warnings, usedNames, index, attribute, List.of(), options,
+              structure.scopedName());
+    }
+    return new InterlisStructureChildProjection(fields, warnings);
+  }
+
   private int addTechnical(
       List<InterlisFieldPlan> fields,
       Set<String> usedNames,

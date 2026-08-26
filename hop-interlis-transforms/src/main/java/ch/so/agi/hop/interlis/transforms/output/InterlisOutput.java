@@ -55,9 +55,34 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       handleBasket(row);
       Object[] values =
           InterlisRowBindings.values(row, data.inputIndexes);
-      IomObject object =
-          data.mapper.map(
-              values, data.plan, new RowWriteOptions(true, resolve(meta.getBasketId())));
+      IomObject object;
+      if (data.sourceObjectFieldIndex >= 0) {
+        Object carrier = row[data.sourceObjectFieldIndex];
+        if (carrier == null) {
+          throw new HopException(
+              "Source object field <"
+                  + resolve(meta.getSourceObjectField())
+                  + "> is null; INTERLIS Input must be configured with \"Keep source object for "
+                  + "Structure Explode\" or the field must be updated by INTERLIS Structure Collect");
+        }
+        if (!(carrier instanceof IomObject carrierObject)) {
+          throw new HopException(
+              "Source object field <"
+                  + resolve(meta.getSourceObjectField())
+                  + "> does not contain an INTERLIS object but "
+                  + carrier.getClass().getName());
+        }
+        object =
+            data.mapper.map(
+                carrierObject,
+                values,
+                data.plan,
+                new RowWriteOptions(true, resolve(meta.getBasketId())));
+      } else {
+        object =
+            data.mapper.map(
+                values, data.plan, new RowWriteOptions(true, resolve(meta.getBasketId())));
+      }
       data.writer.writeObject(object);
       data.writtenObjects++;
     } catch (Exception e) {
@@ -106,6 +131,14 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       String basketField = resolve(meta.getBasketIdField());
       data.basketIdFieldIndex =
           basketField.isBlank() ? -1 : getInputRowMeta().indexOfValue(basketField);
+
+      String sourceObjectField = resolve(meta.getSourceObjectField() == null ? "" : meta.getSourceObjectField());
+      data.sourceObjectFieldIndex =
+          sourceObjectField.isBlank() ? -1 : getInputRowMeta().indexOfValue(sourceObjectField);
+      if (!sourceObjectField.isBlank() && data.sourceObjectFieldIndex < 0) {
+        throw new HopException(
+            "Source object field <" + sourceObjectField + "> not found in the input");
+      }
 
       data.writer =
           XtfTransferWriter.open(

@@ -1177,9 +1177,21 @@ Für die normale `INTERLIS Input`-UX muss die mehrwertige Struktur zugänglich b
 A. `INTERLIS Input` kann ein optionales verstecktes/Advanced `InterlisObject`-Feld behalten.
 B. `INTERLIS Structure Explode` liest direkt aus einem parallel weitergereichten Envelope-Stream.
 
-**Festlegung:** Variante A wird bevorzugt, aber nur wenn der Benutzer eine mehrwertige Struktur zum Explodieren auswählt. Dann fügt `INTERLIS Input` intern/optional ein Feld wie `_ili_source_object` vom InterlisObject-Typ hinzu. Im normalen GUI kann dieses Feld unter „Advanced technical fields“ sichtbar gemacht werden.
+**Festlegung (Phase 3 umgesetzt):** Variante A. `INTERLIS Input` fügt auf Wunsch
+(„Keep source object for Structure Explode“) ein technisches Feld
+`_ili_source_object` vom Typ `ValueMetaInterlisObject` hinzu
+(`@ValueMetaPlugin`, `classLoaderGroup="sogeo-geometry"`, Phase-5-AP-5.2 wird damit
+vorgezogen). Das Feld ist im normalen GUI unter „Advanced technical fields“
+sichtbar; es ist ein Implementierungsdetail des Struktur-Pipelines, kein
+Benutzerdatentyp (`getString()` = XML nur für Debug/Preview, keine verlustbehaftete
+String-Konvertierung).
 
 Damit bleibt der Parent-Stream einfach, ohne alle Strukturen in Java-Listen zu packen.
+
+Hinweis Hop 2.18: Wenn dieselbe Quelle zwei Ausgänge speist (Input → Explode und
+Input → Collect), verteilt Hop standardmässig Round-Robin
+(`TransformMeta.distributes = true`). Für den Fan-out muss `distributes=false`
+gesetzt sein (GUI: Transform-Eigenschaften), sonst wird der Stream aufgeteilt.
 
 ## 20.2 Meta
 
@@ -1250,6 +1262,9 @@ childParentKeyField
 indexField
 structureAttributePath
 strictOrdering
+failOnDuplicateIndex
+failOnChildWithoutParent
+sourceObjectField
 ```
 
 Output kann:
@@ -1257,7 +1272,14 @@ Output kann:
 - Envelope-Parent mit eingesammelter Struktur sein, oder
 - typed Parent + aktualisiertes `_ili_source_object`.
 
-Für den ersten Write-Use-Case wird Envelope-Ausgabe bevorzugt.
+**Festlegung (Phase 3 umgesetzt):** typed Parent + aktualisiertes
+`_ili_source_object`. Die Envelope-Ausgabe braucht Row-to-Object/Transfer-Output
+und folgt mit Phase 5; bis dahin schreibt der erweiterte `INTERLIS Output`
+(Overlay auf den Träger) den Roundtrip.
+
+Die gesammelte Struktur **ersetzt** immer den Strukturinhalt des Trägers: der
+Child-Strom ist das Ergebnis der Downstream-Transformation, von Filtern entfernte
+Kinder dürfen nicht aus dem Träger wieder auftauchen.
 
 Eine alternative buffered Implementierung kann später hinzukommen.
 

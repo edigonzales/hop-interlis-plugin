@@ -53,6 +53,11 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
   @HopMetadataProperty private boolean includeClassName;
   @HopMetadataProperty private boolean includeTopicName;
   @HopMetadataProperty private String defaultSrid;
+  @HopMetadataProperty private boolean keepSourceObject;
+  @HopMetadataProperty private String sourceObjectFieldName;
+
+  /** Default name of the technical source-object carrier field. */
+  public static final String DEFAULT_SOURCE_OBJECT_FIELD = "_ili_source_object";
 
   public InterlisInputMeta() {
     super();
@@ -69,6 +74,8 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
     includeClassName = false;
     includeTopicName = false;
     defaultSrid = "";
+    keepSourceObject = false;
+    sourceObjectFieldName = DEFAULT_SOURCE_OBJECT_FIELD;
   }
 
   @Override
@@ -92,6 +99,11 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
           new HopRowSchemaFactory().createRowMeta(projection.get().plan());
       for (int i = 0; i < detected.size(); i++) {
         rowMeta.addValueMeta(detected.getValueMeta(i));
+      }
+      if (keepSourceObject) {
+        rowMeta.addValueMeta(
+            new ch.so.agi.hop.interlis.transforms.value.ValueMetaInterlisObject(
+                resolvedSourceObjectFieldName()));
       }
       for (String warning : projection.get().plan().warnings()) {
         log.logBasic(origin + ": " + warning);
@@ -210,6 +222,13 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
     }
   }
 
+  /** The resolved name of the source-object carrier field. */
+  public String resolvedSourceObjectFieldName() {
+    return sourceObjectFieldName == null || sourceObjectFieldName.isBlank()
+        ? DEFAULT_SOURCE_OBJECT_FIELD
+        : sourceObjectFieldName;
+  }
+
   private List<String> resolveModelNames(IVariables variables) {
     String resolved = resolve(variables, modelNames);
     if (resolved.isBlank() || MODELS_FROM_DATA.equals(resolved.trim())) {
@@ -311,5 +330,21 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
 
   public void setDefaultSrid(String defaultSrid) {
     this.defaultSrid = defaultSrid;
+  }
+
+  public boolean isKeepSourceObject() {
+    return keepSourceObject;
+  }
+
+  public void setKeepSourceObject(boolean keepSourceObject) {
+    this.keepSourceObject = keepSourceObject;
+  }
+
+  public String getSourceObjectFieldName() {
+    return sourceObjectFieldName;
+  }
+
+  public void setSourceObjectFieldName(String sourceObjectFieldName) {
+    this.sourceObjectFieldName = sourceObjectFieldName;
   }
 }

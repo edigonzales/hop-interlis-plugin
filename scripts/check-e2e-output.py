@@ -84,6 +84,40 @@ assert "COMPOUNDCURVE" in r2[5], f"roundtrip axis is not a compound curve: {r2}"
 assert "CIRCULARSTRING" in r2[5], f"roundtrip arc was linearized: {r2}"
 assert "2600050 1200050" in r2[5], f"roundtrip arc control point missing: {r2}"
 
+structures_roundtrip_csv = output_dir / "interlis-structures-roundtrip.csv"
+if not structures_roundtrip_csv.exists():
+    raise SystemExit(f"missing output {structures_roundtrip_csv}")
+
+with structures_roundtrip_csv.open(newline="", encoding="utf-8") as f:
+    rows = list(csv.reader(f, delimiter=";"))
+
+header = rows[0]
+assert header[:8] == [
+    "_ili_parent_tid",
+    "_ili_parent_bid",
+    "_ili_index",
+    "Street",
+    "Number",
+    "Location",
+    "PostCode_Code",
+    "PostCode_Town",
+], f"unexpected structures header: {header}"
+assert len(rows) == 5, f"expected 1 header + 4 address rows, got {len(rows)}"
+
+# LIST order must survive the full Explode -> Collect -> Output -> Input cycle.
+first, second, third, fourth = rows[1], rows[2], rows[3], rows[4]
+assert val(first, 0) == "p1" and val(first, 1) == "b1" and val(first, 2) == "0", f"unexpected first child: {first}"
+assert val(first, 3) == "Main Street" and val(first, 4) == "10", f"unexpected first address: {first}"
+assert "POINT (2600000 1200000)" in first[5], f"child geometry missing: {first}"
+assert val(first, 6) == "4600" and val(first, 7) == "Olten", f"nested PostCode missing: {first}"
+
+assert val(second, 0) == "p1" and val(second, 2) == "1", f"unexpected second child: {second}"
+assert val(second, 3) == "Station Street", f"LIST order broken: {second}"
+assert val(third, 0) == "p1" and val(third, 2) == "2", f"unexpected third child: {third}"
+assert val(third, 3) == "Village Road", f"LIST order broken: {third}"
+assert val(fourth, 0) == "p2" and val(fourth, 2) == "0", f"unexpected fourth child: {fourth}"
+assert val(fourth, 3) == "Village Road", f"p2 address missing: {fourth}"
+
 if with_gpkg:
     gpkg = output_dir / "interlis-arcs.gpkg"
     if not gpkg.exists():
@@ -121,5 +155,6 @@ print("E2E outputs OK:")
 print(f"  {geometry_csv}: 2 geometry rows, arc preserved as CIRCULARSTRING")
 print(f"  {structures_csv}: structure flattening, role reference and inheritance verified")
 print(f"  {roundtrip_csv}: XTF write/read roundtrip, arc still a CIRCULARSTRING")
+print(f"  {structures_roundtrip_csv}: LIST explode/collect roundtrip with order, geometry and nested structure")
 if with_gpkg:
     print("  interlis-arcs.gpkg: 2 curve features, axis stored as COMPOUNDCURVE")

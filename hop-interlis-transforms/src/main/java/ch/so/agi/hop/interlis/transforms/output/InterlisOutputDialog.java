@@ -43,6 +43,7 @@ public class InterlisOutputDialog extends BaseTransformDialog {
   private TextVar wObjectIdField;
   private TextVar wBasketIdField;
   private TextVar wBasketId;
+  private TextVar wSourceObjectField;
   private Button wOverwrite;
   private Label wStatus;
   private Table wMapping;
@@ -211,13 +212,30 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     fdBid.top = new FormAttachment(wBasketIdField, margin);
     wBasketId.setLayoutData(fdBid);
 
+    Label wlSourceObject = new Label(shell, SWT.RIGHT);
+    wlSourceObject.setText("Source object field");
+    PropsUi.setLook(wlSourceObject);
+    wlSourceObject.setToolTipText(
+        "Optional technical field (_ili_source_object) kept by INTERLIS Input and updated by "
+            + "INTERLIS Structure Collect; when set, the row values are overlaid onto that object "
+            + "so multi-valued structures are preserved");
+    wlSourceObject.setLayoutData(labelData(wBasketId, margin));
+
+    wSourceObjectField = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    PropsUi.setLook(wSourceObjectField);
+    FormData fdSourceObject = new FormData();
+    fdSourceObject.left = new FormAttachment(props.getMiddlePct(), 0);
+    fdSourceObject.right = new FormAttachment(100, 0);
+    fdSourceObject.top = new FormAttachment(wBasketId, margin);
+    wSourceObjectField.setLayoutData(fdSourceObject);
+
     // Status
     wStatus = new Label(shell, SWT.LEFT | SWT.WRAP);
     PropsUi.setLook(wStatus);
     FormData fdStatus = new FormData();
     fdStatus.left = new FormAttachment(0, 0);
     fdStatus.right = new FormAttachment(100, 0);
-    fdStatus.top = new FormAttachment(wBasketId, margin);
+    fdStatus.top = new FormAttachment(wSourceObjectField, margin);
     wStatus.setLayoutData(fdStatus);
 
     // Mapping grid
@@ -323,6 +341,8 @@ public class InterlisOutputDialog extends BaseTransformDialog {
       wObjectIdField.setText(input.getObjectIdField() == null ? "" : input.getObjectIdField());
       wBasketIdField.setText(input.getBasketIdField() == null ? "" : input.getBasketIdField());
       wBasketId.setText(input.getBasketId() == null ? "" : input.getBasketId());
+      wSourceObjectField.setText(
+          input.getSourceObjectField() == null ? "" : input.getSourceObjectField());
       wOverwrite.setSelection(input.isOverwrite());
     } finally {
       suppressRefresh = false;
@@ -383,6 +403,7 @@ public class InterlisOutputDialog extends BaseTransformDialog {
       input.setObjectIdField(wObjectIdField.getText());
       input.setBasketIdField(wBasketIdField.getText());
       input.setBasketId(wBasketId.getText());
+      input.setSourceObjectField(wSourceObjectField.getText());
       input.setOverwrite(wOverwrite.getSelection());
     }
   }

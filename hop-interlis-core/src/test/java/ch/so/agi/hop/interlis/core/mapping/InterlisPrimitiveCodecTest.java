@@ -18,7 +18,8 @@ class InterlisPrimitiveCodecTest {
   private static InterlisAttributeDescriptor attribute(String name, InterlisValueKind kind) {
     return new InterlisAttributeDescriptor(
         name, "Model.Topic.Class." + name, new InterlisCardinality(0, 1), false, kind,
-        kind.name(), false, null, null, false, null, -1, kind == InterlisValueKind.DECIMAL ? 3 : -1);
+        kind.name(), false, null, null, false, null, false, -1,
+        kind == InterlisValueKind.DECIMAL ? 3 : -1);
   }
 
   @Test

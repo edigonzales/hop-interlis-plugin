@@ -216,4 +216,72 @@ class InterlisRowSchemaBuilderTest {
     assertThat(plan.fields())
         .noneMatch(f -> f.source() == InterlisFieldSource.ROLE_REFERENCE);
   }
+
+  @Test
+  void flattens_nested_single_structures_recursively() throws Exception {
+    InterlisSchemaDescriptor structures =
+        new InterlisSchemaExtractor()
+            .extract(
+                new InterlisModelServiceImpl()
+                    .compile(
+                        new ModelSource(
+                            List.of(TestResources.path("/models/HopIli_Structures_V1.ili")),
+                            List.of(),
+                            List.of()),
+                        new ModelCompileOptions("2.4"))
+                    .transferDescription());
+
+    InterlisRowMappingPlan plan =
+        builder.build(
+            structures,
+            classOf(structures, "HopIli_Structures_V1.Data.Person"),
+            ProjectionOptions.defaults());
+
+    assertThat(plan.fields())
+        .extracting(InterlisFieldPlan::hopFieldName)
+        .containsExactly(
+            "_ili_tid", "_ili_bid", "Name", "Home_Place_Name", "Home_Place_Country_Name",
+            "Home_Since");
+
+    // The nested LIST (Home.Place.Phones) and the class-level LIST/BAG are not expandable
+    // scalar fields and must be reported for Structure Explode.
+    assertThat(plan.warnings())
+        .anySatisfy(w -> {
+          assertThat(w).contains("Phones").contains("Structure Explode");
+        });
+    assertThat(plan.warnings())
+        .anySatisfy(w -> {
+          assertThat(w).contains("Addresses").contains("Structure Explode");
+        });
+    assertThat(plan.warnings())
+        .anySatisfy(w -> {
+          assertThat(w).contains("Contacts").contains("Structure Explode");
+        });
+  }
+
+  @Test
+  void structure_separator_is_configurable() throws Exception {
+    InterlisSchemaDescriptor structures =
+        new InterlisSchemaExtractor()
+            .extract(
+                new InterlisModelServiceImpl()
+                    .compile(
+                        new ModelSource(
+                            List.of(TestResources.path("/models/HopIli_Structures_V1.ili")),
+                            List.of(),
+                            List.of()),
+                        new ModelCompileOptions("2.4"))
+                    .transferDescription());
+
+    InterlisRowMappingPlan plan =
+        builder.build(
+            structures,
+            classOf(structures, "HopIli_Structures_V1.Data.Person"),
+            new ProjectionOptions(true, true, false, false, false, true, "__", null,
+                java.util.Set.of()));
+
+    assertThat(plan.fields())
+        .extracting(InterlisFieldPlan::hopFieldName)
+        .contains("Home__Place__Name", "Home__Place__Country__Name", "Home__Since");
+  }
 }

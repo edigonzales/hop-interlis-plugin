@@ -71,6 +71,9 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
           } catch (Exception e) {
             throw new HopException(e.getMessage(), e);
           }
+          if (data.keepSourceObject) {
+            row = appendSourceObject(row, envelope.object());
+          }
           data.emittedObjects++;
           putRow(data.outputRowMeta, row);
           if (checkFeedback(getLinesWritten()) && isBasic()) {
@@ -82,6 +85,22 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
       }
       // Other events and objects of other classes are skipped in the typed projection.
     }
+  }
+
+  private Object[] appendSourceObject(Object[] row, ch.interlis.iom.IomObject object)
+      throws HopException {
+    Object[] extended = new Object[row.length + 1];
+    System.arraycopy(row, 0, extended, 0, row.length);
+    extended[row.length] = object;
+    if (extended.length != data.outputRowMeta.size()) {
+      throw new HopException(
+          "INTERLIS Input row ("
+              + extended.length
+              + " values) does not match the output schema ("
+              + data.outputRowMeta.size()
+              + " fields); the source object carrier is misconfigured");
+    }
+    return extended;
   }
 
   private void doInitialize() throws HopException {
@@ -117,7 +136,13 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
         transferReader.setModel(data.projection.model().transferDescription());
       }
       data.mapper = new DefaultInterlisObjectToRowMapper();
+      data.keepSourceObject = meta.isKeepSourceObject();
       data.outputRowMeta = new HopRowSchemaFactory().createRowMeta(data.plan);
+      if (data.keepSourceObject) {
+        data.outputRowMeta.addValueMeta(
+            new ch.so.agi.hop.interlis.transforms.value.ValueMetaInterlisObject(
+                meta.resolvedSourceObjectFieldName()));
+      }
 
       if (isBasic()) {
         logBasic(

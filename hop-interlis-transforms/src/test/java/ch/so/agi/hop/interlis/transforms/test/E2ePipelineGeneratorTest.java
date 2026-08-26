@@ -60,6 +60,14 @@ class E2ePipelineGeneratorTest {
     write(outputDir.resolve("06-roundtrip-check.hpl"),
         roundtripCheckPipeline("06-roundtrip-check",
             outputFile(outputDir, "roundtrip.xtf"), outputFile(outputDir, "interlis-roundtrip")));
+    write(outputDir.resolve("07-structures-roundtrip.hpl"),
+        structuresRoundtripPipeline("07-structures-roundtrip",
+            inputFile(inputDir, "HopIli_Structures_V1_valid.xtf"),
+            outputFile(outputDir, "structures-roundtrip.xtf")));
+    write(outputDir.resolve("08-structures-roundtrip-check.hpl"),
+        structuresRoundtripCheckPipeline("08-structures-roundtrip-check",
+            outputFile(outputDir, "structures-roundtrip.xtf"),
+            outputFile(outputDir, "interlis-structures-roundtrip")));
   }
 
   @Test
@@ -240,6 +248,123 @@ class E2ePipelineGeneratorTest {
     output.setHeaderEnabled(true);
     output.setFileNameInField(false);
     return output;
+  }
+
+  private static PipelineMeta structuresRoundtripPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta input =
+        new ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setClassName("HopIli_Structures_V1.Data.Person");
+    input.setIncludeTid(true);
+    input.setIncludeBid(true);
+    input.setKeepSourceObject(true);
+
+    ch.so.agi.hop.interlis.transforms.explode.InterlisStructureExplodeMeta explode =
+        new ch.so.agi.hop.interlis.transforms.explode.InterlisStructureExplodeMeta();
+    explode.setDefault();
+    explode.setModelNames("HopIli_Structures_V1");
+    explode.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    explode.setClassName("HopIli_Structures_V1.Data.Person");
+    explode.setStructureAttributePath("Addresses");
+
+    ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta collect =
+        new ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta();
+    collect.setDefault();
+    collect.setParentInputTransform("INTERLIS Input");
+    collect.setChildInputTransform("INTERLIS Structure Explode");
+    collect.setModelNames("HopIli_Structures_V1");
+    collect.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    collect.setClassName("HopIli_Structures_V1.Data.Person");
+    collect.setStructureAttributePath("Addresses");
+
+    InterlisOutputMeta output = new InterlisOutputMeta();
+    output.setFileName(outputFile);
+    output.setModelNames("HopIli_Structures_V1");
+    output.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    output.setClassName("HopIli_Structures_V1.Data.Person");
+    output.setObjectIdField("_ili_tid");
+    output.setBasketIdField("_ili_bid");
+    output.setBasketId("b1");
+    output.setSourceObjectField(
+        ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta
+            .DEFAULT_SOURCE_OBJECT_FIELD);
+    output.setOverwrite(true);
+
+    TransformMeta source = new TransformMeta("INTERLIS_INPUT", "INTERLIS Input", input);
+    source.setLocation(100, 100);
+    // Fan-out: the input feeds both the explode transform and the collect transform.
+    // Hop distributes rows round-robin by default; disable it so all rows reach both targets.
+    source.setDistributes(false);
+    TransformMeta explodeTransform =
+        new TransformMeta("INTERLIS_STRUCTURE_EXPLODE", "INTERLIS Structure Explode", explode);
+    explodeTransform.setLocation(300, 100);
+    TransformMeta collectTransform =
+        new TransformMeta("INTERLIS_STRUCTURE_COLLECT", "INTERLIS Structure Collect", collect);
+    collectTransform.setLocation(500, 100);
+    TransformMeta sink = new TransformMeta("INTERLIS Output", output);
+    sink.setLocation(700, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(explodeTransform);
+    pipelineMeta.addTransform(collectTransform);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, explodeTransform));
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, collectTransform));
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(explodeTransform, collectTransform));
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(collectTransform, sink));
+    return pipelineMeta;
+  }
+
+  private static PipelineMeta structuresRoundtripCheckPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames("HopIli_Structures_V1");
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setClassName("HopIli_Structures_V1.Data.Person");
+    input.setIncludeTid(true);
+    input.setIncludeBid(true);
+    input.setKeepSourceObject(true);
+
+    ch.so.agi.hop.interlis.transforms.explode.InterlisStructureExplodeMeta explode =
+        new ch.so.agi.hop.interlis.transforms.explode.InterlisStructureExplodeMeta();
+    explode.setDefault();
+    explode.setModelNames("HopIli_Structures_V1");
+    explode.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    explode.setClassName("HopIli_Structures_V1.Data.Person");
+    explode.setStructureAttributePath("Addresses");
+
+    TransformMeta source = new TransformMeta("INTERLIS_INPUT", "INTERLIS Input", input);
+    source.setLocation(100, 100);
+    TransformMeta explodeTransform =
+        new TransformMeta("INTERLIS_STRUCTURE_EXPLODE", "INTERLIS Structure Explode", explode);
+    explodeTransform.setLocation(300, 100);
+    TransformMeta stringify = new TransformMeta("Select values", stringifyGeometry(List.of("Location")));
+    stringify.setLocation(500, 100);
+    TransformMeta sink = new TransformMeta("Text file output", csvOutput(outputFile));
+    sink.setLocation(700, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(explodeTransform);
+    pipelineMeta.addTransform(stringify);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, explodeTransform));
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(explodeTransform, stringify));
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(stringify, sink));
+    return pipelineMeta;
   }
 
   private static PipelineMeta twoStepPipeline(

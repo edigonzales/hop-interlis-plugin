@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:geom="http://www.interlis.ch/geometry/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:HopIli_Structures_V1="http://www.interlis.ch/xtf/2.4/HopIli_Structures_V1">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>HopIli_Structures_V1</ili:model>
+    </ili:models>
+    <ili:sender>hop-interlis-plugin-tests</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+    <HopIli_Structures_V1:Data ili:bid="b1">
+      <HopIli_Structures_V1:Person ili:tid="p1">
+        <HopIli_Structures_V1:Name>Meier</HopIli_Structures_V1:Name>
+        <HopIli_Structures_V1:Home>
+          <HopIli_Structures_V1:Home>
+            <HopIli_Structures_V1:Place>
+              <HopIli_Structures_V1:Place>
+                <HopIli_Structures_V1:Name>Springfield</HopIli_Structures_V1:Name>
+                <HopIli_Structures_V1:Country>
+                  <HopIli_Structures_V1:Country>
+                    <HopIli_Structures_V1:Name>Switzerland</HopIli_Structures_V1:Name>
+                  </HopIli_Structures_V1:Country>
+                </HopIli_Structures_V1:Country>
+                <HopIli_Structures_V1:Phones>
+                  <HopIli_Structures_V1:Contact>
+                    <HopIli_Structures_V1:Kind>phone</HopIli_Structures_V1:Kind>
+                    <HopIli_Structures_V1:Value>+41 79 123 45 67</HopIli_Structures_V1:Value>
+                  </HopIli_Structures_V1:Contact>
+                </HopIli_Structures_V1:Phones>
+              </HopIli_Structures_V1:Place>
+            </HopIli_Structures_V1:Place>
+            <HopIli_Structures_V1:Since>2020-01-15</HopIli_Structures_V1:Since>
+          </HopIli_Structures_V1:Home>
+        </HopIli_Structures_V1:Home>
+        <HopIli_Structures_V1:Addresses>
+          <HopIli_Structures_V1:Address>
+            <HopIli_Structures_V1:Street>Main Street</HopIli_Structures_V1:Street>
+            <HopIli_Structures_V1:Number>10</HopIli_Structures_V1:Number>
+            <HopIli_Structures_V1:Location>
+              <geom:coord>
+                <geom:c1>2600000.000</geom:c1>
+                <geom:c2>1200000.000</geom:c2>
+              </geom:coord>
+            </HopIli_Structures_V1:Location>
+            <HopIli_Structures_V1:PostCode>
+              <HopIli_Structures_V1:PostCode>
+                <HopIli_Structures_V1:Code>4600</HopIli_Structures_V1:Code>
+                <HopIli_Structures_V1:Town>Olten</HopIli_Structures_V1:Town>
+              </HopIli_Structures_V1:PostCode>
+            </HopIli_Structures_V1:PostCode>
+          </HopIli_Structures_V1:Address>
+          <HopIli_Structures_V1:Address>
+            <HopIli_Structures_V1:Street>Station Street</HopIli_Structures_V1:Street>
+            <HopIli_Structures_V1:Number>4</HopIli_Structures_V1:Number>
+            <HopIli_Structures_V1:Location>
+              <geom:coord>
+                <geom:c1>2600050.000</geom:c1>
+                <geom:c2>1200050.000</geom:c2>
+              </geom:coord>
+            </HopIli_Structures_V1:Location>
+            <HopIli_Structures_V1:PostCode>
+              <HopIli_Structures_V1:PostCode>
+                <HopIli_Structures_V1:Code>4600</HopIli_Structures_V1:Code>
+                <HopIli_Structures_V1:Town>Olten</HopIli_Structures_V1:Town>
+              </HopIli_Structures_V1:PostCode>
+            </HopIli_Structures_V1:PostCode>
+          </HopIli_Structures_V1:Address>
+          <HopIli_Structures_V1:Address>
+            <HopIli_Structures_V1:Street>Village Road</HopIli_Structures_V1:Street>
+            <HopIli_Structures_V1:Number>22</HopIli_Structures_V1:Number>
+          </HopIli_Structures_V1:Address>
+        </HopIli_Structures_V1:Addresses>
+        <HopIli_Structures_V1:Contacts>
+          <HopIli_Structures_V1:Contact>
+            <HopIli_Structures_V1:Kind>phone</HopIli_Structures_V1:Kind>
+            <HopIli_Structures_V1:Value>+41 79 123 45 67</HopIli_Structures_V1:Value>
+          </HopIli_Structures_V1:Contact>
+          <HopIli_Structures_V1:Contact>
+            <HopIli_Structures_V1:Kind>email</HopIli_Structures_V1:Kind>
+            <HopIli_Structures_V1:Value>meier@example.ch</HopIli_Structures_V1:Value>
+          </HopIli_Structures_V1:Contact>
+        </HopIli_Structures_V1:Contacts>
+      </HopIli_Structures_V1:Person>
+      <HopIli_Structures_V1:Person ili:tid="p2">
+        <HopIli_Structures_V1:Name>Mueller</HopIli_Structures_V1:Name>
+        <HopIli_Structures_V1:Addresses>
+          <HopIli_Structures_V1:Address>
+            <HopIli_Structures_V1:Street>Village Road</HopIli_Structures_V1:Street>
+            <HopIli_Structures_V1:Number>22</HopIli_Structures_V1:Number>
+          </HopIli_Structures_V1:Address>
+        </HopIli_Structures_V1:Addresses>
+      </HopIli_Structures_V1:Person>
+      <HopIli_Structures_V1:Person ili:tid="p3">
+        <HopIli_Structures_V1:Name>Empty</HopIli_Structures_V1:Name>
+      </HopIli_Structures_V1:Person>
+    </HopIli_Structures_V1:Data>
+  </ili:datasection>
+</ili:transfer>

@@ -10,6 +10,24 @@ The authoritative architecture and implementation specification lives in [`docs/
 
 ## Status
 
+**Phase 3** (structures end to end) is implemented:
+
+- `INTERLIS Structure Explode` transform explodes one `LIST`/`BAG OF` structure
+  attribute (also below single structures, e.g. `Home.Place.Phones`) into child rows
+  (`_ili_parent_tid`, `_ili_parent_bid`, `_ili_index`, child fields incl. geometry and
+  flattened nested structures);
+- `INTERLIS Structure Collect` merges a sorted child stream back into the parent's
+  source object (streaming merge, strict LIST index checks, replace semantics) and
+  `INTERLIS Output` overlays the row onto the updated carrier, so the full
+  `LIST`/`BAG` roundtrip `XTF → Input → Explode → Collect → Output → XTF` works –
+  **LIST order, child geometries and nested structures survive** (verified in unit,
+  pipeline and `hop-run` E2E tests);
+- `INTERLIS Input` keeps the raw source object on demand (`Keep source object for
+  Structure Explode`, technical `_ili_source_object` field of the new
+  `InterlisObject` Hop value type); model-aware dialogs for Explode and Collect;
+- recursive flattening of nested single structures (`Home_Place_Country_Name`)
+  with warnings pointing multi-valued structures to Structure Explode.
+
 **Phase 2** (`INTERLIS Output` + typed roundtrip) is implemented:
 
 - `INTERLIS Output` transform writes typed Hop rows of one INTERLIS class to an XTF file
@@ -44,7 +62,8 @@ Phase 0 (project foundation) is implemented as well:
 - plugin packaging as installable ZIP with a distribution checker;
 - one-command local development workflow and `hop-run` E2E suite.
 
-See [`docs/progress/phase-02.md`](docs/progress/phase-02.md),
+See [`docs/progress/phase-03.md`](docs/progress/phase-03.md),
+[`docs/progress/phase-02.md`](docs/progress/phase-02.md),
 [`docs/progress/phase-01.md`](docs/progress/phase-01.md) and
 [`docs/progress/phase-00.md`](docs/progress/phase-00.md) for details and known limitations.
 
@@ -94,8 +113,8 @@ bash scripts/run-e2e.sh "$HOP_HOME"
 
 | Module | Purpose |
 |---|---|
-| `hop-interlis-core` | Model compilation, schema descriptors, transfer reader/writer, mapping plans, geometry mapper. No SWT, no Hop runtime. |
-| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`, `INTERLIS Output`). |
+| `hop-interlis-core` | Model compilation, schema descriptors, transfer reader/writer, mapping plans, structure plans/explode/collect, geometry mapper. No SWT, no Hop runtime. |
+| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`, `INTERLIS Output`, `INTERLIS Structure Explode`, `INTERLIS Structure Collect`), `InterlisObject` value type. |
 | `assemblies/assemblies-hop-interlis` | Installable plugin ZIP. |
 
 ## License

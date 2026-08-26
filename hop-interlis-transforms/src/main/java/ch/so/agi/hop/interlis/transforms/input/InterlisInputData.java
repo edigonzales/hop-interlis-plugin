@@ -16,6 +16,7 @@ public class InterlisInputData extends BaseTransformData {
   InterlisRowMappingPlan plan;
   IRowMeta outputRowMeta;
   InterlisObjectToRowMapper mapper;
+  boolean keepSourceObject;
   long readObjects;
   long emittedObjects;
 }

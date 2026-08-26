@@ -2,13 +2,10 @@ package ch.so.agi.hop.interlis.core.mapping;
 
 import ch.interlis.iom.IomObject;
 import ch.interlis.iom_j.Iom_jObject;
-import ch.so.agi.hop.interlis.core.geometry.InterlisGeometryMapper;
 import ch.so.agi.hop.interlis.core.model.InterlisAttributeDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisPropertyDescriptor;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import org.locationtech.jts.geom.Geometry;
 
 /**
  * Maps typed row values back to an INTERLIS IOM object according to a precomputed
@@ -30,14 +27,18 @@ import org.locationtech.jts.geom.Geometry;
  *   <li>role reference fields become IOM reference objects ({@code REF} semantics);
  *   <li>geometry values are converted through the SQL/MM WKB bridge, so arcs are preserved.
  * </ul>
+ *
+ * <p>When a base (carrier) object is given, the row values are overlaid onto a deep copy of it:
+ * structures already present on the carrier are reused, and multi-valued structures collected
+ * downstream (see {@code InterlisStructureCollector}) are preserved. If the row TID differs from
+ * the carrier TID, a new object with the row TID is created and the carrier's content is copied.
  */
 public final class RowToIomMapper {
 
-  private final InterlisPrimitiveCodec primitiveCodec = new InterlisPrimitiveCodec();
-  private final InterlisGeometryMapper geometryMapper = new InterlisGeometryMapper();
+  private final IomFieldWriter fieldWriter = new IomFieldWriter();
 
   /**
-   * Maps row values (in plan field order) to an IOM object.
+   * Maps row values (in plan field order) to a new IOM object.
    *
    * @param values values per plan field, in plan field order
    * @param plan the projection the values were produced with
@@ -46,29 +47,46 @@ public final class RowToIomMapper {
    */
   public IomObject map(Object[] values, InterlisRowMappingPlan plan, RowWriteOptions options)
       throws InterlisMappingException {
-    if (values == null || values.length != plan.fieldCount()) {
-      throw new InterlisMappingException(
-          "Expected " + plan.fieldCount() + " values but got "
-              + (values == null ? 0 : values.length));
-    }
-
-    String tid = null;
-    for (InterlisFieldPlan field : plan.fields()) {
-      if (field.source() == InterlisFieldSource.OBJECT_ID) {
-        Object value = values[field.outputIndex()];
-        tid = value == null ? null : value.toString().trim();
-        if (tid != null && tid.isEmpty()) {
-          tid = null;
-        }
-      }
-    }
-    if (tid == null) {
-      throw new InterlisMappingException(
-          "No object identifier (TID) for class " + plan.classDescriptor().scopedName()
-              + "; the projection must include _ili_tid");
-    }
-
+    String tid = requireTid(values, plan);
     Iom_jObject object = new Iom_jObject(plan.classDescriptor().scopedName(), tid);
+    return mapInto(object, values, plan, options);
+  }
+
+  /**
+   * Overlays row values onto a carrier object (e.g. the {@code _ili_source_object} kept by
+   * INTERLIS Input and updated by INTERLIS Structure Collect).
+   *
+   * <p>The carrier is never mutated; the result is a deep copy with the row values applied.
+   *
+   * @param carrier the base object, must not be {@code null}
+   * @param values values per plan field, in plan field order
+   * @param plan the projection the values were produced with
+   * @param options write options
+   * @return the merged INTERLIS object
+   */
+  public IomObject map(
+      IomObject carrier, Object[] values, InterlisRowMappingPlan plan, RowWriteOptions options)
+      throws InterlisMappingException {
+    if (carrier == null) {
+      throw new InterlisMappingException(
+          "Source INTERLIS object is null; cannot write class "
+              + plan.classDescriptor().scopedName());
+    }
+    String tid = requireTid(values, plan);
+    Iom_jObject target;
+    if (tid.equals(carrier.getobjectoid())) {
+      target = new Iom_jObject(carrier);
+    } else {
+      target = new Iom_jObject(plan.classDescriptor().scopedName(), tid);
+      copyChildren(carrier, target);
+    }
+    return mapInto(target, values, plan, options);
+  }
+
+  private IomObject mapInto(
+      Iom_jObject object, Object[] values, InterlisRowMappingPlan plan, RowWriteOptions options)
+      throws InterlisMappingException {
+    String tid = object.getobjectoid();
     Map<String, Iom_jObject> structureCache = new HashMap<>();
 
     for (InterlisFieldPlan field : plan.fields()) {
@@ -76,12 +94,15 @@ public final class RowToIomMapper {
       switch (field.source()) {
         case OBJECT_ID, BASKET_ID, CLASS_NAME, TOPIC_NAME, OPERATION ->
             /* consumed above or handled by the caller */ { }
-        case PRIMITIVE_ATTRIBUTE ->
-            writePrimitive(object, field, value, options, plan.classDescriptor().scopedName());
-        case GEOMETRY_ATTRIBUTE ->
-            writeGeometry(object, field, value, options, plan.classDescriptor().scopedName());
-        case FLATTENED_STRUCTURE_ATTRIBUTE ->
-            writeFlattened(object, field, value, options, structureCache, plan);
+        case PRIMITIVE_ATTRIBUTE, GEOMETRY_ATTRIBUTE, FLATTENED_STRUCTURE_ATTRIBUTE ->
+            fieldWriter.write(
+                object,
+                field,
+                value,
+                options,
+                structureCache,
+                plan.classDescriptor().effectiveProperties(),
+                plan.classDescriptor().scopedName());
         case ROLE_REFERENCE ->
             writeRoleReference(object, field, value, plan.classDescriptor().scopedName());
       }
@@ -105,116 +126,45 @@ public final class RowToIomMapper {
     return object;
   }
 
-  private void writePrimitive(
-      Iom_jObject owner,
-      InterlisFieldPlan field,
-      Object value,
-      RowWriteOptions options,
-      String className)
+  private String requireTid(Object[] values, InterlisRowMappingPlan plan)
       throws InterlisMappingException {
-    if (value == null) {
-      requireNotMandatory(field, className, options);
-      return;
-    }
-    String raw = primitiveCodec.format(value, field.attributeDescriptor());
-    owner.setattrvalue(field.attributeDescriptor().name(), raw);
-  }
-
-  private void writeGeometry(
-      Iom_jObject owner,
-      InterlisFieldPlan field,
-      Object value,
-      RowWriteOptions options,
-      String className)
-      throws InterlisMappingException {
-    if (value == null) {
-      requireNotMandatory(field, className, options);
-      return;
-    }
-    if (!(value instanceof Geometry geometry)) {
+    if (values == null || values.length != plan.fieldCount()) {
       throw new InterlisMappingException(
-          "Expected a Geometry value for field " + field.hopFieldName() + " but got "
-              + value.getClass().getName());
+          "Expected " + plan.fieldCount() + " values but got "
+              + (values == null ? 0 : values.length));
     }
-    InterlisAttributeDescriptor descriptor = field.attributeDescriptor();
-    int dimension = descriptor.coordDimension() == null ? 2 : descriptor.coordDimension();
-    try {
-      IomObject iomGeometry =
-          geometryMapper.toIomGeometry(geometry, descriptor.geometryKind(), dimension);
-      owner.addattrobj(descriptor.name(), iomGeometry);
-    } catch (Exception e) {
+    String tid = null;
+    for (InterlisFieldPlan field : plan.fields()) {
+      if (field.source() == InterlisFieldSource.OBJECT_ID) {
+        Object value = values[field.outputIndex()];
+        tid = value == null ? null : value.toString().trim();
+        if (tid != null && tid.isEmpty()) {
+          tid = null;
+        }
+      }
+    }
+    if (tid == null) {
       throw new InterlisMappingException(
-          "Failed to convert geometry field " + field.hopFieldName() + ": " + e.getMessage(), e);
+          "No object identifier (TID) for class " + plan.classDescriptor().scopedName()
+              + "; the projection must include _ili_tid");
     }
+    return tid;
   }
 
-  private void writeFlattened(
-      Iom_jObject root,
-      InterlisFieldPlan field,
-      Object value,
-      RowWriteOptions options,
-      Map<String, Iom_jObject> structureCache,
-      InterlisRowMappingPlan plan)
-      throws InterlisMappingException {
-    List<String> segments = field.propertyPath().segments();
-    boolean structureExists =
-        structureCache.containsKey(String.join(".", segments));
-
-    if (value == null) {
-      // A missing optional structure leaves all its children undefined. If the structure
-      // already exists (another child was set), mandatory leaves are enforced in strict mode.
-      if (structureExists) {
-        requireNotMandatory(field, plan.classDescriptor().scopedName(), options);
-      }
-      return;
-    }
-
-    Iom_jObject owner = root;
-    for (int i = 0; i < segments.size(); i++) {
-      String key = String.join(".", segments.subList(0, i + 1));
-      Iom_jObject child = structureCache.get(key);
-      if (child == null) {
-        InterlisAttributeDescriptor structureAttribute =
-            findStructureAttribute(plan, segments.get(i));
-        child = new Iom_jObject(structureAttribute.structureScopedName(), null);
-        owner.addattrobj(segments.get(i), child);
-        structureCache.put(key, child);
-      }
-      owner = child;
-    }
-
-    InterlisAttributeDescriptor leaf = field.attributeDescriptor();
-    if (leaf.kind().isGeometry()) {
-      if (!(value instanceof Geometry geometry)) {
-        throw new InterlisMappingException(
-            "Expected a Geometry value for field " + field.hopFieldName() + " but got "
-                + value.getClass().getName());
-      }
-      try {
-        int dimension = leaf.coordDimension() == null ? 2 : leaf.coordDimension();
-        owner.addattrobj(
-            leaf.name(),
-            geometryMapper.toIomGeometry(geometry, leaf.geometryKind(), dimension));
-      } catch (Exception e) {
-        throw new InterlisMappingException(
-            "Failed to convert geometry field " + field.hopFieldName() + ": " + e.getMessage(), e);
-      }
-    } else {
-      owner.setattrvalue(leaf.name(), primitiveCodec.format(value, leaf));
-    }
-  }
-
-  private InterlisAttributeDescriptor findStructureAttribute(
-      InterlisRowMappingPlan plan, String attributeName) throws InterlisMappingException {
-    for (InterlisPropertyDescriptor property : plan.classDescriptor().effectiveProperties()) {
-      if (property instanceof InterlisAttributeDescriptor attribute
-          && attribute.name().equals(attributeName)) {
-        return attribute;
+  /** Deep-copies all children of the source into a target that already has a fresh TID. */
+  private void copyChildren(IomObject source, Iom_jObject target) {
+    for (int i = 0; i < source.getattrcount(); i++) {
+      String name = source.getattrname(i);
+      int count = source.getattrvaluecount(name);
+      for (int j = 0; j < count; j++) {
+        IomObject child = source.getattrobj(name, j);
+        if (child != null) {
+          target.addattrobj(name, new Iom_jObject(child));
+        } else {
+          target.addattrvalue(name, source.getattrprim(name, j));
+        }
       }
     }
-    throw new InterlisMappingException(
-        "Structure attribute " + attributeName + " not found in class "
-            + plan.classDescriptor().scopedName());
   }
 
   private void writeRoleReference(
@@ -230,15 +180,5 @@ public final class RowToIomMapper {
     Iom_jObject reference = new Iom_jObject("REF", null);
     reference.setobjectrefoid(referenceTid);
     owner.addattrobj(field.propertyPath().leafName(), reference);
-  }
-
-  private void requireNotMandatory(
-      InterlisFieldPlan field, String className, RowWriteOptions options)
-      throws InterlisMappingException {
-    InterlisAttributeDescriptor descriptor = field.attributeDescriptor();
-    if (options.strict() && descriptor != null && descriptor.mandatory()) {
-      throw new InterlisMappingException(
-          "Mandatory attribute " + descriptor.name() + " is null for class " + className);
-    }
   }
 }

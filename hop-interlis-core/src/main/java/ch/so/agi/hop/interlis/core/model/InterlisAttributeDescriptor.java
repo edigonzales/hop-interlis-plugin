@@ -14,6 +14,7 @@ package ch.so.agi.hop.interlis.core.model;
  * @param coordDimension 2 or 3 for coordinate-based geometries, else {@code null}
  * @param allowsArcs whether the geometry domain allows circular arcs
  * @param structureScopedName qualified name of the structure type, else {@code null}
+ * @param ordered whether a multi-valued structure is a {@code LIST} (order is semantic)
  * @param textMaxLength maximum text length for textual domains, {@code -1} if not applicable
  * @param decimalPlaces number of decimal places for decimal domains, {@code -1} if not applicable
  */
@@ -29,6 +30,7 @@ public record InterlisAttributeDescriptor(
     Integer coordDimension,
     boolean allowsArcs,
     String structureScopedName,
+    boolean ordered,
     int textMaxLength,
     int decimalPlaces)
     implements InterlisPropertyDescriptor {}
