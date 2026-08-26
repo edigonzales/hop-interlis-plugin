@@ -136,7 +136,7 @@ Wenn Sie das Plugin `ili2fme` für FME kennen, werden Sie einige Unterschiede fe
 | Aspekt | ili2fme (FME) | hop-interlis-plugin (Hop)
 
 | Grundeinheit
-| Feature (mit einer ausgezeichneten Geometrie)
+| Feature (mit einer Hauptgeometrie)
 | Row (`Object[]` mit `IRowMeta`)
 
 | Mehrere Geometrien
@@ -166,7 +166,7 @@ Wenn Sie das Plugin `ili2fme` für FME kennen, werden Sie einige Unterschiede fe
 
 [IMPORTANT]
 ====
-Der entscheidende Unterschied: Hop hat _keine ausgezeichnete Geometrie_. Ein INTERLIS-Objekt mit drei Geometrieattributen (`Axis`, `Footprint`, `Geometry`) wird in Hop zu einer Row mit _drei `Geometry`-Feldern_. Sie entscheiden später beim Schreiben, welche Geometrie Sie verwenden möchten.
+Der entscheidende Unterschied: Hop hat _keine Hauptgeometrie_. Ein INTERLIS-Objekt mit drei Geometrieattributen (`Axis`, `Footprint`, `Geometry`) wird in Hop zu einer Row mit _drei `Geometry`-Feldern_. Sie entscheiden später beim Schreiben, welche Geometrie Sie verwenden möchten.
 ====
 
 === Technische Felder im Detail
@@ -203,7 +203,7 @@ Die technischen Felder sind Bestandteil des stabilen Schemas und ändern sich in
 
 Die Geometrie-Verarbeitung ist ein wichtiger Aspekt des Plugins:
 
-**Keine ausgezeichnete Geometrie**: Anders als FME kennt Hop keine ausgezeichnete Geometrie („eine Geometrie pro Row"). Ein INTERLIS-Objekt mit mehreren Geometrieattributen wird zu einer Hop-Row mit mehreren `Geometry`-Feldern.
+**Keine Hauptgeometrie**: Anders als FME kennt Hop keine Hauptgeometrie („eine Geometrie pro Row"). Ein INTERLIS-Objekt mit mehreren Geometrieattributen wird zu einer Hop-Row mit mehreren `Geometry`-Feldern.
 
 **Kreisbögen bleiben Kreisbögen**: Das Plugin verwendet die `hop-geometry-type-plugin` und wandelt INTERLIS-Geometrien über SQL/MM WKB um. Dadurch bleiben Kreisbögen (_circular arcs_) als JTS-`CircularString` oder `CompoundCurve` erhalten -- keine stille Linearisierung.
 

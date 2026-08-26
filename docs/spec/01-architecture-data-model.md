@@ -4,7 +4,7 @@
 
 FME und Apache Hop besitzen unterschiedliche interne Datenmodelle:
 
-- FME transportiert Features, die ihren Feature Type und eine ausgezeichnete Feature-Geometrie mit sich führen.
+- FME transportiert Features, die ihren Feature Type und eine Hauptgeometrie mit sich führen.
 - Hop transportiert `Object[]`-Rows zusammen mit `IRowMeta`. Das Row-Schema gehört zum Stream und muss für normale Verarbeitung stabil bleiben.
 
 INTERLIS wiederum besitzt:
@@ -408,7 +408,7 @@ Regeln:
 
 ## 8. Mehrere Geometrieattribute
 
-Anders als FME benötigt Hop keine ausgezeichnete einzige Feature-Geometrie.
+Anders als FME benötigt Hop keine einzige Hauptgeometrie.
 
 Beispiel:
 

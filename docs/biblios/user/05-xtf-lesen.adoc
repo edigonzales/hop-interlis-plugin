@@ -297,7 +297,7 @@ Footprint   Geometry
 
 [IMPORTANT]
 ====
-Anders als FME gibt es in Hop _keine ausgezeichnete Geometrie_. Bei der Weiterverarbeitung (z. B. GeoPackage Writer) müssen Sie explizit das gewünschte Geometrie-Feld auswählen.
+Anders als FME gibt es in Hop _keine Hauptgeometrie_. Bei der Weiterverarbeitung (z. B. GeoPackage Writer) müssen Sie explizit das gewünschte Geometrie-Feld auswählen.
 ====
 
 ==== Kreisbögen
