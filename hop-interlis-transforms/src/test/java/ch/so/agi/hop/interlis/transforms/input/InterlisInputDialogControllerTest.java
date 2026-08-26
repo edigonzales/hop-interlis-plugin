@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.input;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import org.apache.hop.core.HopEnvironment;
 import org.apache.hop.core.variables.Variables;

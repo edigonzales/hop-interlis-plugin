@@ -1,6 +1,7 @@
 package ch.so.agi.hop.interlis.transforms.test;
 
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
+import ch.so.agi.hop.interlis.transforms.output.InterlisOutputMeta;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -53,6 +54,12 @@ class E2ePipelineGeneratorTest {
     write(outputDir.resolve("03-interlis-input-structures.hpl"),
         spikeToCsvPipeline("03-interlis-input-structures",
             inputFile(inputDir, INPUT_SPIKE_XTF), outputFile(outputDir, OUTPUT_SPIKE_CSV)));
+    write(outputDir.resolve("05-xtf-roundtrip.hpl"),
+        roundtripPipeline("05-xtf-roundtrip",
+            inputFile(inputDir, INPUT_GEOMETRY_XTF), outputFile(outputDir, "roundtrip.xtf")));
+    write(outputDir.resolve("06-roundtrip-check.hpl"),
+        roundtripCheckPipeline("06-roundtrip-check",
+            outputFile(outputDir, "roundtrip.xtf"), outputFile(outputDir, "interlis-roundtrip")));
   }
 
   @Test
@@ -98,6 +105,55 @@ class E2ePipelineGeneratorTest {
     // Default: test resources data directory of this module.
     Path data = Path.of(E2ePipelineGeneratorTest.class.getResource("/data/HopIli_Geometry_V1_valid.xtf").toURI());
     return data.getParent().toAbsolutePath();
+  }
+
+  private static PipelineMeta roundtripPipeline(String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setClassName("HopIli_Geometry_V1.Data.TestObject");
+    input.setIncludeTid(true);
+    input.setIncludeBid(true);
+
+    InterlisOutputMeta output = new InterlisOutputMeta();
+    output.setFileName(outputFile);
+    output.setModelNames("HopIli_Geometry_V1");
+    output.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    output.setClassName("HopIli_Geometry_V1.Data.TestObject");
+    output.setObjectIdField("_ili_tid");
+    output.setBasketIdField("_ili_bid");
+    output.setBasketId("b1");
+    output.setOverwrite(true);
+
+    return twoStepPipeline(pipelineMeta, input, output);
+  }
+
+  private static PipelineMeta roundtripCheckPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames("HopIli_Geometry_V1");
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setClassName("HopIli_Geometry_V1.Data.TestObject");
+    input.setIncludeTid(true);
+    input.setIncludeBid(true);
+
+    return threeStepPipeline(
+        pipelineMeta,
+        input,
+        stringifyGeometry(
+            List.of("Center", "Points", "Axis", "Axes", "Boundary", "Area", "Surfaces")),
+        csvOutput(outputFile));
   }
 
   private static PipelineMeta geometryToCsvPipeline(
@@ -184,6 +240,18 @@ class E2ePipelineGeneratorTest {
     output.setHeaderEnabled(true);
     output.setFileNameInField(false);
     return output;
+  }
+
+  private static PipelineMeta twoStepPipeline(
+      PipelineMeta pipelineMeta, ITransformMeta inputMeta, ITransformMeta outputMeta) {
+    TransformMeta source = new TransformMeta("INTERLIS_INPUT", "INTERLIS Input", inputMeta);
+    source.setLocation(100, 100);
+    TransformMeta sink = new TransformMeta("INTERLIS Output", outputMeta);
+    sink.setLocation(300, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    return pipelineMeta;
   }
 
   private static PipelineMeta threeStepPipeline(

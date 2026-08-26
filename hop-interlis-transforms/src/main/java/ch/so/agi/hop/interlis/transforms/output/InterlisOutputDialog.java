@@ -1,4 +1,4 @@
-package ch.so.agi.hop.interlis.transforms.input;
+package ch.so.agi.hop.interlis.transforms.output;
 
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
@@ -19,38 +19,39 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Table;
+import org.eclipse.swt.widgets.TableColumn;
+import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 
 /**
- * INTERLIS Input dialog: model source, class browser (combo with all transferable classes) and a
- * live schema preview.
+ * INTERLIS Output dialog: target file, model source, class browser, identity/basket options and
+ * a field mapping grid (INTERLIS property → Hop field → status).
  *
- * <p>All model interpretation happens in {@link InterlisInputDialogController}; this class only
- * renders widgets and delegates. Probing failures are shown in the preview area and never make
- * the dialog unusable.
+ * <p>All model interpretation happens in {@link InterlisOutputDialogController}; probing failures
+ * are shown as messages and never make the dialog unusable.
  */
-public class InterlisInputDialog extends BaseTransformDialog {
+public class InterlisOutputDialog extends BaseTransformDialog {
 
-  private final InterlisInputMeta input;
-  private final InterlisInputDialogController controller = new InterlisInputDialogController();
+  private final InterlisOutputMeta input;
+  private final InterlisOutputDialogController controller = new InterlisOutputDialogController();
 
   private TextVar wFileName;
   private TextVar wModelNames;
   private TextVar wModelDirectories;
   private ComboVar wClassName;
-  private Button wIncludeTid;
-  private Button wIncludeBid;
-  private Button wIncludeClassName;
-  private Button wIncludeTopicName;
-  private TextVar wDefaultSrid;
+  private TextVar wObjectIdField;
+  private TextVar wBasketIdField;
+  private TextVar wBasketId;
+  private Button wOverwrite;
   private Label wStatus;
-  private Text wPreview;
+  private Table wMapping;
 
   private List<InterlisClassDescriptor> classes = List.of();
   private boolean suppressRefresh;
 
-  public InterlisInputDialog(
-      Shell parent, IVariables variables, InterlisInputMeta transformMeta, PipelineMeta pipelineMeta) {
+  public InterlisOutputDialog(
+      Shell parent, IVariables variables, InterlisOutputMeta transformMeta, PipelineMeta pipelineMeta) {
     super(parent, variables, transformMeta, pipelineMeta);
     this.input = transformMeta;
   }
@@ -60,7 +61,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
     shell = new Shell(getParent(), SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX);
     PropsUi.setLook(shell);
     setShellImage(shell, input);
-    shell.setText("INTERLIS Input");
+    shell.setText("INTERLIS Output");
     shell.setMinimumSize(860, 640);
 
     changed = input.hasChanged();
@@ -89,12 +90,11 @@ public class InterlisInputDialog extends BaseTransformDialog {
     fdTransformName.top = new FormAttachment(0, margin);
     wTransformName.setLayoutData(fdTransformName);
 
-    // Transfer file
+    // Output file
     Label wlFile = new Label(shell, SWT.RIGHT);
-    wlFile.setText("Data file");
+    wlFile.setText("XTF file");
     PropsUi.setLook(wlFile);
-    FormData fdlFile = labelData(wTransformName, margin);
-    wlFile.setLayoutData(fdlFile);
+    wlFile.setLayoutData(labelData(wTransformName, margin));
 
     Button wbFile = new Button(shell, SWT.PUSH | SWT.CENTER);
     wbFile.setText("Browse");
@@ -112,18 +112,26 @@ public class InterlisInputDialog extends BaseTransformDialog {
     fdFile.top = new FormAttachment(wTransformName, margin);
     wFileName.setLayoutData(fdFile);
 
+    wOverwrite = new Button(shell, SWT.CHECK);
+    wOverwrite.setText("Overwrite existing file");
+    PropsUi.setLook(wOverwrite);
+    FormData fdOverwrite = new FormData();
+    fdOverwrite.left = new FormAttachment(props.getMiddlePct(), 0);
+    fdOverwrite.top = new FormAttachment(wFileName, margin);
+    wOverwrite.setLayoutData(fdOverwrite);
+
     // Models
     Label wlModels = new Label(shell, SWT.RIGHT);
     wlModels.setText("Models");
     PropsUi.setLook(wlModels);
-    wlModels.setLayoutData(labelData(wFileName, margin));
+    wlModels.setLayoutData(labelData(wOverwrite, margin));
 
     wModelNames = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     PropsUi.setLook(wModelNames);
     FormData fdModels = new FormData();
     fdModels.left = new FormAttachment(props.getMiddlePct(), 0);
     fdModels.right = new FormAttachment(100, 0);
-    fdModels.top = new FormAttachment(wFileName, margin);
+    fdModels.top = new FormAttachment(wOverwrite, margin);
     wModelNames.setLayoutData(fdModels);
 
     // Model directories
@@ -140,7 +148,6 @@ public class InterlisInputDialog extends BaseTransformDialog {
     fdDirs.top = new FormAttachment(wModelNames, margin);
     wModelDirectories.setLayoutData(fdDirs);
 
-    // Reload
     Button wReload = new Button(shell, SWT.PUSH);
     wReload.setText("Reload model");
     PropsUi.setLook(wReload);
@@ -164,31 +171,45 @@ public class InterlisInputDialog extends BaseTransformDialog {
     fdClass.top = new FormAttachment(wModelDirectories, margin);
     wClassName.setLayoutData(fdClass);
 
-    // Options: reserved fields + default SRID
+    // Identity and basket
     Label wlTid = new Label(shell, SWT.RIGHT);
-    wlTid.setText("Reserved fields");
+    wlTid.setText("Object ID field");
     PropsUi.setLook(wlTid);
-    FormData fdlTid = labelData(wClassName, margin);
-    wlTid.setLayoutData(fdlTid);
+    wlTid.setLayoutData(labelData(wClassName, margin));
 
-    wIncludeTid = checkbox("_ili_tid", wClassName, 0);
-    wIncludeBid = checkbox("_ili_bid", wIncludeTid, 0);
-    wIncludeClassName = checkbox("_ili_class", wIncludeBid, 0);
-    wIncludeTopicName = checkbox("_ili_topic", wIncludeClassName, 0);
+    wObjectIdField = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    PropsUi.setLook(wObjectIdField);
+    FormData fdTid = new FormData();
+    fdTid.left = new FormAttachment(props.getMiddlePct(), 0);
+    fdTid.right = new FormAttachment(100, 0);
+    fdTid.top = new FormAttachment(wClassName, margin);
+    wObjectIdField.setLayoutData(fdTid);
 
-    Label wlSrid = new Label(shell, SWT.RIGHT);
-    wlSrid.setText("Default SRID");
-    PropsUi.setLook(wlSrid);
-    FormData fdlSrid = labelData(wIncludeTopicName, margin);
-    wlSrid.setLayoutData(fdlSrid);
+    Label wlBidField = new Label(shell, SWT.RIGHT);
+    wlBidField.setText("BID field");
+    PropsUi.setLook(wlBidField);
+    wlBidField.setLayoutData(labelData(wObjectIdField, margin));
 
-    wDefaultSrid = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    PropsUi.setLook(wDefaultSrid);
-    FormData fdSrid = new FormData();
-    fdSrid.left = new FormAttachment(props.getMiddlePct(), 0);
-    fdSrid.right = new FormAttachment(100, 0);
-    fdSrid.top = new FormAttachment(wIncludeTopicName, margin);
-    wDefaultSrid.setLayoutData(fdSrid);
+    wBasketIdField = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    PropsUi.setLook(wBasketIdField);
+    FormData fdBidField = new FormData();
+    fdBidField.left = new FormAttachment(props.getMiddlePct(), 0);
+    fdBidField.right = new FormAttachment(100, 0);
+    fdBidField.top = new FormAttachment(wObjectIdField, margin);
+    wBasketIdField.setLayoutData(fdBidField);
+
+    Label wlBid = new Label(shell, SWT.RIGHT);
+    wlBid.setText("Default BID");
+    PropsUi.setLook(wlBid);
+    wlBid.setLayoutData(labelData(wBasketIdField, margin));
+
+    wBasketId = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    PropsUi.setLook(wBasketId);
+    FormData fdBid = new FormData();
+    fdBid.left = new FormAttachment(props.getMiddlePct(), 0);
+    fdBid.right = new FormAttachment(100, 0);
+    fdBid.top = new FormAttachment(wBasketIdField, margin);
+    wBasketId.setLayoutData(fdBid);
 
     // Status
     wStatus = new Label(shell, SWT.LEFT | SWT.WRAP);
@@ -196,18 +217,26 @@ public class InterlisInputDialog extends BaseTransformDialog {
     FormData fdStatus = new FormData();
     fdStatus.left = new FormAttachment(0, 0);
     fdStatus.right = new FormAttachment(100, 0);
-    fdStatus.top = new FormAttachment(wDefaultSrid, margin);
+    fdStatus.top = new FormAttachment(wBasketId, margin);
     wStatus.setLayoutData(fdStatus);
 
-    // Schema preview
-    wPreview = new Text(shell, SWT.MULTI | SWT.READ_ONLY | SWT.V_SCROLL | SWT.H_SCROLL | SWT.BORDER);
-    PropsUi.setLook(wPreview);
-    FormData fdPreview = new FormData();
-    fdPreview.left = new FormAttachment(0, 0);
-    fdPreview.right = new FormAttachment(100, 0);
-    fdPreview.top = new FormAttachment(wStatus, margin);
-    fdPreview.bottom = new FormAttachment(100, -margin * 8);
-    wPreview.setLayoutData(fdPreview);
+    // Mapping grid
+    wMapping = new Table(shell, SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL);
+    wMapping.setHeaderVisible(true);
+    wMapping.setLinesVisible(true);
+    PropsUi.setLook(wMapping);
+    String[] columns = {"INTERLIS property", "Hop field", "Type", "Status"};
+    for (String column : columns) {
+      TableColumn tableColumn = new TableColumn(wMapping, SWT.LEFT);
+      tableColumn.setText(column);
+      tableColumn.setWidth(180);
+    }
+    FormData fdMapping = new FormData();
+    fdMapping.left = new FormAttachment(0, 0);
+    fdMapping.right = new FormAttachment(100, 0);
+    fdMapping.top = new FormAttachment(wStatus, margin);
+    fdMapping.bottom = new FormAttachment(100, -margin * 8);
+    wMapping.setLayoutData(fdMapping);
 
     // OK / Cancel
     Button wOk = new Button(shell, SWT.PUSH);
@@ -216,68 +245,49 @@ public class InterlisInputDialog extends BaseTransformDialog {
     wCancel.setText("Cancel");
     setButtonPositions(new Button[] {wOk, wCancel}, margin, null);
 
-    // Listeners
     wTransformName.addModifyListener(e -> input.setChanged());
     wFileName.addModifyListener(
         e -> {
           input.setChanged();
           if (!suppressRefresh) {
-            reloadClassesAndPreview();
+            refresh();
           }
         });
     wModelNames.addModifyListener(
         e -> {
           input.setChanged();
           if (!suppressRefresh) {
-            reloadClassesAndPreview();
+            refresh();
           }
         });
     wModelDirectories.addModifyListener(
         e -> {
           input.setChanged();
           if (!suppressRefresh) {
-            reloadClassesAndPreview();
+            refresh();
           }
         });
     wClassName.addModifyListener(
         e -> {
           input.setChanged();
           if (!suppressRefresh) {
-            refreshPreview();
+            refresh();
           }
         });
-    wIncludeTid.addListener(SWT.Selection, e -> refreshPreview());
-    wIncludeBid.addListener(SWT.Selection, e -> refreshPreview());
-    wIncludeClassName.addListener(SWT.Selection, e -> refreshPreview());
-    wIncludeTopicName.addListener(SWT.Selection, e -> refreshPreview());
-    wDefaultSrid.addModifyListener(
-        e -> {
-          input.setChanged();
-          if (!suppressRefresh) {
-            refreshPreview();
-          }
-        });
+    wObjectIdField.addModifyListener(e -> input.setChanged());
+    wBasketIdField.addModifyListener(e -> input.setChanged());
+    wBasketId.addModifyListener(e -> input.setChanged());
+    wOverwrite.addListener(SWT.Selection, e -> input.setChanged());
     wbFile.addListener(SWT.Selection, e -> browse());
-    wReload.addListener(SWT.Selection, e -> reloadClassesAndPreview());
+    wReload.addListener(SWT.Selection, e -> refresh());
     wOk.addListener(SWT.Selection, e -> ok());
     wCancel.addListener(SWT.Selection, e -> cancel());
 
     getData();
-    reloadClassesAndPreview();
+    refresh();
     input.setChanged(changed);
     BaseDialog.defaultShellHandling(shell, c -> ok(), c -> cancel());
     return transformName;
-  }
-
-  private Button checkbox(String label, org.eclipse.swt.widgets.Control topControl, int offset) {
-    Button button = new Button(shell, SWT.CHECK);
-    button.setText(label);
-    PropsUi.setLook(button);
-    FormData fd = new FormData();
-    fd.left = new FormAttachment(props.getMiddlePct(), 0);
-    fd.top = new FormAttachment(topControl, offset == 0 ? PropsUi.getMargin() : 0);
-    button.setLayoutData(fd);
-    return button;
   }
 
   private FormData labelData(org.eclipse.swt.widgets.Control topControl, int margin) {
@@ -289,7 +299,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
   }
 
   private void browse() {
-    FileDialog dialog = new FileDialog(shell, SWT.OPEN);
+    FileDialog dialog = new FileDialog(shell, SWT.SAVE);
     dialog.setFilterExtensions(new String[] {"*.xtf", "*.*"});
     dialog.setFilterNames(new String[] {"INTERLIS transfer files", "All files"});
     String current = wFileName.getText();
@@ -310,11 +320,10 @@ public class InterlisInputDialog extends BaseTransformDialog {
       wModelDirectories.setText(
           input.getModelDirectories() == null ? "" : input.getModelDirectories());
       wClassName.setText(input.getClassName() == null ? "" : input.getClassName());
-      wIncludeTid.setSelection(input.isIncludeTid());
-      wIncludeBid.setSelection(input.isIncludeBid());
-      wIncludeClassName.setSelection(input.isIncludeClassName());
-      wIncludeTopicName.setSelection(input.isIncludeTopicName());
-      wDefaultSrid.setText(input.getDefaultSrid() == null ? "" : input.getDefaultSrid());
+      wObjectIdField.setText(input.getObjectIdField() == null ? "" : input.getObjectIdField());
+      wBasketIdField.setText(input.getBasketIdField() == null ? "" : input.getBasketIdField());
+      wBasketId.setText(input.getBasketId() == null ? "" : input.getBasketId());
+      wOverwrite.setSelection(input.isOverwrite());
     } finally {
       suppressRefresh = false;
     }
@@ -322,17 +331,17 @@ public class InterlisInputDialog extends BaseTransformDialog {
     wTransformName.setFocus();
   }
 
-  private void reloadClassesAndPreview() {
+  private void refresh() {
     syncMetaFromWidgets();
     InterlisProbeResult result = controller.probe(input, variables);
     classes = result.classes();
+    populateClassCombo();
     if (result.successful()) {
-      populateClassCombo();
-      refreshPreview();
-    } else {
-      populateClassCombo();
       wStatus.setText(result.message());
-      wPreview.setText("");
+      populateMapping(controller.mapping(result.projection().plan()));
+    } else {
+      wStatus.setText(result.message());
+      wMapping.removeAll();
     }
   }
 
@@ -354,31 +363,27 @@ public class InterlisInputDialog extends BaseTransformDialog {
     }
   }
 
-  private void refreshPreview() {
-    syncMetaFromWidgets();
-    InterlisProbeResult result = controller.probe(input, variables);
-    classes = result.classes();
-    if (result.successful()) {
-      wStatus.setText(result.message());
-      wPreview.setText(controller.formatSchemaPreview(result.projection().plan()));
-    } else {
-      wStatus.setText(result.message());
-      wPreview.setText("");
+  private void populateMapping(List<InterlisFieldMapping> mappings) {
+    wMapping.removeAll();
+    for (InterlisFieldMapping mapping : mappings) {
+      TableItem item = new TableItem(wMapping, SWT.NONE);
+      item.setText(0, mapping.property());
+      item.setText(1, mapping.hopField());
+      item.setText(2, mapping.type());
+      item.setText(3, mapping.status());
     }
   }
 
-  /** Copies the current widget values into the meta so probing uses the latest configuration. */
   private void syncMetaFromWidgets() {
     if (wFileName != null) {
       input.setFileName(wFileName.getText());
       input.setModelNames(wModelNames.getText());
       input.setModelDirectories(wModelDirectories.getText());
       input.setClassName(wClassName.getText());
-      input.setIncludeTid(wIncludeTid.getSelection());
-      input.setIncludeBid(wIncludeBid.getSelection());
-      input.setIncludeClassName(wIncludeClassName.getSelection());
-      input.setIncludeTopicName(wIncludeTopicName.getSelection());
-      input.setDefaultSrid(wDefaultSrid.getText());
+      input.setObjectIdField(wObjectIdField.getText());
+      input.setBasketIdField(wBasketIdField.getText());
+      input.setBasketId(wBasketId.getText());
+      input.setOverwrite(wOverwrite.getSelection());
     }
   }
 

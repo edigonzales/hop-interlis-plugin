@@ -112,6 +112,10 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
               resolve(meta.getClassName()),
               meta.projectionOptions(this));
       data.plan = data.projection.plan();
+      // The XTF 2.4 reader needs the model to resolve topics; set it after the header was read.
+      if (data.reader instanceof XtfTransferReader transferReader) {
+        transferReader.setModel(data.projection.model().transferDescription());
+      }
       data.mapper = new DefaultInterlisObjectToRowMapper();
       data.outputRowMeta = new HopRowSchemaFactory().createRowMeta(data.plan);
 

@@ -37,6 +37,7 @@ public final class XtfTransferReader implements InterlisTransferReader {
   private String currentTopic;
   private String currentBasketId;
   private List<String> detectedModelNames;
+  private boolean transferEnded;
 
   private XtfTransferReader(Path file, TransferDescription transferDescription) {
     this.file = file;
@@ -67,6 +68,10 @@ public final class XtfTransferReader implements InterlisTransferReader {
 
   @Override
   public InterlisObjectEnvelope next() throws InterlisReadException {
+    // The XTF 2.4 reader throws on reads past END_TRANSFER instead of returning null.
+    if (transferEnded) {
+      return null;
+    }
     try {
       IoxEvent event = reader.read();
       if (event == null) {
@@ -133,6 +138,7 @@ public final class XtfTransferReader implements InterlisTransferReader {
             null);
       }
       if (event instanceof EndTransferEvent) {
+        transferEnded = true;
         return new InterlisObjectEnvelope(
             InterlisEventType.END_TRANSFER,
             null,
@@ -153,6 +159,16 @@ public final class XtfTransferReader implements InterlisTransferReader {
   /** Model names declared in the XTF header; empty until {@code START_TRANSFER} was read. */
   public List<String> detectedModelNames() {
     return detectedModelNames == null ? List.of() : List.copyOf(detectedModelNames);
+  }
+
+  /**
+   * Sets the model description used to interpret the transfer. Needed by the XTF 2.4 reader to
+   * resolve topics; safe to call after the transfer header was read.
+   */
+  public void setModel(TransferDescription transferDescription) {
+    if (reader instanceof IoxIliReader ioxIliReader && transferDescription != null) {
+      ioxIliReader.setModel(transferDescription);
+    }
   }
 
   private static List<String> detectModelNames(XtfStartTransferEvent event) {

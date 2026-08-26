@@ -66,6 +66,24 @@ assert val(building, 5) == "10", f"flattened number missing: {building}"
 assert val(building, 6) == "m1", f"role reference missing: {building}"
 assert val(building, 7) == "inherited note", f"inherited attribute missing: {building}"
 
+roundtrip_csv = output_dir / "interlis-roundtrip.csv"
+if not roundtrip_csv.exists():
+    raise SystemExit(f"missing output {roundtrip_csv}")
+
+with roundtrip_csv.open(newline="", encoding="utf-8") as f:
+    rows = list(csv.reader(f, delimiter=";"))
+
+assert len(rows) == 3, f"expected 1 header + 2 data rows in roundtrip, got {len(rows)}"
+r1, r2 = rows[1], rows[2]
+assert val(r1, 0) == "o1" and val(r1, 2) == "A", f"unexpected roundtrip o1 row: {r1}"
+assert val(r2, 0) == "o2" and val(r2, 2) == "B", f"unexpected roundtrip o2 row: {r2}"
+assert "POINT (2600000 1200000)" in r1[3], f"roundtrip center missing: {r1}"
+assert "POLYGON" in r1[7], f"roundtrip boundary missing: {r1}"
+# The arc must survive the full XTF write/read roundtrip.
+assert "COMPOUNDCURVE" in r2[5], f"roundtrip axis is not a compound curve: {r2}"
+assert "CIRCULARSTRING" in r2[5], f"roundtrip arc was linearized: {r2}"
+assert "2600050 1200050" in r2[5], f"roundtrip arc control point missing: {r2}"
+
 if with_gpkg:
     gpkg = output_dir / "interlis-arcs.gpkg"
     if not gpkg.exists():
@@ -102,5 +120,6 @@ if with_gpkg:
 print("E2E outputs OK:")
 print(f"  {geometry_csv}: 2 geometry rows, arc preserved as CIRCULARSTRING")
 print(f"  {structures_csv}: structure flattening, role reference and inheritance verified")
+print(f"  {roundtrip_csv}: XTF write/read roundtrip, arc still a CIRCULARSTRING")
 if with_gpkg:
     print("  interlis-arcs.gpkg: 2 curve features, axis stored as COMPOUNDCURVE")

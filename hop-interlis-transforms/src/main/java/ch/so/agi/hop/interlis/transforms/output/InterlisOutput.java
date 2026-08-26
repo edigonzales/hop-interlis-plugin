@@ -1,0 +1,217 @@
+package ch.so.agi.hop.interlis.transforms.output;
+
+import ch.interlis.iom.IomObject;
+import ch.so.agi.hop.interlis.core.io.XtfTransferWriter;
+import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
+import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
+import ch.so.agi.hop.interlis.core.mapping.RowToIomMapper;
+import ch.so.agi.hop.interlis.core.mapping.RowWriteOptions;
+import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
+import ch.so.agi.hop.interlis.transforms.mapping.InterlisRowBindings;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.List;
+import org.apache.hop.core.exception.HopException;
+import org.apache.hop.pipeline.Pipeline;
+import org.apache.hop.pipeline.PipelineMeta;
+import org.apache.hop.pipeline.transform.BaseTransform;
+import org.apache.hop.pipeline.transform.TransformMeta;
+
+/**
+ * INTERLIS Output: writes typed Hop rows of one INTERLIS class to an XTF file.
+ *
+ * <p>Input rows must be grouped by basket ID; a changed BID opens a new basket. The row schema is
+ * not modified, so downstream transforms receive the rows unchanged.
+ */
+public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOutputData> {
+
+  public InterlisOutput(
+      TransformMeta transformMeta,
+      InterlisOutputMeta meta,
+      InterlisOutputData data,
+      int copyNr,
+      PipelineMeta pipelineMeta,
+      Pipeline pipeline) {
+    super(transformMeta, meta, data, copyNr, pipelineMeta, pipeline);
+  }
+
+  @Override
+  public boolean processRow() throws HopException {
+    Object[] row = getRow();
+    if (row == null) {
+      finishWriting();
+      setOutputDone();
+      if (isBasic()) {
+        logBasic("Finished writing INTERLIS transfer: objects written " + data.writtenObjects);
+      }
+      return false;
+    }
+
+    if (!data.initialized) {
+      initialize();
+    }
+
+    try {
+      handleBasket(row);
+      Object[] values =
+          InterlisRowBindings.values(row, data.inputIndexes);
+      IomObject object =
+          data.mapper.map(
+              values, data.plan, new RowWriteOptions(true, resolve(meta.getBasketId())));
+      data.writer.writeObject(object);
+      data.writtenObjects++;
+    } catch (Exception e) {
+      closeWriter();
+      throw new HopException(
+          "Failed to write INTERLIS object: " + e.getMessage(), e);
+    }
+
+    putRow(getInputRowMeta(), row);
+    if (checkFeedback(getLinesWritten()) && isBasic()) {
+      logBasic("Wrote " + data.writtenObjects + " objects of class " + meta.getClassName());
+    }
+    return true;
+  }
+
+  private void initialize() throws HopException {
+    InterlisRuntimeSupport.initialize();
+
+    String resolvedFile = resolve(meta.getFileName());
+    if (resolvedFile.isBlank()) {
+      throw new HopException("INTERLIS output file is not configured");
+    }
+    Path file = Path.of(resolvedFile);
+    if (!meta.isOverwrite() && java.nio.file.Files.exists(file)) {
+      throw new HopException(
+          "INTERLIS output file already exists: " + file + " (enable overwrite to replace it)");
+    }
+
+    try {
+      data.projection =
+          new InterlisProjectionService()
+              .project(
+                  new InterlisModelRequest(
+                      null, resolveModelNames(), resolveModelDirectories()),
+                  resolve(meta.getClassName()),
+                  meta.projectionOptions(this));
+      data.plan = data.projection.plan();
+      data.mapper = new RowToIomMapper();
+      data.inputIndexes = InterlisRowBindings.bind(getInputRowMeta(), data.plan);
+
+      data.objectIdFieldIndex = getInputRowMeta().indexOfValue(resolve(meta.getObjectIdField()));
+      if (data.objectIdFieldIndex < 0) {
+        throw new HopException(
+            "Object ID field <" + resolve(meta.getObjectIdField()) + "> not found in the input");
+      }
+      String basketField = resolve(meta.getBasketIdField());
+      data.basketIdFieldIndex =
+          basketField.isBlank() ? -1 : getInputRowMeta().indexOfValue(basketField);
+
+      data.writer =
+          XtfTransferWriter.open(
+              file,
+              data.projection.model().transferDescription(),
+              data.projection.modelNames());
+      data.writer.startTransfer("hop-interlis-plugin");
+
+      if (isBasic()) {
+        logBasic(
+            "Writing INTERLIS class "
+                + data.plan.classDescriptor().scopedName()
+                + " to "
+                + file
+                + " (models "
+                + data.projection.modelNames()
+                + ")");
+      }
+      data.initialized = true;
+    } catch (HopException e) {
+      closeWriter();
+      throw e;
+    } catch (Exception e) {
+      closeWriter();
+      throw new HopException("Failed to initialize INTERLIS Output: " + e.getMessage(), e);
+    }
+  }
+
+  private void handleBasket(Object[] row) throws Exception {
+    String bid;
+    if (data.basketIdFieldIndex >= 0 && row[data.basketIdFieldIndex] != null) {
+      bid = row[data.basketIdFieldIndex].toString().trim();
+      if (bid.isEmpty()) {
+        bid = resolve(meta.getBasketId());
+      }
+    } else {
+      bid = resolve(meta.getBasketId());
+    }
+
+    if (data.currentBid == null) {
+      data.writer.startBasket(data.plan.classDescriptor().topicScopedName(), bid);
+      data.currentBid = bid;
+    } else if (!data.currentBid.equals(bid)) {
+      data.writer.endBasket();
+      data.writer.startBasket(data.plan.classDescriptor().topicScopedName(), bid);
+      data.currentBid = bid;
+    }
+  }
+
+  private void finishWriting() throws HopException {
+    if (data.writer == null) {
+      return;
+    }
+    try {
+      if (data.currentBid != null) {
+        data.writer.endBasket();
+      }
+      data.writer.endTransfer();
+    } catch (Exception e) {
+      throw new HopException("Failed to finish INTERLIS transfer: " + e.getMessage(), e);
+    } finally {
+      closeWriter();
+    }
+  }
+
+  private void closeWriter() {
+    if (data.writer != null) {
+      try {
+        data.writer.close();
+      } catch (Exception e) {
+        if (isDebug()) {
+          logDebug("Failed to close INTERLIS writer: " + e.getMessage());
+        }
+      } finally {
+        data.writer = null;
+      }
+    }
+  }
+
+  private List<String> resolveModelNames() {
+    String resolved = resolve(meta.getModelNames());
+    if (resolved.isBlank()
+        || ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA.equals(
+            resolved.trim())) {
+      return List.of();
+    }
+    return Arrays.stream(resolved.split(","))
+        .map(String::trim)
+        .filter(n -> !n.isEmpty())
+        .toList();
+  }
+
+  private List<String> resolveModelDirectories() {
+    String resolved = resolve(meta.getModelDirectories());
+    if (resolved.isBlank()) {
+      return List.of();
+    }
+    return Arrays.stream(resolved.split(";"))
+        .map(String::trim)
+        .filter(d -> !d.isEmpty())
+        .toList();
+  }
+
+  @Override
+  public void dispose() {
+    closeWriter();
+    super.dispose();
+  }
+}

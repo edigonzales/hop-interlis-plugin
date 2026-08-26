@@ -10,6 +10,16 @@ The authoritative architecture and implementation specification lives in [`docs/
 
 ## Status
 
+**Phase 2** (`INTERLIS Output` + typed roundtrip) is implemented:
+
+- `INTERLIS Output` transform writes typed Hop rows of one INTERLIS class to an XTF file
+  (streaming, multi-basket, overwrite protection, strict mandatory checks);
+- the full roundtrip `XTF → INTERLIS Input → INTERLIS Output → XTF` is verified in unit,
+  pipeline and `hop-run` E2E tests – **circular arcs survive the write/read cycle** as
+  SQL/MM curves;
+- dialog with target file, model source, class browser, identity/basket options and a
+  field mapping grid (auto-map by name, status per property).
+
 **Phase 1** (`INTERLIS Input` for XTF) is implemented:
 
 - `INTERLIS Input` transform reads one INTERLIS class from an XTF file and emits stable,
@@ -34,7 +44,8 @@ Phase 0 (project foundation) is implemented as well:
 - plugin packaging as installable ZIP with a distribution checker;
 - one-command local development workflow and `hop-run` E2E suite.
 
-See [`docs/progress/phase-01.md`](docs/progress/phase-01.md) and
+See [`docs/progress/phase-02.md`](docs/progress/phase-02.md),
+[`docs/progress/phase-01.md`](docs/progress/phase-01.md) and
 [`docs/progress/phase-00.md`](docs/progress/phase-00.md) for details and known limitations.
 
 ## Quick start for developers
@@ -83,8 +94,8 @@ bash scripts/run-e2e.sh "$HOP_HOME"
 
 | Module | Purpose |
 |---|---|
-| `hop-interlis-core` | Model compilation, schema descriptors, transfer reader, mapping plans, geometry mapper. No SWT, no Hop runtime. |
-| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`). |
+| `hop-interlis-core` | Model compilation, schema descriptors, transfer reader/writer, mapping plans, geometry mapper. No SWT, no Hop runtime. |
+| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`, `INTERLIS Output`). |
 | `assemblies/assemblies-hop-interlis` | Installable plugin ZIP. |
 
 ## License

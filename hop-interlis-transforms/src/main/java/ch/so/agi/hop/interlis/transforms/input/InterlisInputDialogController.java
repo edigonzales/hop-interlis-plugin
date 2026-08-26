@@ -4,6 +4,7 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisFieldPlan;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowMappingPlan;
 import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
+import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hop.core.exception.HopTransformException;

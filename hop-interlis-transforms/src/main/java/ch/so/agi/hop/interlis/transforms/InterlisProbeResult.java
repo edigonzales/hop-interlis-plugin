@@ -1,4 +1,4 @@
-package ch.so.agi.hop.interlis.transforms.input;
+package ch.so.agi.hop.interlis.transforms;
 
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;

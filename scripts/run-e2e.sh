@@ -94,6 +94,8 @@ run_pipeline() {
 
 run_pipeline "$PROJECT_DIR/e2e/pipelines/02-interlis-input-to-csv.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/03-interlis-input-structures.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/05-xtf-roundtrip.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/06-roundtrip-check.hpl"
 if [[ "$RUN_GPKG" == "true" ]]; then
   run_pipeline "$PROJECT_DIR/e2e/pipelines/04-interlis-to-gpkg.hpl"
 fi

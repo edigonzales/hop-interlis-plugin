@@ -85,7 +85,7 @@ public final class InterlisProjectionService {
                                 .toList()));
 
     InterlisRowMappingPlan plan = schemaBuilder.build(schema, classDescriptor, options);
-    return new InterlisProjectionResult(schema, plan, modelNames);
+    return new InterlisProjectionResult(model, schema, plan, modelNames);
   }
 
   private List<String> resolveModelDirectories(InterlisModelRequest request) {
