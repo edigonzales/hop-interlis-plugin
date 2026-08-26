@@ -30,6 +30,16 @@ if [[ ! -f "$HOP_HOME/hop-run.sh" ]]; then
   exit 1
 fi
 
+# Pick a JDK >= 21 for hop-run: HOP_JAVA_HOME or JAVA_HOME win when usable;
+# otherwise the SDKMAN candidates are scanned (Temurin preferred, then highest
+# version; Java 8/11/17 are ignored).
+source "$SCRIPT_DIR/lib-java.sh"
+select_java_home
+export JAVA_HOME="$SELECTED_JAVA_HOME"
+export PATH="$JAVA_HOME/bin:$PATH"
+export HOP_JAVA_HOME="$JAVA_HOME"
+echo "==> Using JDK $JAVA_HOME"
+
 GEOMETRY_REPO="${HOP_GEOMETRY_TYPE_REPO:-$PROJECT_DIR/../hop-geometry-type-plugin}"
 GEOMETRY_ZIP="$(find "$GEOMETRY_REPO/assemblies/assemblies-hop-geometry-type/target" \
   -maxdepth 1 -name 'hop-geometry-type-plugin-*.zip' -print 2>/dev/null | head -n 1)"

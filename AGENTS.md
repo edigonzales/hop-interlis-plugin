@@ -124,16 +124,25 @@ bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
 
 The script should:
 
-1. locate/build `hop-geometry-type-plugin` if required;
-2. build and test `hop-interlis-plugin`;
-3. verify the produced distribution;
-4. install the plugin into Apache Hop;
-5. restart Hop GUI;
-6. print the Hop startup log path.
+1. pick a suitable JDK (see below);
+2. locate/build `hop-geometry-type-plugin` if required;
+3. build and test `hop-interlis-plugin`;
+4. verify the produced distribution;
+5. install the plugin into Apache Hop;
+6. restart Hop GUI;
+7. print the Hop startup log path.
 
 Prefer improving this script instead of documenting additional manual copy/install procedures.
 
 `HOP_HOME` must remain configurable. Do not commit a developer-specific Apache Hop installation path.
+
+JDK selection (`scripts/lib-java.sh`, shared with `scripts/run-e2e.sh`): the
+build requires Java >= 21 (`maven.compiler.release`). The scripts use
+`HOP_JAVA_HOME` or `JAVA_HOME` when they provide a usable JDK, otherwise they
+scan `$HOME/.sdkman/candidates/java` and prefer Temurin (`*-tem`) before the
+highest version; unsuitable candidates (e.g. Java 8, 11, 17) and the SDKMAN
+`current` symlink are ignored, and the scripts fail with an actionable message
+when no suitable JDK exists. Do not replace this with hard-coded JDK paths.
 
 ## Architecture invariants
 

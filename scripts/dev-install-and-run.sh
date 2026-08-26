@@ -27,6 +27,16 @@ if [[ ! -f "$GEOMETRY_REPO/pom.xml" ]]; then
   exit 1
 fi
 
+# Pick a JDK >= 21 for the Maven builds and the Hop GUI: HOP_JAVA_HOME or
+# JAVA_HOME win when usable; otherwise the SDKMAN candidates are scanned
+# (Temurin preferred, then highest version; Java 8/11/17 are ignored).
+source "$SCRIPT_DIR/lib-java.sh"
+select_java_home
+export JAVA_HOME="$SELECTED_JAVA_HOME"
+export PATH="$JAVA_HOME/bin:$PATH"
+export HOP_JAVA_HOME="$JAVA_HOME"
+echo "==> Using JDK $JAVA_HOME"
+
 GEOMETRY_REPO="$(cd "$GEOMETRY_REPO" && pwd)"
 GEOMETRY_PLUGIN_DIR="$HOP_HOME/plugins/misc/hop-geometry-type"
 INTERLIS_PLUGIN_DIR="$HOP_HOME/plugins/transforms/interlis"
