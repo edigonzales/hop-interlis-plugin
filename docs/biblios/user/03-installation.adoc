@@ -1,0 +1,138 @@
+== Installation
+
+Dieses Kapitel beschreibt, wie Sie das `hop-interlis-plugin` installieren und in Apache Hop verfügbar machen.
+
+=== Voraussetzungen
+
+Bevor Sie das Plugin installieren, stellen Sie sicher, dass folgende Komponenten vorhanden sind:
+
+[cols="1,2"]
+|===
+| Komponente | Version / Anforderung
+
+| Java
+| Java 21 (entspricht der Anforderung von Apache Hop 2.18)
+
+| Apache Hop
+| Version 2.18.x (oder kompatible Version)
+
+| hop-geometry-type-plugin
+| Muss installiert sein (wird vom INTERLIS-Plugin für Geometrie-Typen benötigt)
+
+| Betriebssystem
+| Linux, macOS oder Windows
+|===
+
+[IMPORTANT]
+====
+Das INTERLIS-Plugin benötigt das `hop-geometry-type-plugin` als Voraussetzung, da es Geometrie-Werte in Hop-Rows als JTS-Geometrien darstellt. Ohne dieses Plugin funktioniert die Geometrie-Verarbeitung nicht.
+====
+
+=== Plugin herunterladen oder bauen
+
+Das Plugin wird als installierbare ZIP-Datei (`hop-interlis-plugin-<version>.zip`) ausgeliefert.
+
+==== Option A: Release herunterladen
+
+1. Gehen Sie zu den https://github.com/edigonzales/hop-interlis-plugin/releases[GitHub Releases^].
+2. Laden Sie die neueste ZIP-Datei herunter.
+3. Entpacken Sie die ZIP-Datei in ein temporäres Verzeichnis.
+
+==== Option B: Aus Quellen bauen
+
+Wenn Sie das Plugin aus dem Quellcode bauen möchten, benötigen Sie Maven:
+
+[source,bash,subs=none]
+----
+# Repository klonen
+$ git clone https://github.com/edigonzales/hop-interlis-plugin.git
+$ cd hop-interlis-plugin
+
+# Mit Maven Wrapper bauen (ergibt ZIP im assemblies/-Verzeichnis)
+$ ./mvnw -B -ntp clean verify
+----
+
+Die installierbare ZIP-Datei finden Sie anschliessend unter:
+
+[source,text]
+----
+assemblies/assemblies-hop-interlis/target/hop-interlis-plugin-<version>.zip
+----
+
+=== Plugin in Apache Hop installieren
+
+1. **Hop beenden**: Schliessen Sie die Hop-GUI und stellen Sie sicher, dass keine Hop-Prozesse laufen.
+
+2. **ZIP entpacken**: Entpacken Sie das Plugin-ZIP in das `plugins/`-Verzeichnis Ihrer Hop-Installation. Die Struktur sollte wie folgt aussehen:
++
+[source,text]
+----
+$HOP_HOME/
+  plugins/
+    hop-interlis-plugin/
+      hop-interlis-core-<version>.jar
+      hop-interlis-transforms-<version>.jar
+      ... (weitere JARs und Konfigurationsdateien)
+----
++
+[IMPORTANT]
+====
+Erstellen Sie ein neues Verzeichnis `hop-interlis-plugin/` unter `plugins/`, falls es noch nicht existiert. Entpacken Sie den Inhalt des ZIPs dort hinein, nicht direkt in `plugins/`.
+====
+
+3. **hop-geometry-type-plugin prüfen**: Stellen Sie sicher, dass das `hop-geometry-type-plugin` ebenfalls unter `plugins/` installiert ist:
++
+[source,text]
+----
+$HOP_HOME/
+  plugins/
+    hop-geometry-type-plugin/
+      ...
+----
+
+=== Installation verifizieren
+
+1. **Hop GUI starten**.
+
+2. **Transform-Palette öffnen**: Gehen Sie zu _Pipeline → Transforms_ oder drücken Sie `Ctrl+Shift+T`.
+
+3. **Suchen**: Geben Sie im Suchfeld `interlis` ein.
+
+4. **Ergebnis prüfen**: Sie sollten folgende Transforms sehen:
+
+[source,text]
+----
+INTERLIS Input
+INTERLIS Output
+INTERLIS Transfer Input
+INTERLIS Transfer Output
+INTERLIS Object to Row
+INTERLIS Row to Object
+INTERLIS Structure Explode
+INTERLIS Structure Collect
+INTERLIS Role Join
+INTERLIS Validate
+INTERLIS Enumerations
+----
+
+[CAUTION]
+====
+Wenn die Transforms nicht erscheinen, prüfen Sie:
+
+- Ob das Plugin-ZIP vollständig entpackt wurde
+- Ob keine JAR-Dateien doppelt vorhanden sind (ClassLoader-Probleme)
+- Das Hop-Startprotokoll auf Fehlermeldungen (unter `logs/` oder in der Konsole)
+- Ob Java 21 verwendet wird (prüfen Sie mit `java -version`)
+====
+
+[TIP]
+====
+Für die lokale Entwicklung gibt es ein Skript, das den Build, die Installation und den Hop-Start automatisiert:
+
+[source,bash]
+----
+$ bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
+----
+
+Das Skript baut das Plugin, installiert es in Hop und startet die Hop-GUI neu.
+====

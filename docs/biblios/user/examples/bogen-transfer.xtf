@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="hop-interlis-plugin-doc" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="DemoBogen" VERSION="2024-01-01" URI="https://github.com/edigonzales/hop-interlis-plugin"/>
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <DemoBogen.Verkehr BID="b1">
+      <DemoBogen.Verkehr.Strassenachse TID="s1">
+        <Name>Hauptstrasse</Name>
+        <Geometrie>
+          <POLYLINE>
+            <COORD>
+              <C1>2600000.0</C1>
+              <C2>1200000.0</C2>
+            </COORD>
+            <ARC>
+              <C1>2600050.0</C1>
+              <C2>1200050.0</C2>
+              <A1>2600100.0</A1>
+              <A2>1200000.0</A2>
+            </ARC>
+            <COORD>
+              <C1>2600100.0</C1>
+              <C2>1200000.0</C2>
+            </COORD>
+          </POLYLINE>
+        </Geometrie>
+      </DemoBogen.Verkehr.Strassenachse>
+    </DemoBogen.Verkehr>
+  </DATASECTION>
+</TRANSFER>

@@ -1,0 +1,25 @@
+INTERLIS 2.3;
+
+/** Beispielmodell mit einfachem Constraint für Validierung.
+    Zeigt die Validierung von INTERLIS-Daten.
+**/
+
+MODEL DemoValidierung (de)
+AT "https://github.com/edigonzales/hop-interlis-plugin"
+VERSION "2024-01-01" =
+
+  TOPIC Daten =
+
+    CLASS Messung =
+      Standort : TEXT*100;
+      Wert : 0.0 .. 100.0;
+      Einheit : (
+        Prozent,
+        Grad_Celsius,
+        Meter
+      );
+    END Messung;
+
+  END Daten;
+
+END DemoValidierung.

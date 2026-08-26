@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="hop-interlis-plugin-doc" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="DemoValidierung" VERSION="2024-01-01" URI="https://github.com/edigonzales/hop-interlis-plugin"/>
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <DemoValidierung.Daten BID="b1">
+      <DemoValidierung.Daten.Messung TID="m1">
+        <Standort>Station A</Standort>
+        <Wert>23.5</Wert>
+        <Einheit>Grad_Celsius</Einheit>
+      </DemoValidierung.Daten.Messung>
+      <DemoValidierung.Daten.Messung TID="m2">
+        <Standort>Station B</Standort>
+        <Wert>85.0</Wert>
+        <Einheit>Grad_Celsius</Einheit>
+      </DemoValidierung.Daten.Messung>
+    </DemoValidierung.Daten>
+  </DATASECTION>
+</TRANSFER>

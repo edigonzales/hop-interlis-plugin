@@ -1,0 +1,503 @@
+[[erweiterte-transforms]]
+== Erweiterte Transforms
+
+Dieses Kapitel beschreibt die spezialisierten Transforms für fortgeschrittene Szenarien.
+
+[TIP]
+====
+Diese Transforms sind für fortgeschrittene Anwendungsfälle gedacht. Für die meisten ETL-Aufgaben reichen `INTERLIS Input` und `INTERLIS Output` aus.
+====
+
+=== INTERLIS Transfer Input
+
+Liest den gesamten Transfer als Event-Stream. Im Gegensatz zum `INTERLIS Input` (der nur Objekte einer Klasse liefert), liefert der `INTERLIS Transfer Input` alle Events des Transfers: Transfer-Start, Basket-Start, Objekte aller Klassen, Basket-Ende, Transfer-Ende.
+
+#### Anwendungsfälle
+
+- Paralleles Verarbeiten mehrerer Klassen aus demselben Transfer
+- Zugriff auf Transfer-Metadaten (Header, OID-Spaces)
+- Verarbeitung von inkrementellen Transfers mit vollständigem Event-Stream
+
+#### Output-Schema
+
+[cols="1,1,2"]
+|===
+| Feld | Typ | Bedeutung
+
+| _ili_event_type
+| String
+| `START_TRANSFER`, `START_BASKET`, `OBJECT`, `DELETE_OBJECT`, `END_BASKET`, `END_TRANSFER`
+
+| _ili_model
+| String
+| Name des Modells (bei OBJECT)
+
+| _ili_topic
+| String
+| Name des Topics (bei START_BASKET und OBJECT)
+
+| _ili_bid
+| String
+| Basket-ID
+
+| _ili_class
+| String
+| Qualifizierter Klassenname (bei OBJECT)
+
+| _ili_tid
+| String
+| Object-ID (bei OBJECT und DELETE_OBJECT)
+
+| _ili_operation
+| String
+| `INSERT`, `UPDATE`, `DELETE` (bei inkrementellen Transfers)
+
+| _ili_object
+| InterlisObject
+| Das rohe IOM-Objekt (nur bei OBJECT)
+
+| _ili_line
+| Integer
+| Zeilennummer in der XTF-Datei
+
+| _ili_column
+| Integer
+| Spaltennummer in der XTF-Datei
+|===
+
+[IMPORTANT]
+====
+Der Output-Stream hat ein **stabiles Schema** -- unabhängig davon, welche Klassen im Transfer vorkommen. Alle Objekte aller Klassen erscheinen in demselben Stream.
+====
+
+#### Modi
+
+[cols="1,2"]
+|===
+| Modus | Beschreibung
+
+| Objects (Default)
+| Nur OBJECT- und DELETE_OBJECT-Events werden ausgegeben. Transfer- und Basket-Events werden zwar gelesen, aber nicht als Rows ausgegeben (ihre Daten stehen als Felder in den Object-Rows).
+
+| Events
+| Der vollständige Event-Stream inkl. START_TRANSFER, START_BASKET, END_BASKET, END_TRANSFER.
+|===
+
+[WARNING]
+====
+Im Events-Modus ändert sich das Verhalten der nachfolgenden Transforms, da auch Rows ohne Objekt vorhanden sind. Verwenden Sie einen `Filter rows`-Transform, um nur OBJECT-Rows weiterzugeben:
+
+[source,text]
+----
+Filter rows:
+  Condition: _ili_event_type = "OBJECT"
+----
+====
+
+=== INTERLIS Transfer Output
+
+Schreibt einen Envelope-Stream als XTF-Datei.
+
+#### Anwendungsfälle
+
+- Schreiben mehrerer Klassen in eine XTF-Datei (über `Append Streams` oder `Merge join`)
+- Verarbeitung von Event-Streams aus `INTERLIS Transfer Input`
+- Erstellen von inkrementellen Transfers
+
+#### Input-Schema
+
+Das Input-Schema muss die Envelope-Felder enthalten (siehe `INTERLIS Transfer Input`).
+
+#### Modi
+
+[cols="1,2"]
+|===
+| Modus | Beschreibung
+
+| Object (Default)
+| Leitet Transfer-/Basket-Events aus den OBJECT-Rows ab. Baskets werden automatisch gruppiert (nach `_ili_bid`).
+
+| Event
+| Erwartet explizite Event-Rows (START_TRANSFER, START_BASKET, etc.). Die Reihenfolge wird geprüft.
+|===
+
+[CAUTION]
+====
+Im Object-Modus müssen die Input-Rows nach `_ili_bid` sortiert sein (wie beim `INTERLIS Output`). Bei `Event`-Modus muss die Event-Reihenfolge korrekt sein: START_TRANSFER → (START_BASKET → OBJECT* → END_BASKET)* → END_TRANSFER.
+====
+
+=== INTERLIS Object to Row
+
+Projiziert ein `InterlisObject` (aus dem Envelope-Stream) auf typisierte Rows einer bestimmten Klasse.
+
+#### Anwendungsfälle
+
+- Nach `INTERLIS Transfer Input`: Extrahieren einer bestimmten Klasse aus dem gemischten Stream
+- Typkonvertierung von generischen Envelopes zu spezifischen Rows
+
+#### Konfiguration
+
+- **Object field**: Name des Feldes, das das `InterlisObject` enthält (Standard: `_ili_object`)
+- **Class**: Die INTERLIS-Klasse, auf die projiziert werden soll
+
+[source,text]
+----
+Input (Envelope):
+_ili_event_type | _ili_class                  | _ili_object
+"OBJECT"        | "Model.Topic.Building"      | [IOM-Objekt]
+
+Object to Row (Class = Model.Topic.Building):
+_ili_tid | Name      | Art      | Geometry
+"b1"     | "Rathaus" | "public" | [Polygon]
+----
+
+[TIP]
+====
+Dieser Transform ist das Gegenstück zum `INTERLIS Row to Object`. Zusammen ermöglichen sie die Konvertierung zwischen generischem Envelope-Stream und typisierten Rows.
+====
+
+=== INTERLIS Row to Object
+
+Wandelt typisierte Rows in `InterlisObject`-Envelopes um.
+
+#### Anwendungsfälle
+
+- Vor `INTERLIS Transfer Output`: Mehrere Klassen-Streams in einen gemischten Envelope-Stream umwandeln
+- Regenerieren von Assoziations-Link-Objekten aus geflatteten Feldern
+
+[source,text]
+----
+Input (Building rows):
+_ili_tid | Name      | Geometry
+"b1"     | "Rathaus" | [Polygon]
+
+Row to Object:
+_ili_event_type | _ili_class             | _ili_object
+"OBJECT"        | "Model.Topic.Building" | [IOM-Objekt]
+----
+
+[NOTE]
+====
+Assoziationsattribute (z. B. `Municipality_ref`) werden automatisch wieder in Link-Objekte/Referenzen umgewandelt. Der Transform kennt das Modell und erzeugt die korrekte IOM-Struktur.
+====
+
+=== INTERLIS Structure Explode
+
+Löst eine mehrwertige Struktur (`LIST OF` oder `BAG OF`) in einzelne Child-Rows auf.
+
+#### Voraussetzungen
+
+Im Parent-Stream muss das Feld `_ili_source_object` vorhanden sein. Aktivieren Sie dies im `INTERLIS Input` unter _Advanced > Keep source object for Structure Explode_.
+
+#### Konfiguration
+
+[cols="1,2"]
+|===
+| Parameter | Beschreibung
+
+| Source object field
+| Name des `_ili_source_object`-Feldes
+
+| Parent TID field
+| Name des TID-Feldes des Parents (z. B. `_ili_tid`)
+
+| Structure attribute path
+| Pfad zur Struktur (z. B. `Qualitaeten` oder `Adresse.Kindergeschwister`)
+
+| Parent field
+| Name des `_ili_parent_tid`-Feldes im Output (Standard: `_ili_parent_tid`)
+
+| Index field
+| Name des Index-Feldes (bei LIST: `_ili_index`, bei BAG: optional)
+
+| Child fields
+| Auswahl der auszugebenden Child-Attribute
+|===
+
+[source,text]
+----
+Input (Parent):
+_ili_tid | Name      | _ili_source_object
+"g1"     | "Rathaus" | [IOM-Objekt]
+
+Auflösen (Struktur = Qualitaeten):
+_ili_parent_tid | _ili_index | Code   | Beschreibung
+"g1"            | 0          | "Q100" | "Brandschutz geprüft"
+"g1"            | 1          | "Q200" | "Statik geprüft"
+----
+
+[CAUTION]
+====
+Stellen Sie sicher, dass der Transform `distributes=false` hat, wenn derselbe Input auch für `Structure Collect` verwendet wird. Andernfalls werden die Rows aufgeteilt und das Zusammenführen schlägt fehl.
+====
+
+=== INTERLIS Structure Collect
+
+Führt Child-Rows wieder zur Parent-Struktur zusammen.
+
+#### Voraussetzungen
+
+- Parent-Stream und Child-Stream müssen beim `Structure Collect` zusammengeführt werden
+- Child-Rows müssen nach `_ili_parent_tid` sortiert sein
+- Bei LIST: zusätzlich nach `_ili_index` sortiert
+
+[source,text]
+----
+Input Parent:
+_ili_tid | Name      | _ili_source_object
+"g1"     | "Rathaus" | [IOM-Objekt]
+
+Input Child:
+_ili_parent_tid | _ili_index | Code   | Beschreibung
+"g1"            | 0          | "Q100" | "Brandschutz geprüft"
+"g1"            | 1          | "Q200" | "Statik geprüft"
+
+Output (Zusammenführen):
+_ili_tid | Name      | _ili_source_object
+"g1"     | "Rathaus" | [aktualisiertes IOM-Objekt mit Qualitaeten]
+----
+
+[IMPORTANT]
+====
+Der `Structure Collect` ersetzt den Strukturinhalt des Parent-Objekts vollständig. Wenn Sie Child-Rows gefiltert haben (z. B. nur Q100 behalten), enthält das Parent-Objekt nach dem Collect nur noch diese gefilterten Einträge.
+====
+
+### INTERLIS Role Join
+
+Fügt Felder der Zielklasse einer Rolle zum Main-Stream hinzu.
+
+#### Funktionsweise
+
+1. Liest den Lookup-Stream (Zielklasse) in einen In-Memory-Cache
+2. Für jede Main-Row: Sucht den Zielobjekt-TID im Cache
+3. Fügt die konfigurierten Felder der Zielklasse hinzu
+
+[source,text]
+----
+Main input (Gebaeude):
+_ili_tid | Name    | Gemeinde_ref
+"g1"     | "Rathaus" | "gem1"
+
+Lookup input (Gemeinde):
+_ili_tid | Name      | BFS_Nummer
+"gem1"   | "Solothurn" | 2549
+
+Output:
+_ili_tid | Name    | Gemeinde_ref | Gemeinde_Name | Gemeinde_BFS_Nummer
+"g1"     | "Rathaus" | "gem1"       | "Solothurn"   | 2549
+----
+
+#### Konfiguration
+
+[cols="1,2"]
+|===
+| Parameter | Beschreibung
+
+| Main input
+| Name des Main-Input-Transforms
+
+| Lookup input
+| Name des Lookup-Input-Transforms
+
+| Rolle
+| Die Rolle, die aufgelöst werden soll
+
+| Main ref field
+| Das Feld im Main-Stream mit der Referenz-TID (z. B. `Gemeinde_ref`)
+
+| Target TID field
+| Das TID-Feld im Lookup-Stream (Standard: `_ili_tid`)
+
+| Fields to add
+| Welche Felder der Zielklasse hinzugefügt werden sollen
+
+| Prefix
+| Präfix für die hinzugefügten Felder (z. B. `Gemeinde_`)
+
+| Max lookup rows
+| Maximalzahl der Lookup-Rows (Default: 500'000)
+
+| Fail on missing mandatory reference
+| Ob die Pipeline abbrechen soll, wenn eine mandatory Rolle nicht aufgelöst werden kann
+|===
+
+[WARNING]
+====
+Der `Role Join` verwendet einen In-Memory-Lookup. Bei mehr als 500'000 Lookup-Rows wird eine Warnung ausgegeben. Für sehr grosse Referenzdaten verwenden Sie stattdessen einen `Stream Lookup`-Transform oder eine Datenbank-Join.
+====
+
+[NOTE]
+====
+Der Lookup wird nur einmal beim ersten Input-Row geladen. Wenn sich der Lookup-Stream nicht von Anfang an komplett lesen lässt, verwenden Sie `Stream Lookup`.
+====
+
+=== INTERLIS Validate
+
+Validiert eine XTF-Datei gegen das INTERLIS-Modell.
+
+#### Besonderheit: Transform ohne Input
+
+Der `INTERLIS Validate` benötigt **keinen vorherigen Transform**. Er liest direkt eine XTF-Datei und gibt Validierungsfehler als Rows aus.
+
+#### Output-Schema
+
+[cols="1,1,2"]
+|===
+| Feld | Typ | Bedeutung
+
+| _ili_severity
+| String
+| `Error`, `Warning`, `Info`
+
+| _ili_message
+| String
+| Fehlermeldung
+
+| _ili_source_file
+| String
+| Pfad zur XTF-Datei
+
+| _ili_line
+| Integer
+| Zeilennummer
+
+| _ili_column
+| Integer
+| Spaltennummer
+
+| _ili_model
+| String
+| Modellname
+
+| _ili_topic
+| String
+| Topic-Name
+
+| _ili_bid
+| String
+| Basket-ID
+
+| _ili_class
+| String
+| Klassenname
+
+| _ili_tid
+| String
+| Object-ID
+
+| _ili_attribute_path
+| String
+| Pfad zum Attribut (z. B. `Geometrie`)
+
+| _ili_constraint_name
+| String
+| Name der verletzten Constraint
+|===
+
+#### Konfiguration
+
+[cols="1,2"]
+|===
+| Parameter | Beschreibung
+
+| File
+| Pfad zur zu validierenden XTF-Datei
+
+| Models / Model dirs
+| Modellquelle (wie bei INTERLIS Input)
+
+| Validator config
+| Lokale TOML-Konfigurationsdatei für den ilivalidator
+
+| Validate multiplicity
+| Prüft, ob mandatory Attribute/Rollen vorhanden sind
+
+| Max errors
+| Maximale Anzahl Fehler, nach der abgebrochen wird
+
+| Stop on first error
+| Ob nach dem ersten Fehler abgebrochen werden soll
+
+| Output severities
+| Welche Schweregrade ausgegeben werden sollen (Error, Warning, Info)
+|===
+
+[NOTE]
+====
+Der `INTERLIS Validate`-Transform ist ein **Transform ohne Input**. Er wird wie ein Input-Transform in die Pipeline platziert und benötigt keinen eingehenden Hop.
+====
+
+### INTERLIS Enumerations
+
+Listet alle Enumeration-Werte eines Modells als Rows aus.
+
+#### Besonderheit: Transform ohne Input
+
+Wie `INTERLIS Validate` benötigt dieser Transform keinen vorherigen Input.
+
+#### Anwendungsfälle
+
+- Erstellen von Lookup-Tabellen für Enumerationen
+- Dokumentation der erlaubten Werte
+- Mapping-Hilfe: Welche Enum-Werte gibt es im Modell?
+
+#### Output-Schema
+
+[cols="1,1,2"]
+|===
+| Feld | Typ | Bedeutung
+
+| enum_definition
+| String
+| Qualifizierter Name der Enumeration-Definition
+
+| enum_value
+| String
+| Wert des Elements
+
+| enum_path
+| String
+| Vollständiger hierarchischer Pfad
+
+| parent_value
+| String
+| Elternelement (bei verschachtelten Enums)
+
+| depth
+| Integer
+| Tiefe in der Hierarchie (0 = Root)
+
+| is_leaf
+| Boolean
+| Ob das Element ein Blatt ist (keine Kinder)
+|===
+
+[TIP]
+====
+Verwenden Sie diesen Transform, um eine Lookup-Tabelle für Enumerationen zu erstellen. Diese können Sie dann in der Pipeline für Mapping- oder Validierungszwecke verwenden.
+====
+
+=== Kombinationsbeispiel: Mehrere Klassen in eine XTF-Datei schreiben
+
+Sie möchten Gebäude **und** Wege in eine XTF-Datei schreiben:
+
+[source,text]
+----
+Quelle A (Gebäude):
+INTERLIS Input (Klasse = Building) --> Row to Object -->\
+                                                   +--> Append Streams --> Transfer Output
+Quelle B (Wege):                                    /
+INTERLIS Input (Klasse = Road)     --> Row to Object -->
+----
+
+Schritte:
+
+1. Zwei `INTERLIS Input`-Transforms (einer für Gebäude, einer für Wege)
+2. Jeder gefolgt von `INTERLIS Row to Object` (wandelt typisierte Rows in Envelopes um)
+3. `Append Streams` (fügt beide Envelope-Streams zusammen)
+4. `INTERLIS Transfer Output` (schreibt den kombinierten Stream als XTF)
+
+[IMPORTANT]
+====
+Der `Append Streams`-Transform ist ein Standard-Hop-Transform. Er fügt zwei oder mehr Streams zusammen. Achten Sie darauf, dass beide Streams das gleiche Schema haben (die Envelope-Felder).
+====

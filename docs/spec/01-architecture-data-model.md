@@ -494,7 +494,7 @@ _ili_tid | Name | ...
 `INTERLIS Structure Explode` erzeugt:
 
 ```text
-_parent_tid | _ili_index | Street          | Number
+_ili_parent_tid | _ili_index | Street          | Number
 123         | 0          | Main Street     | 10
 123         | 1          | Station Street  | 4
 456         | 0          | Village Road    | 22
@@ -506,7 +506,7 @@ Für `BAG` ist Reihenfolge fachlich nicht relevant. Das Plugin darf für stabile
 
 ### 10.3 Parent identity
 
-Wenn die Parent-Klasse eine TID besitzt, ist `_parent_tid` Default.
+Wenn die Parent-Klasse eine TID besitzt, ist `_ili_parent_tid` Default.
 
 Für nicht-identifizierbare Parent-Kontexte bzw. intern verschachtelte Strukturen braucht der Exploder zusätzlich eine Runtime-Korrelation:
 

@@ -1,0 +1,250 @@
+[[erste-pipeline]]
+== Ihr erstes XTF in 10 Minuten
+
+Dieses Kapitel führt Sie Schritt für Schritt durch Ihre erste Pipeline: Sie lesen eine INTERLIS-XTF-Datei mit Gebäuden und schreiben sie als GeoPackage.
+
+=== Das Ziel
+
+[cols="1,3"]
+|===
+| Eingabe | INTERLIS-XTF-Datei mit Gebäuden (Name, Art, Geometrie)
+| Transform | INTERLIS Input → Typisierte Rows
+| Ausgabe | GeoPackage-Datei mit einer Tabelle `Gebaeude`
+|===
+
+Das Beispielmodell und der Beispiel-Transfer sind bewusst minimal gehalten, damit Sie sich auf die Pipeline-Konfiguration konzentrieren können.
+
+=== Beispiel-Daten
+
+Das INTERLIS-Modell für dieses Tutorial:
+
+[source,interlis]
+----
+include::examples/demo-modell.ili[]
+----
+
+Der Beispiel-Transfer enthält zwei Gebäude:
+
+[source,xml]
+----
+include::examples/demo-transfer.xtf[]
+----
+
+[TIP]
+====
+Speichern Sie diese Dateien lokal:
+
+- `demo-modell.ili` -- das INTERLIS-Modell
+- `demo-transfer.xtf` -- die Geometriedaten
+
+Der Einfachheit halber legen Sie beide Dateien ins gleiche Verzeichnis.
+====
+
+=== Schritt-für-Schritt-Anleitung
+
+==== 1. Neue Pipeline erstellen
+
+Starten Sie die Hop-GUI und erstellen Sie eine neue Pipeline (Datei → Neu → Pipeline).
+
+==== 2. INTERLIS Input platzieren
+
+Ziehen Sie den Transform **INTERLIS Input** aus der Palette in die Pipeline.
+
+[source,text]
+----
++-----------------------------------------------------------+
+| Palette                                                   |
+|  [Suchfeld: interlis]                                     |
+|                                                           |
+|  [INTERLIS Input]       <- Ziehen Sie diesen hierher      |
+|  [INTERLIS Output]                                        |
+|  [INTERLIS Transfer Input]                                |
+|  ...                                                      |
++-----------------------------------------------------------+
+----
+
+==== 3. Dialog öffnen
+
+Doppelklicken Sie auf den `INTERLIS Input`-Transform, um den Dialog zu öffnen.
+
+==== 4. Data File auswählen
+
+Im Dialog finden Sie oben den Bereich _Source_:
+
+[source,text]
+----
++====================================================================+
+| INTERLIS Input                                                      |
++====================================================================+
+| Transform name  [ Gebäude lesen                                ]    |
+|                                                                     |
+| Source                                                              |
+| Data file       [ ${PROJECT_HOME}/demo-transfer.xtf            ] ...|
+| Models          [ %DATA                                        v]   |
+| Model dirs      [ %XTF_DIR                                     ] ...|
+|                                                                     |
+| [ Reload ]  Status: (noch nicht geladen)                            |
++====================================================================+
+----
+
+- **Data file**: Wählen Sie Ihre `demo-transfer.xtf` aus.
+- **Models**: Lassen Sie `%DATA` eingestellt. Das Plugin erkennt das Modell automatisch aus der XTF-Datei.
+- **Model dirs**: Lassen Sie `%XTF_DIR` eingestellt. Das Plugin sucht `.ili`-Dateien im gleichen Verzeichnis wie die XTF-Datei.
+
+Klicken Sie auf **[ Reload ]**, um das Modell zu laden.
+
+[NOTE]
+====
+Das Feld `%DATA` bedeutet: „Ermittle das Modell aus der Transferdatei“. Das funktioniert, weil jede XTF-Datei im Header angibt, welches INTERLIS-Modell sie verwendet.
+
+Das Feld `%XTF_DIR` bedeutet: „Suche Modell-Dateien im gleichen Verzeichnis wie die XTF-Datei". Da `demo-modell.ili` im selben Ordner liegt, wird es gefunden.
+====
+
+Wenn alles funktioniert, erscheint die Statuszeile:
+
+[source,text]
+----
+Status: OK - model DemoBodenbedeckung loaded, 1 topic, 1 class
+----
+
+==== 5. Klasse auswählen
+
+Im Bereich _Class_ wählen Sie die Klasse aus, die Sie lesen möchten:
+
+[source,text]
+----
+| Class                                                               |
+| [ DemoBodenbedeckung.Bodenbedeckung.Gebaeude                   v ]  |
+|                                                                     |
+| [ Browse model... ]                                                 |
+----
+
+Wählen Sie `DemoBodenbedeckung.Bodenbedeckung.Gebaeude`.
+
+#### 6. Schema Preview prüfen
+
+Nach dem Laden des Modells und der Klassenauswahl zeigt der Dialog eine Vorschau der erzeugten Hop-Felder:
+
+[source,text]
+----
+Output fields
++--------------------------------------------------------------------------+
+| Use | INTERLIS property       | Hop field              | Type            |
+|-----+--------------------------+------------------------+-----------------|
+| [x] | @TID                     | _ili_tid               | String          |
+| [x] | @BID                     | _ili_bid               | String          |
+| [x] | Name                     | Name                   | String(100)     |
+| [x] | Art                      | Art                    | String (enum)   |
+| [x] | Geometrie                | Geometrie              | Geometry        |
++--------------------------------------------------------------------------+
+----
+
+Das Schema zeigt:
+
+- `_ili_tid` und `_ili_bid` als technische Felder
+- `Name` als String mit max. 100 Zeichen
+- `Art` als String (Enum-Werte wie `Wohngebaeude`)
+- `Geometrie` als Hop-Geometry (SURFACE-Typ)
+
+[TIP]
+====
+Die **Schema Preview** ist ein zentrales Feature des Plugins. Sie zeigt _vor_ der Ausführung, welche Felder erzeugt werden. Das verhindert Überraschungen und hilft bei der Planung der nachfolgenden Transforms.
+====
+
+Unterhalb der Tabelle sehen Sie den Bereich _Structures and relationships_. Da unser Beispielmodell keine Strukturen und Rollen hat, ist er leer.
+
+==== 7. Dialog bestätigen
+
+Klicken Sie auf **[ OK ]**, um den Dialog zu schliessen.
+
+==== 8. GeoPackage Output platzieren
+
+Ziehen Sie aus der Palette einen **Table Output**-Transform in die Pipeline und verbinden Sie ihn mit `INTERLIS Input`.
+
+Konfigurieren Sie den Table Output:
+
+- **Connection**: Erstellen Sie eine neue GeoPackage-Verbindung (oder wählen Sie eine bestehende)
+- **Target schema**: (leer lassen)
+- **Target table**: `Gebaeude`
+- **Specify database fields**: Aktivieren
+- **Database fields**: Ordnen Sie die Hop-Felder den Tabellenspalten zu:
+
+[source,text]
+----
++------------------------------------------------------------------+
+| Database fields                                                   |
+|-------------------------------------------------------------------|
+| # | Table field | Stream field | Update |                         |
+|---|-------------|--------------|--------|-------------------------|
+| 1 | tid         | _ili_tid     |        |                         |
+| 2 | name        | Name         |        |                         |
+| 3 | art         | Art          |        |                         |
+| 4 | geom        | Geometrie    |        |                         |
++------------------------------------------------------------------+
+----
+
+[IMPORTANT]
+====
+Für Geometriespalten in GeoPackage stellen Sie sicher, dass der Table Output den Datentyp korrekt erkennt. Das `hop-geometry-type-plugin` stellt sicher, dass Geometry-Werte korrekt in die Datenbank geschrieben werden.
+====
+
+#### 9. Pipeline ausführen
+
+Speichern Sie die Pipeline und führen Sie sie aus (_Action → Run_ oder `F8`).
+
+Sie sollten in der Log-Ausgabe sehen:
+
+[source,text]
+----
+2024/01/15 10:30:15 - INTERLIS Input - Reading XTF: /home/user/demo-transfer.xtf
+2024/01/15 10:30:15 - INTERLIS Input - Loaded model: DemoBodenbedeckung
+2024/01/15 10:30:15 - INTERLIS Input - Selected class: DemoBodenbedeckung.Bodenbedeckung.Gebaeude
+2024/01/15 10:30:15 - INTERLIS Input - Objects read: 2
+2024/01/15 10:30:15 - Table Output - 2 rows inserted into Gebaeude
+----
+
+[NOTE]
+====
+Die Log-Ausgaben des Plugins sind in Apache-Hop-Standard-Logging geschrieben und verwenden keine `System.out.println`-Ausgaben. Das gewährleistet konsistentes Logging über alle Pipeline-Komponenten hinweg.
+====
+
+==== 10. Ergebnis prüfen
+
+Öffnen Sie die GeoPackage-Datei in QGIS, GDAL oder einem anderen GeoPackage-fähigen Tool:
+
+[source,bash]
+----
+# Mit ogrinfo prüfen
+$ ogrinfo -al output.gpkg Gebaeude
+
+# Mit QGIS öffnen
+$ qgis output.gpkg
+----
+
+Sie sollten zwei Gebäude sehen:
+
+- **Rathaus** (Art: `Oeffentliches_Gebaeude`)
+- **Migros** (Art: `Gewerbegebaeude`)
+
+Beide mit einer Polygon-Geometrie im Schweizer Koordinatensystem (CH1903+/LV95).
+
+[CAUTION]
+====
+Wenn die Geometrien nicht erscheinen, prüfen Sie:
+
+1. Ist das `hop-geometry-type-plugin` installiert?
+2. Wurde die Geometriespalte im Table Output als Geometry-Typ erkannt?
+3. Ist der SRID korrekt gesetzt? (In diesem Beispiel: CH1903+/LV95)
+====
+
+=== Zusammenfassung
+
+Gratulation! Sie haben erfolgreich:
+
+- Eine INTERLIS-XTF-Datei gelesen
+- Das Modell automatisch erkannt
+- Eine Klasse ausgewählt
+- Die Schema Preview geprüft
+- Die Daten als GeoPackage geschrieben
+
+Im nächsten Kapitel <<xtf-lesen>> erfahren Sie alle Details zum `INTERLIS Input`-Transform.

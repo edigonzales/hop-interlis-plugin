@@ -1,0 +1,261 @@
+== Beispiele
+
+Dieses Kapitel enthält sechs vollständige Mini-Tutorials. Jedes Tutorial besteht aus:
+
+- Einem minimalen INTERLIS-Modell
+- Einem Beispiel-Transfer (XTF)
+- Einer Pipeline-Beschreibung
+- Dem erwarteten Ergebnis
+
+[TIP]
+====
+Alle `.ili`- und `.xtf`-Dateien aus diesem Kapitel liegen unter `docs/biblios/user/examples/` und können per `include::` direkt in die Dokumentation eingebunden werden.
+====
+
+=== Beispiel A: Einfaches Lesen
+
+**Ziel**: Eine XTF-Datei mit Gebäuden lesen und alle Attribute sowie die Geometrie ausgeben.
+
+==== Modell
+
+[source,interlis]
+----
+include::examples/demo-modell.ili[]
+----
+
+==== Transfer
+
+[source,xml]
+----
+include::examples/demo-transfer.xtf[]
+----
+
+==== Pipeline
+
+1. `INTERLIS Input` mit `demo-transfer.xtf` und Klasse `DemoBodenbedeckung.Bodenbedeckung.Gebaeude`
+2. `Dummy` (zur Inspektion) oder `Table Output` für GeoPackage
+
+==== Ergebnis
+
+[source,text]
+----
+_ili_tid | _ili_bid | Name      | Art                    | Geometrie
+---------|----------|-----------|------------------------|------------------
+"g1"     | "b1"     | "Rathaus" | "Oeffentliches_Gebaeude" | [Polygon]
+"g2"     | "b1"     | "Migros"  | "Gewerbegebaeude"       | [Polygon]
+----
+
+[NOTE]
+====
+Dieses Beispiel ist identisch mit dem <<erste-pipeline,Einführungs-Tutorial>>. Es dient als Referenz und Ausgangspunkt für komplexere Beispiele.
+====
+
+=== Beispiel B: Struktur flach abbilden (Flatten)
+
+**Ziel**: Einwertige Struktur (`Adresse`) als geflattete Felder lesen.
+
+==== Modell
+
+[source,interlis]
+----
+include::examples/struktur-modell.ili[]
+----
+
+==== Transfer
+
+[source,xml]
+----
+include::examples/struktur-transfer.xtf[]
+----
+
+==== Pipeline
+
+1. `INTERLIS Input` mit `struktur-transfer.xtf` und Klasse `DemoStruktur.Personen.Person`
+2. Struktur `Adresse` wird automatisch flach abgebildet (Default)
+
+==== Ergebnis
+
+[source,text]
+----
+_ili_tid | _ili_bid | Name    | Vorname | Adresse_Strasse   | Adresse_Hausnummer | Adresse_PLZ | Adresse_Ort
+---------|----------|---------|---------|-------------------|--------------------|-------------|------------
+"p1"     | "b1"     | "Meier" | "Hans"  | "Hauptstrasse"    | "42"               | "4500"      | "Solothurn"
+"p2"     | "b1"     | "Mueller"| "Anna" | "Bahnhofstrasse"  | "1"                | "4500"      | "Solothurn"
+----
+
+[TIP]
+====
+Durch das Flattening entstehen aus einer verschachtelten Struktur flache Felder. Das ist nützlich, wenn Sie die Daten in ein relationales Zielsystem (z. B. Datenbanktabelle) schreiben möchten.
+====
+
+=== Beispiel C: LIST/BAG auflösen und zusammenführen
+
+**Ziel**: Mehrwertige Struktur (`Qualitaeten`) als Child-Rows lesen, transformieren und zurückschreiben.
+
+==== Modell
+
+[source,interlis]
+----
+include::examples/liste-modell.ili[]
+----
+
+==== Transfer
+
+[source,xml]
+----
+include::examples/liste-transfer.xtf[]
+----
+
+==== Pipeline
+
+. **Auflösen:** `INTERLIS Input` mit `liste-transfer.xtf`
+. **Auflösen:** Aktivieren Sie _Keep source object for Structure Explode_ (Advanced)
+. **Auflösen:** `INTERLIS Structure Explode` mit Struktur `Qualitaeten`
+. **Child-Transform:** Filtern Sie z. B. so, dass nur Qualitäten mit Code `Q100` übrig bleiben
+. **Zusammenführen:** `INTERLIS Structure Collect` (Parent-Stream + Child-Stream)
+. **Schreiben:** `INTERLIS Output`
+
+[source,text]
+----
+Input (Parent):
+_ili_tid | Name     | _ili_source_object
+"g1"     | "Rathaus" | [interlis-object]
+
+Output (Auflösen):
+_ili_parent_tid | _ili_index | Code   | Beschreibung          | Pruefdatum
+"g1"            | 0          | "Q100" | "Brandschutz geprüft"  | 2024-01-15
+"g1"            | 1          | "Q200" | "Statik geprüft"       | 2024-02-20
+
+Nach dem Zusammenführen (Parent):
+_ili_tid | Name     | _ili_source_object
+"g1"     | "Rathaus" | [updated-interlis-object]
+----
+
+[IMPORTANT]
+====
+Der `INTERLIS Structure Collect` ersetzt immer den vollständigen Strukturinhalt des Parent-Objekts. Entfernte Child-Rows (z. B. durch Filterung) verschwinden auch im Output.
+====
+
+=== Beispiel D: Rolle auflösen
+
+**Ziel**: Eine einfache Rolle (`Gemeinde`) auflösen und Gemeinde-Attribute zum Gebäude-Stream hinzufügen.
+
+==== Modell
+
+[source,interlis]
+----
+include::examples/rolle-modell.ili[]
+----
+
+==== Transfer
+
+[source,xml]
+----
+include::examples/rolle-transfer.xtf[]
+----
+
+==== Pipeline
+
+1. `INTERLIS Input` mit `rolle-transfer.xtf` und Klasse `DemoRolle.Verwaltung.Gebaeude`
+2. `INTERLIS Role Join`:
+   - Main input: Gebaeude-Stream
+   - Lookup input: Gemeinde-Stream (separater `INTERLIS Input`)
+   - Rolle: `Gemeinde`
+   - Felder hinzufügen: `Name`, `BFS_Nummer`
+   - Präfix: `Gemeinde_`
+
+==== Ergebnis
+
+[source,text]
+----
+_ili_tid | Name    | Gemeinde_ref | Geometrie | Gemeinde_Name | Gemeinde_BFS_Nummer
+---------|---------|--------------|-----------|---------------|--------------------
+"g1"     | "Rathaus" | "gem1"       | [Polygon] | "Solothurn"   | 2549
+----
+
+[TIP]
+====
+Der `INTERLIS Role Join` liest den Lookup-Stream (Gemeinden) in einen In-Memory-Cache. Bei mehr als 500'000 Lookup-Rows wird eine Warnung ausgegeben. Für sehr grosse Referenzdaten sollten Sie stattdessen einen `Stream Lookup`-Transform oder eine Datenbank-Join verwenden.
+====
+
+=== Beispiel E: Roundtrip mit Kreisbögen
+
+**Ziel**: Eine XTF-Datei mit Kreisbögen lesen, unverändert durchreichen und wieder schreiben. Die Bögen müssen erhalten bleiben.
+
+==== Modell
+
+[source,interlis]
+----
+include::examples/bogen-modell.ili[]
+----
+
+==== Transfer
+
+[source,xml]
+----
+include::examples/bogen-transfer.xtf[]
+----
+
+==== Pipeline
+
+1. `INTERLIS Input` mit `bogen-transfer.xtf`
+2. Optional: `Select values` (nur um zu zeigen, dass nichts verändert wird)
+3. `INTERLIS Output` mit derselben Modell-/Klassen-Konfiguration
+4. `INTERLIS Validate` zum Prüfen der Ausgabe
+
+==== Ergebnis
+
+[source,bash]
+----
+# Originale Geometrie:
+<COORD><C1>2600000.0</C1><C2>1200000.0</C2></COORD>
+<ARC><C1>2600050.0</C1><C2>1200050.0</C2><A1>2600100.0</A1><A2>1200000.0</A2></ARC>
+<COORD><C1>2600100.0</C1><C2>1200000.0</C2></COORD>
+
+# Nach Roundtrip (muss identisch sein):
+<COORD><C1>2600000.0</C1><C2>1200000.0</C2></COORD>
+<ARC><C1>2600050.0</C1><C2>1200050.0</C2><A1>2600100.0</A1><A2>1200000.0</A2></ARC>
+<COORD><C1>2600100.0</C1><C2>1200000.0</C2></COORD>
+----
+
+[IMPORTANT]
+====
+Wenn Bögen linearisiert würden, erschiene statt `<ARC>` eine Serie von `<COORD>`-Punkten. Der Roundtrip mit `<ARC>` beweist, dass die SQL/MM-WKB-Umwandlung Bögen verlustfrei erhält.
+====
+
+=== Beispiel F: Validierung
+
+**Ziel**: INTERLIS-Daten validieren und Fehler als Rows ausgeben.
+
+==== Modell
+
+[source,interlis]
+----
+include::examples/validierung-modell.ili[]
+----
+
+==== Transfer
+
+[source,xml]
+----
+include::examples/validierung-transfer.xtf[]
+----
+
+==== Pipeline
+
+1. `INTERLIS Validate` mit `validierung-transfer.xtf`
+2. `Table Output` (z. B. CSV oder Datenbanktabelle für Fehlerprotokoll)
+
+==== Ergebnis
+
+[source,text]
+----
+_ili_severity | _ili_message                          | _ili_source_file | _ili_line | _ili_class | _ili_tid | _ili_attribute_path
+--------------|---------------------------------------|------------------|-----------|------------|----------|--------------------
+"Error"       | "Wert zu hoch für Grad Celsius"       | "validierung-transfer.xtf" | 15 | "DemoValidierung.Daten.Messung" | "m2" | "Wert"
+----
+
+[NOTE]
+====
+Der `INTERLIS Validate`-Transform benötigt keinen vorherigen Transform. Er validiert direkt eine XTF-Datei und gibt Fehler als Rows aus, die Sie weiterverarbeiten können (z. B. in eine Datenbanktabelle für ein Fehlerprotokoll schreiben).
+====

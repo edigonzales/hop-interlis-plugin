@@ -1,0 +1,38 @@
+INTERLIS 2.3;
+
+/** Beispielmodell mit einfacher Rolle (Gebäude → Gemeinde).
+    Zeigt die Abbildung von Rollen als Referenzfelder.
+**/
+
+MODEL DemoRolle (de)
+AT "https://github.com/edigonzales/hop-interlis-plugin"
+VERSION "2024-01-01" =
+
+  DOMAIN
+    Coord2 = COORD
+      2000000.000 .. 3000000.000,
+      1000000.000 .. 1400000.000;
+
+  TOPIC Verwaltung =
+
+    CLASS Gemeinde =
+      Name : TEXT*100;
+      BFS_Nummer : 1 .. 9999;
+      Geometrie : SURFACE WITH (STRAIGHTS)
+        VERTEX Coord2 WITHOUT OVERLAPS > 0.001;
+    END Gemeinde;
+
+    CLASS Gebaeude =
+      Name : TEXT*100;
+      Geometrie : SURFACE WITH (STRAIGHTS)
+        VERTEX Coord2 WITHOUT OVERLAPS > 0.001;
+    END Gebaeude;
+
+    ASSOCIATION GebaeudeGemeinde =
+      GebaeudeRef -- {0..*} Gebaeude;
+      Zugehoerigkeit -- {0..*} Gemeinde;
+    END GebaeudeGemeinde;
+
+  END Verwaltung;
+
+END DemoRolle.

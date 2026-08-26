@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="hop-interlis-plugin-doc" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="DemoBodenbedeckung" VERSION="2024-01-01" URI="https://github.com/edigonzales/hop-interlis-plugin"/>
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <DemoBodenbedeckung.Bodenbedeckung BID="b1">
+      <DemoBodenbedeckung.Bodenbedeckung.Gebaeude TID="g1">
+        <Name>Rathaus</Name>
+        <Art>Oeffentliches_Gebaeude</Art>
+        <Geometrie>
+          <SURFACE>
+            <BOUNDARY>
+              <POLYLINE>
+                <COORD>
+                  <C1>2600000.0</C1>
+                  <C2>1200000.0</C2>
+                </COORD>
+                <COORD>
+                  <C1>2600100.0</C1>
+                  <C2>1200000.0</C2>
+                </COORD>
+                <COORD>
+                  <C1>2600100.0</C1>
+                  <C2>1200100.0</C2>
+                </COORD>
+                <COORD>
+                  <C1>2600000.0</C1>
+                  <C2>1200100.0</C2>
+                </COORD>
+                <COORD>
+                  <C1>2600000.0</C1>
+                  <C2>1200000.0</C2>
+                </COORD>
+              </POLYLINE>
+            </BOUNDARY>
+          </SURFACE>
+        </Geometrie>
+      </DemoBodenbedeckung.Bodenbedeckung.Gebaeude>
+      <DemoBodenbedeckung.Bodenbedeckung.Gebaeude TID="g2">
+        <Name>Migros</Name>
+        <Art>Gewerbegebaeude</Art>
+        <Geometrie>
+          <SURFACE>
+            <BOUNDARY>
+              <POLYLINE>
+                <COORD>
+                  <C1>2600200.0</C1>
+                  <C2>1200200.0</C2>
+                </COORD>
+                <COORD>
+                  <C1>2600250.0</C1>
+                  <C2>1200200.0</C2>
+                </COORD>
+                <COORD>
+                  <C1>2600250.0</C1>
+                  <C2>1200250.0</C2>
+                </COORD>
+                <COORD>
+                  <C1>2600200.0</C1>
+                  <C2>1200250.0</C2>
+                </COORD>
+                <COORD>
+                  <C1>2600200.0</C1>
+                  <C2>1200200.0</C2>
+                </COORD>
+              </POLYLINE>
+            </BOUNDARY>
+          </SURFACE>
+        </Geometrie>
+      </DemoBodenbedeckung.Bodenbedeckung.Gebaeude>
+    </DemoBodenbedeckung.Bodenbedeckung>
+  </DATASECTION>
+</TRANSFER>

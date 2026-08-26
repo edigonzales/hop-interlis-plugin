@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="hop-interlis-plugin-doc" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="DemoStruktur" VERSION="2024-01-01" URI="https://github.com/edigonzales/hop-interlis-plugin"/>
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <DemoStruktur.Personen BID="b1">
+      <DemoStruktur.Personen.Person TID="p1">
+        <Name>Meier</Name>
+        <Vorname>Hans</Vorname>
+        <Adresse>
+          <DemoStruktur.Personen.Adresse>
+            <Strasse>Hauptstrasse</Strasse>
+            <Hausnummer>42</Hausnummer>
+            <PLZ>4500</PLZ>
+            <Ort>Solothurn</Ort>
+          </DemoStruktur.Personen.Adresse>
+        </Adresse>
+      </DemoStruktur.Personen.Person>
+      <DemoStruktur.Personen.Person TID="p2">
+        <Name>Mueller</Name>
+        <Vorname>Anna</Vorname>
+        <Adresse>
+          <DemoStruktur.Personen.Adresse>
+            <Strasse>Bahnhofstrasse</Strasse>
+            <Hausnummer>1</Hausnummer>
+            <PLZ>4500</PLZ>
+            <Ort>Solothurn</Ort>
+          </DemoStruktur.Personen.Adresse>
+        </Adresse>
+      </DemoStruktur.Personen.Person>
+    </DemoStruktur.Personen>
+  </DATASECTION>
+</TRANSFER>

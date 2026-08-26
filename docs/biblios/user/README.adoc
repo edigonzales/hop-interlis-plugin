@@ -1,0 +1,90 @@
+= hop-interlis-plugin – Benutzerhandbuch
+
+Dieses Verzeichnis enthält das AsciiDoc-Benutzerhandbuch für das `hop-interlis-plugin`.
+
+== Rendering mit thoth-biblios
+
+Die Dokumentation wird mit https://github.com/edigonzales/thoth[thoth-biblios] gerendert.
+
+=== Konfiguration
+
+Die `biblios.yml` befindet sich im übergeordneten Verzeichnis (`../biblios.yml`).
+
+=== Lokales Bauen
+
+[source,bash]
+----
+# thoth-biblios JAR bauen (im thoth-Repository)
+cd /path/to/thoth
+./gradlew :thoth-biblios:build
+
+# Dokumentation bauen
+cd /path/to/hop-interlis-plugin/docs/biblios
+java -jar /path/to/thoth/thoth-biblios/build/libs/thoth-biblios-<version>-all.jar build \
+  --config biblios.yml
+
+# Ergebnis öffnen
+open build/docs-site/index.html
+----
+
+=== Entwicklungsserver
+
+[source,bash]
+----
+cd /path/to/hop-interlis-plugin/docs/biblios
+java -jar /path/to/thoth/thoth-biblios/build/libs/thoth-biblios-<version>-all.jar serve \
+  --config biblios.yml \
+  --port 8080 \
+  --use-local-working-tree
+----
+
+== Struktur
+
+[cols="1,2"]
+|===
+| Datei | Inhalt
+
+| `master.adoc`
+| Master-Datei für Single-Page-Rendering. Bindet alle Kapitel ein.
+
+| `01-einfuehrung.adoc`
+| Was ist INTERLIS? Was macht das Plugin?
+
+| `02-konzepte.adoc`
+| Die zentrale Architektur: Was wird zu was (INTERLIS → Hop Row)
+
+| `03-installation.adoc`
+| Plugin installieren und verifizieren
+
+| `04-erste-pipeline.adoc`
+| 10-Minuten-Tutorial: XTF → GeoPackage
+
+| `05-xtf-lesen.adoc`
+| INTERLIS Input im Detail
+
+| `06-xtf-schreiben.adoc`
+| INTERLIS Output im Detail
+
+| `07-erweiterte-transforms.adoc`
+| Transfer I/O, Object↔Row, Explode/Collect, Role Join, Validate
+
+| `08-beispiele.adoc`
+| 6 vollständige Mini-Tutorials
+
+| `09-troubleshooting.adoc`
+| Häufige Probleme und FAQ
+
+| `10-glossar.adoc`
+| INTERLIS-Fachbegriffe
+
+| `examples/`
+| INTERLIS-Modelle und -Transfers für die Beispiele
+|===
+
+== Sprache
+
+Das Handbuch ist in **Deutsch** verfasst.
+
+== Lizenz
+
+MIT (wie das Plugin selbst)

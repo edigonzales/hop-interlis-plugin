@@ -1,0 +1,90 @@
+== Einführung
+
+Dieses Handbuch erklärt, wie Sie mit dem `hop-interlis-plugin` INTERLIS-Daten in Apache Hop lesen, transformieren und schreiben.
+
+=== Was ist INTERLIS?
+
+INTERLIS ist ein schweizerischer Standard für die Modellierung und den Datenaustausch im Bereich Geodaten. INTERLIS besteht aus zwei Teilen:
+
+- **Das INTERLIS-Datenmodell** (`.ili`-Datei): Hier werden die Datenstrukturen definiert -- welche Klassen es gibt, welche Attribute sie haben, welche Beziehungen zwischen ihnen bestehen, und welche Geometrietypen erlaubt sind.
+- **Das INTERLIS-Transferformat** (`.xtf`-Datei): Hier sind die eigentlichen Daten gespeichert -- die Objekte, ihre Attributwerte, Geometrien und Beziehungen.
+
+INTERLIS 2 verwendet XML-basierte XTF-Dateien (_XML Transfer Format_), während INTERLIS 1 ITF-Dateien (_INTERLIS Transfer Format_) verwendet.
+
+[IMPORTANT]
+====
+Dieses Plugin unterstützt **XTF 2.3 und XTF 2.4**. INTERLIS 1 (ITF) wird **nicht unterstützt**.
+====
+
+=== Kernkonzepte von INTERLIS
+
+Bevor Sie mit dem Plugin arbeiten, sollten Sie diese Begriffe kennen:
+
+*Modell*::
+Die Gesamtheit aller Definitionen in einer `.ili`-Datei. Ein Modell kann mehrere Topics enthalten.
+
+*Topic*::
+Ein thematischer Bereich innerhalb eines Modells, der verwandte Klassen und Strukturen gruppiert.
+
+*Klasse*::
+Eine Entität mit Attributen, z. B. `Gebaeude` mit den Attributen `Name`, `Art` und `Geometrie`.
+
+*Struktur*::
+Ein zusammengesetztes Attribut, das mehrere Unterattribute gruppiert. Strukturen können einwertig (`0..1` oder `1`) oder mehrwertig (`BAG` oder `LIST`) sein.
+
+*TID*::
+_Der Transferidentifikator_ -- eine eindeutige ID eines Objekts innerhalb des gesamten Transfers.
+
+*BID*::
+_Der Basket-Identifikator_ -- eine eindeutige ID eines Baskets. Ein Basket enthält alle Objekte eines Topics.
+
+*Basket*::
+Eine Sammlung von Objekten eines Topics. Ein Transfer kann mehrere Baskets desselben oder verschiedener Topics enthalten.
+
+*Rolle*::
+Eine Beziehung zwischen zwei Klassen. Eine einfache Rolle verweist auf genau ein Zielobjekt (1:1 oder 0..1). Eine komplexe Rolle verweist auf mehrere Zielobjekte (1:n oder m:n).
+
+*Assoziation*::
+Eine Beziehung zwischen mehreren Klassen, die eigene Attribute haben kann.
+
+*Vererbung*::
+Eine Klasse kann von einer anderen Klasse erben und deren Attribute erweitern.
+
+*Domain*::
+Ein benutzerdefinierter Datentyp, z. B. eine Koordinate oder eine OID.
+
+*Enumeration*::
+Eine feste Liste von erlaubten Werten, z. B. `Wohngebaeude`, `Gewerbegebaeude`, `Oeffentliches_Gebaeude`.
+
+=== Was macht das hop-interlis-plugin?
+
+Das `hop-interlis-plugin` ist ein Apache-Hop-Plugin für INTERLIS-Daten. Es ermöglicht Ihnen:
+
+- *INTERLIS-Daten lesen*: XTF-Dateien als typisierte Hop-Rows einlesen
+- *INTERLIS-Daten schreiben*: Typisierte Hop-Rows als XTF-Dateien ausgeben
+- *INTERLIS-Daten validieren*: Daten gegen das Modell prüfen
+- *Strukturen verarbeiten*: Mehrwertige Strukturen in Child-Rows auflösen und wieder zusammenführen
+- *Rollen auflösen*: Referenzen auf Zielobjekte auflösen und deren Felder hinzufügen
+- *Transfers verarbeiten*: Den vollständigen Transfer als Event-Stream lesen und schreiben
+
+[NOTE]
+====
+Das Plugin projiziert INTERLIS-Objekte auf stabile, typisierte Hop-Rows. Es verbirgt die XTF-Codierung (z. B. Embedded Links) vor dem Benutzer und zeigt die INTERLIS-Semantik an.
+====
+
+=== Für wen ist dieses Handbuch?
+
+Dieses Handbuch richtet sich an:
+
+- **Hop-Anwender**, die INTERLIS-Daten verarbeiten müssen (z. B. XTF-Dateien in eine Datenbank laden, oder aus einer Datenbank eine XTF-Datei erstellen).
+- **INTERLIS-Experten**, die Hop als ETL-Tool nutzen wollen (z. B. Daten aus verschiedenen Quellen in ein INTERLIS-Modell überführen).
+- **Datenintegratoren**, die INTERLIS-Daten transformieren, filtern oder anreichern müssen.
+
+Sie sollten mit Apache Hop vertraut sein (Pipelines, Transforms, Rows, Hops) und die Grundkonzepte von INTERLIS kennen (Modell, Klasse, Attribut, Geometrie). Falls nicht: Lesen Sie zuerst das https://hop.apache.org/manual/[Apache-Hop-Handbuch^] und die Dokumentation auf https://www.interlis.ch/[interlis.ch^].
+
+=== Weiterführende Informationen
+
+- **Plugin-Repository**: https://github.com/edigonzales/hop-interlis-plugin
+- **INTERLIS-Spezifikation**: https://www.interlis.ch/
+- **ili2fme-Referenz** (vergleichbares Plugin für FME): https://ili2fme.ch/
+- **Apache Hop**: https://hop.apache.org/

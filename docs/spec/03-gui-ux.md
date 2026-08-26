@@ -414,7 +414,7 @@ Advanced-Transform; bewusst kompakter.
 | [ Qualities : LIST {0..*} OF Quality                                     v]    |
 |                                                                                |
 | Child row                                                                      |
-| Parent field      [ _parent_tid                                           ]    |
+| Parent field      [ _ili_parent_tid                                       ]    |
 | Index field       [ _ili_index                                            ]    |
 |                                                                                |
 | Child fields                                                                   |
@@ -429,7 +429,7 @@ Advanced-Transform; bewusst kompakter.
 | [ Add... ]  BFSNo, DatasetId                                                   |
 |                                                                                |
 | Preview                                                                         |
-| _parent_tid, _ili_index, Code, Date, Geometry                                   |
+| _ili_parent_tid, _ili_index, Code, Date, Geometry                               |
 |                                                                                |
 |                                                     [ OK ] [ Cancel ]            |
 +================================================================================+
@@ -453,7 +453,7 @@ pipeline processing and may be omitted on write.
 | Child input transform  [ Addresses                                          v] |
 |                                                                                |
 | Parent key field      [ _ili_tid                                             ] |
-| Child parent key      [ _parent_tid                                          ] |
+| Child parent key      [ _ili_parent_tid                                      ] |
 |                                                                                |
 | Structure             [ Addresses : LIST OF Address                        v]   |
 | Index field           [ _ili_index                                         v]   |

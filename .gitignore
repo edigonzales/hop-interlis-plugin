@@ -32,3 +32,8 @@ target/
 # virtual machine crash logs
 hs_err_pid*
 replay_pid*
+
+# thoth-biblios documentation build (docs/biblios)
+docs/biblios/build/
+docs/biblios/**/*.pdf
+docs/biblios/.thoth/

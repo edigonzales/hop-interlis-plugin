@@ -1,0 +1,339 @@
+== Konzepte: Was wird zu was?
+
+Dieses Kapitel erklärt die zentrale Frage: _Wie werden INTERLIS-Objekte in Hop-Rows abgebildet?_
+
+Das Verständnis dieser Abbildung ist entscheidend, um das Plugin effektiv zu nutzen. INTERLIS und Apache Hop haben grundlegend unterschiedliche Datenmodelle, und das Plugin muss die reiche Semantik von INTERLIS in das relationale Hop-Row-Modell übersetzen.
+
+=== Die 4-Schichten-Architektur
+
+Das Plugin arbeitet mit vier klar getrennten Schichten:
+
+[source,text]
+----
++---------------------------------------------------------------+
+| 4. Hop User Layer                                             |
+|    Object[] + IRowMeta                                        |
+|    String / Long / BigDecimal / Date / Geometry / ...         |
++-------------------------------^-------------------------------+
+                                |
+                                | projizieren / zusammenführen
++-------------------------------+-------------------------------+
+| 3. Mapping Layer                                               |
+|    RowSchemaPlan                                               |
+|    IomToRowMapper / RowToIomMapper                             |
+|    StructureMapper / AssociationMapper                         |
++-------------------------------^-------------------------------+
+                                |
++-------------------------------+-------------------------------+
+| 2. Canonical INTERLIS Envelope                                 |
+|    InterlisObjectEnvelope                                      |
+|    class, topic, bid, oid, operation, IomObject                |
++-------------------------------^-------------------------------+
+                                |
++-------------------------------+-------------------------------+
+| 1. IO/Model Layer                                              |
+|    ili2c TransferDescription / model repositories              |
+|    iox-ili IoxReader/IoxWriter                                 |
++---------------------------------------------------------------+
+----
+
+**Schicht 1 -- IO/Modell**: Die unterste Schicht liest die XTF-Datei und kompiliert das INTERLIS-Modell. Hier arbeitet das Plugin mit `ili2c` (Modellkompilierung) und `iox-ili` (I/O).
+
+**Schicht 2 -- Envelope**: Aus den rohen INTERLIS-Objekten werden _Envelopes_ erzeugt -- eine neutrale Zwischenrepräsentation, die das INTERLIS-Objekt zusammen mit Transfermetadaten enthält (Klasse, Topic, BID, TID, Operation).
+
+**Schicht 3 -- Mapping**: Ein vorberechneter Plan (`RowSchemaPlan`) beschreibt exakt, wie ein bestimmtes INTERLIS-Objekt auf Hop-Felder projiziert wird. Die Mapper wandeln dann jedes Objekt in eine Hop-Row um.
+
+**Schicht 4 -- Hop Row**: Das Ergebnis ist eine normale Hop-Row (`Object[]`) mit einem stabilen Schema (`IRowMeta`). Diese Row können Sie mit allen Standard-Hop-Transforms weiterverarbeiten.
+
+[IMPORTANT]
+====
+Die Trennung zwischen Schicht 2 (Envelope) und Schicht 4 (Hop Row) ist bewusst. Dadurch können mehrere INTERLIS-Klassen im selben Hop-Stream transportiert werden (im _Advanced-Modus_ über den `INTERLIS Transfer Input`), während der normale _User-Modus_ direkt typisierte Rows einer einzelnen Klasse erzeugt.
+====
+
+=== Zentrale Abbildung: INTERLIS → Hop
+
+Die folgende Tabelle zeigt, wie INTERLIS-Konzepte auf Hop-Felder abgebildet werden:
+
+[cols="2,2,1"]
+|===
+| INTERLIS-Konzept | Hop-Repräsentation | Transform
+
+| Klasse
+| Row mit stabilem Schema (1 Row = 1 Objekt)
+| INTERLIS Input
+
+| TID (Transferidentifikator)
+| String-Feld `_ili_tid`
+| INTERLIS Input
+
+| BID (Basket-ID)
+| String-Feld `_ili_bid`
+| INTERLIS Input
+
+| Topic-Name
+| String-Feld `_ili_topic` (optional)
+| INTERLIS Input
+
+| Klassen-Name (bei Vererbung)
+| String-Feld `_ili_class` (optional)
+| INTERLIS Input
+
+| Operation (INSERT/UPDATE/DELETE)
+| String-Feld `_ili_operation` (optional)
+| INTERLIS Input
+
+| Primitives Attribut (TEXT, INT, BOOLEAN, ...)
+| Entsprechender Hop-Typ (String, Long, Boolean, BigDecimal, Date, ...)
+| INTERLIS Input
+
+| Enumeration
+| String-Feld mit vollständigem Elementnamen
+| INTERLIS Input
+
+| Geometrie (COORD, POLYLINE, SURFACE, ...)
+| Hop-Geometry-Feld
+| INTERLIS Input
+
+| Mehrere Geometrien pro Klasse
+| Mehrere gleichwertige Geometry-Felder
+| INTERLIS Input
+
+| Struktur `0..1` oder `1`
+| Geflattete Felder mit Präfix (z. B. `Adresse_Strasse`)
+| INTERLIS Input
+
+| Struktur `BAG/LIST OF`
+| Nicht im Parent-Row; stattdessen Child-Rows über `INTERLIS Structure Explode`
+| Structure Explode
+
+| Einfache Rolle (1:1, 0..1)
+| Referenzfeld mit Ziel-TID (z. B. `Gemeinde_ref`)
+| INTERLIS Input
+
+| Komplexe Rolle / Assoziation (1:n, m:n)
+| Eigener Row-Typ mit `<rolle>_ref`-Feldern
+| INTERLIS Input
+
+| Vererbung
+| Flaches Schema mit allen effektiven Attributen (inkl. geerbter)
+| INTERLIS Input
+
+| Basket-Metadaten (consistency, state)
+| Technische Felder (bei Transfer Input)
+| INTERLIS Transfer Input
+|===
+
+[NOTE]
+====
+Die Feldnamen mit `_ili_`-Präfix sind technische Metadatenfelder. Alle anderen Felder haben Namen, die aus dem INTERLIS-Modell abgeleitet sind.
+====
+
+=== Vergleich: INTERLIS in Hop vs. FME
+
+Wenn Sie das Plugin `ili2fme` für FME kennen, werden Sie einige Unterschiede feststellen:
+
+|===
+| Aspekt | ili2fme (FME) | hop-interlis-plugin (Hop)
+
+| Grundeinheit
+| Feature (mit einer ausgezeichneten Geometrie)
+| Row (`Object[]` mit `IRowMeta`)
+
+| Mehrere Geometrien
+| Nur erste Geometrie = FME-Geometrie; Rest als HEX-WKB in Attributen
+| Mehrere gleichwertige `Geometry`-Felder
+
+| Strukturen
+| Als FME-Listen (komplexe Attribute)
+| `0..1` → geflattete Felder; `BAG/LIST` → separate Child-Rows
+
+| Rollen
+| Als Attribute mit REF-Werten
+| Einfache Rollen als `_ref`-Felder; komplexe als eigene Rows
+
+| Assoziationen
+| Eingebettete Link-Objekte oder separate Features
+| Komplexe Assoziationen als eigene Row-Typen
+
+| Vererbung
+| SuperClass- oder SubClass-Strategie wählbar
+| Flaches Schema mit allen effektiven Attributen (Default)
+
+| Baskets
+| Manuell über `xtf_basket` und `XTF_BASKETS`-Features
+| `_ili_bid` automatisch in jeder Row; Basket-Policy konfigurierbar
+|===
+
+[IMPORTANT]
+====
+Der entscheidende Unterschied: Hop hat _keine ausgezeichnete Geometrie_. Ein INTERLIS-Objekt mit drei Geometrieattributen (`Axis`, `Footprint`, `Geometry`) wird in Hop zu einer Row mit _drei `Geometry`-Feldern_. Sie entscheiden später beim Schreiben, welche Geometrie Sie verwenden möchten.
+====
+
+=== Technische Felder im Detail
+
+Das Plugin fügt automatisch technische Felder hinzu, die INTERLIS-Metadaten transportieren:
+
+`_ili_tid`::
+Der Transferidentifikator des Objekts (TID/OID). Dieser Wert ist immer ein String und wird niemals numerisch interpretiert. Er ist eindeutig über den gesamten Transfer.
+
+`_ili_bid`::
+Die Basket-ID, die angibt, zu welchem Basket das Objekt gehört. Ein Transfer kann mehrere Baskets enthalten.
+
+`_ili_topic`::
+Der qualifizierte Name des Topics (z. B. `DemoBodenbedeckung.Bodenbedeckung`). Optional aktivierbar.
+
+`_ili_class`::
+Der qualifizierte Name der Klasse (z. B. `DemoBodenbedeckung.Bodenbedeckung.Gebaeude`). Bei Vererbung relevant, da hier der tatsächliche Typ des Objekts steht, nicht nur der gewählte Input-Typ. Optional aktivierbar.
+
+`_ili_operation`::
+Die Operation des Objekts: `INSERT`, `UPDATE` oder `DELETE` (bei inkrementellen Transfers). Optional aktivierbar.
+
+`_ili_index`::
+Die Listenposition bei `LIST OF`-Strukturen. Semantisch relevant, da LIST eine geordnete Menge ist.
+
+`_ili_source_object`::
+Das rohe INTERLIS-Objekt als technisches Feld (nur wenn aktiviert). Benötigt für `INTERLIS Structure Explode`, damit Child-Rows aus dem Parent-Objekt extrahiert werden können.
+
+[WARNING]
+====
+Die technischen Felder sind Bestandteil des stabilen Schemas und ändern sich innerhalb eines Streams nie. Sie können sie in der Pipeline wie normale Hop-Felder verwenden (filtern, gruppieren, transformieren, schreiben).
+====
+
+=== Geometrie-Handling
+
+Die Geometrie-Verarbeitung ist ein wichtiger Aspekt des Plugins:
+
+**Keine ausgezeichnete Geometrie**: Anders als FME kennt Hop keine ausgezeichnete Geometrie („eine Geometrie pro Row"). Ein INTERLIS-Objekt mit mehreren Geometrieattributen wird zu einer Hop-Row mit mehreren `Geometry`-Feldern.
+
+**Kreisbögen bleiben Kreisbögen**: Das Plugin verwendet die `hop-geometry-type-plugin` und wandelt INTERLIS-Geometrien über SQL/MM WKB um. Dadurch bleiben Kreisbögen (_circular arcs_) als JTS-`CircularString` oder `CompoundCurve` erhalten -- keine stille Linearisierung.
+
+**SRID**: INTERLIS-Modelle definieren Koordinatensysteme über Domänen, nicht über EPSG-Codes. Das Plugin setzt die SRID nur, wenn eine eindeutige Zuordnung vorliegt. Sie können einen Default-SRID konfigurieren.
+
+**Geometrie-Abbildung** (vereinfacht):
+
+[source,text]
+----
+INTERLIS Geometrie (IomObject)
+       |
+       v
+Iox2wkb (SQL/MM WKB)
+       |
+       v
+SQL/MM WKB bytes
+       |
+       v
+CurveGeometrySupport.readWkb()
+       |
+       v
+Hop Geometry (JTS Geometry)
+----
+
+Beim Schreiben wird der Pfad umgekehrt:
+
+[source,text]
+----
+Hop Geometry (JTS Geometry)
+       |
+       v
+CurveGeometrySupport.writeWkb()
+       |
+       v
+SQL/MM WKB bytes
+       |
+       v
+Wkb2iox.read()
+       |
+       v
+INTERLIS Geometrie (IomObject)
+----
+
+[NOTE]
+====
+Für `SURFACE` und `AREA` mit Bögen werden `CurvePolygon`-Geometrien erzeugt. Für `POLYLINE` mit Bögen `CompoundCurve`-Geometrien. Diese sind vollständig im Hop-Geometry-Value-Type unterstützt.
+====
+
+=== Strukturen: Flatten vs. Auflösen
+
+INTERLIS-Strukturen können auf zwei Arten behandelt werden:
+
+**Einwertige Strukturen** (`0..1` oder `1`): Werden automatisch _geflattet_ -- ihre Attribute werden zu Feldern des Parent-Rows. Bei einem Präfix wie `Adresse_` entstehen Felder wie `Adresse_Strasse` und `Adresse_Nummer`.
+
+**Mehrwertige Strukturen** (`BAG OF` oder `LIST OF`): Passen nicht in eine einzelne Row und werden daher über den `INTERLIS Structure Explode`-Transform in Child-Rows aufgelöst. Jede Child-Row trägt die Parent-TID (`_ili_parent_tid`) und bei LIST einen Index (`_ili_index`).
+
+Beispiel:
+
+[source,text]
+----
+Parent:
+_ili_tid = "g1"
+Name = "Rathaus"
+
+Child-Rows (nach dem Auflösen):
+_ili_parent_tid | _ili_index | Code    | Datum
+"g1"        | 0          | "Q100"  | 2024-01-15
+"g1"        | 1          | "Q200"  | 2024-02-20
+----
+
+[TIP]
+====
+Das Präfix bei geflatteten Strukturen ist konfigurierbar. Bei Namenskollisionen (z. B. Struktur-Attribut heisst auch `Name` wie ein Top-Level-Attribut) wird das Plugin warnen und ein alternatives Präfix vorschlagen.
+====
+
+=== Rollen und Assoziationen
+
+**Einfache Rollen** (Kardinalität 0..1 oder 1): Werden als Referenzfelder dargestellt. Ein Objekt `Gebaeude` mit einer Rolle `Gemeinde` (die auf `Gemeinde`-Objekte verweist) erhält ein Feld `Gemeinde_ref` mit der TID des Zielobjekts.
+
+**Externe Referenzen**: Falls das Zielobjekt in einem anderen Basket liegt, wird zusätzlich ein Feld `<rolle>_ref_bid` mit der BID des Ziel-Baskets erzeugt.
+
+**Komplexe Assoziationen** (m:n oder mit eigenen Attributen): Eigene Row-Typen. Eine Assoziation `Ownership` zwischen `Person` und `Organisation` mit Attributen `Share` und `Since` wird zu einer Row mit:
+
+[source,text]
+----
+_ili_tid       (optional, falls Assoziation identifizierbar)
+person_ref
+organisation_ref
+Share
+Since
+----
+
+[TIP]
+====
+Für den komfortablen Zugriff auf Zielobjekte einer einfachen Rolle steht der `INTERLIS Role Join`-Transform zur Verfügung. Er liest die Zielklasse und fügt gewünschte Felder als Lookup zum Main-Stream hinzu.
+====
+
+=== Vererbung
+
+INTERLIS-Klassen können voneinander erben (`EXTENDS`). Das Plugin löst Vererbung flach auf:
+
+- Alle _effektiven Attribute_ (deklarierte + geerbte) erscheinen im Row-Schema
+- Die Reihenfolge folgt der Modellhierarchie
+- `_ili_class` zeigt den tatsächlichen Objekttyp an
+
+Beispiel:
+
+[source,interlis]
+----
+CLASS BaseObject =
+  CreatedAt : DATE;
+END BaseObject;
+
+CLASS Gebaeude EXTENDS BaseObject =
+  Name : TEXT*100;
+  Geometrie : SURFACE;
+END Gebaeude;
+----
+
+Hop-Row für `Gebaeude`:
+
+[source,text]
+----
+_ili_tid    String
+CreatedAt   Date
+Name        String
+Geometrie   Geometry
+----
+
+[NOTE]
+====
+Die Vererbung wird vollständig flach aufgelöst. Es gibt keine separate Unterscheidung zwischen BaseObject- und Gebaeude-Rows. Wenn Sie nur BaseObject-Objekte haben möchten, wählen Sie die Klasse `BaseObject` als Input-Klasse.
+====

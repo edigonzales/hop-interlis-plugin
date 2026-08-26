@@ -1,0 +1,259 @@
+== Troubleshooting
+
+Dieses Kapitel hilft Ihnen, häufige Probleme mit dem `hop-interlis-plugin` zu lösen.
+
+=== Problem: Modell wird nicht gefunden
+
+**Symptom**: Statuszeile zeigt `Model not found` oder `Repository could not be reached`.
+
+**Ursachen und Lösungen**:
+
+|===
+| Ursache | Lösung
+
+| XTF-Datei enthält keinen Modellverweis
+| Prüfen Sie den Transfer-Header. Falls der Header fehlt, geben Sie das Modell explizit an (nicht `%DATA`).
+
+| `.ili`-Datei liegt nicht im gleichen Verzeichnis wie die XTF-Datei
+| Kopieren Sie das Modell in das XTF-Verzeichnis oder geben Sie den Pfad in _Model dirs_ an.
+
+| Modellname falsch geschrieben
+| INTERLIS-Modellnamen sind case-sensitive. Prüfen Sie die exakte Schreibweise.
+
+| Modell-Repository nicht erreichbar
+| Prüfen Sie die Netzwerkverbindung. Für Offline-Arbeit: Laden Sie Modelle herunter und geben Sie lokale Verzeichnisse an.
+
+| Lokaler Cache veraltet
+| Löschen Sie den lokalen Cache (`~/.ilicache` oder konfiguriertes Cache-Verzeichnis).
+|===
+
+[TIP]
+====
+Die Fehlermeldung im Dialog nennt immer die eigentliche Ursache (Root Cause). Lesen Sie die Statuszeile genau:
+
+- `Repository https://models.interlis.ch/ could not be reached` → Netzwerkproblem
+- `Model 'DemoModel' not found in directory /path/to/models` → Datei fehlt oder falscher Name
+- `Multiple models with name 'DemoModel' found` → Namenskollision im Modellverzeichnis
+====
+
+=== Problem: Schema Preview nicht verfügbar
+
+**Symptom**: Die Schema Preview zeigt keine Felder oder `Preview unavailable`.
+
+**Ursachen und Lösungen**:
+
+|===
+| Ursache | Lösung
+
+| Unaufgelöste Variablen (z. B. `${PROJECT_HOME}`)
+| Die Hop-GUI kann einige Variablen zur Entwurfszeit (Design Time) nicht auflösen. Setzen Sie absolute Pfade oder definieren Sie die Variablen im Hop-Projekt.
+
+| Modell noch nicht geladen
+| Klicken Sie auf **[ Reload ]**, um die Modellprobe auszulösen.
+
+| Modell-Repository offline
+| Prüfen Sie die Netzwerkverbindung oder verwenden Sie lokale Modelle.
+
+| Falsche Klasse ausgewählt
+| Stellen Sie sicher, dass die Klasse existiert und transferierbar ist (keine abstrakte Klasse).
+|===
+
+[NOTE]
+====
+Eine fehlgeschlagene Schema-Probe macht den Dialog **nicht unbrauchbar**. Sie können den Dialog trotzdem bearbeiten und speichern. Die Fehlerbehebung erfolgt dann zur Laufzeit.
+====
+
+=== Problem: `INTERLIS Structure Explode` findet keine Kinder
+
+**Symptom**: Der `INTERLIS Structure Explode` gibt keine Child-Rows aus.
+
+**Ursachen und Lösungen**:
+
+|===
+| Ursache | Lösung
+
+| `distributes=true` am Input-Transform
+| Setzen Sie `distributes=false` am Input-Transform (Eigenschaften des Transforms). Hop verteilt sonst die Rows Round-Robin auf mehrere Ausgänge.
+
+| `_ili_source_object` nicht aktiviert
+| Aktivieren Sie _Keep source object for Structure Explode_ im `INTERLIS Input` (Advanced).
+
+| Falsche Struktur ausgewählt
+| Prüfen Sie den qualifizierten Namen der Struktur im Dialog.
+
+| Parent hat keine Kinder
+| Einige Parent-Rows haben möglicherweise keine Strukturkinder. Das ist normal -- es werden dann 0 Child-Rows erzeugt.
+|===
+
+[CAUTION]
+====
+**Das `distributes`-Problem** ist ein häufiger Stolperstein in Hop. Standardmässig verteilt Hop Rows Round-Robin an alle Ausgänge eines Transforms. Wenn Sie einen Input an zwei Transforms weitergeben (z. B. an `Structure Explode` und an `Structure Collect`), müssen Sie `distributes=false` setzen, damit jede Row an beide Transforms geht.
+
+Im Dialog: Rechtsklick auf den Transform → _Transform properties_ → `distributes` = `false`.
+====
+
+=== Problem: Mehrere Baskets im Output
+
+**Symptom**: Die Pipeline bricht beim `INTERLIS Output` mit einem Basket-Fehler ab.
+
+**Fehlermeldung**:
+
+[source,text]
+----
+Basket b1 was already closed. Input rows must be grouped by Basket ID.
+----
+
+**Lösung**:
+
+1. Sortieren Sie die Input-Rows nach `_ili_bid` vor dem `INTERLIS Output`.
+2. Verwenden Sie den `Sort rows`-Transform.
+
+[source,text]
+----
+Sort rows:
+  Sort field: _ili_bid
+  Ascending: true
+----
+
+[IMPORTANT]
+====
+Ein streaming XTF-Writer kann Baskets nicht beliebig verschachteln. Die Input-Rows müssen nach BID sortiert sein. Bei `GROUP_BY_BID`-Policy dürfen Rows mit derselben BID nicht nach einem anderen Basket erneut erscheinen.
+====
+
+=== Problem: Kreisbögen werden linearisiert
+
+**Symptom**: Nach dem Roundtrip sind Kreisbögen in viele kleine Geradensegmente aufgelöst.
+
+**Ursachen und Lösungen**:
+
+|===
+| Ursache | Lösung
+
+| `hop-geometry-type-plugin` nicht installiert
+| Installieren Sie das `hop-geometry-type-plugin` (Voraussetzung für Curve-Geometrien).
+
+| GeoPackage Writer unterstützt keine Kreisbögen
+| Stellen Sie sicher, dass der GeoPackage-Typ `COMPOUNDCURVE` oder `CURVEPOLYGON` unterstützt. QGIS 3.x und GDAL 3.x unterstützen dies.
+
+| FME oder anderes Tool dazwischen
+| Wenn Sie das XTF nach FME importieren und wieder exportieren, linearisiert FME die Bögen (abhängig von der Konfiguration).
+
+| Routing über einen nicht kurvenfähigen Transform
+| Einige Hop-Transforms (z. B. einige Geometry-Operationen) könnten Bögen linearisieren. Vermeiden Sie solche Operationen im Roundtrip.
+|===
+
+[NOTE]
+====
+So prüfen Sie, ob die Bögen erhalten geblieben sind:
+
+1. Lesen Sie die originale XTF und die Output-XTF mit `INTERLIS Input`
+2. Vergleichen Sie die Geometrie-Felder (z. B. mit `Stream lookup` oder `Merge join`)
+3. Alternativ: Öffnen Sie beide XTF-Dateien in einem Texteditor und suchen Sie nach `<ARC>`-Elementen
+====
+
+=== Problem: DELETE-Objekte werden als normale Rows ausgegeben
+
+**Symptom**: Inkrementelle Transfers enthalten DELETE-Markierungen, die als normale Zeilen erscheinen.
+
+**Lösung**:
+
+1. Filtern Sie DELETE-Objekte in der Pipeline heraus:
++
+[source,text]
+----
+Filter rows:
+  Condition: _ili_operation <> "DELETE"
+----
+
+2. Oder: Stellen Sie im `INTERLIS Input` die Option _Delete objects_ auf _Ignore_.
++
+[source,text]
+----
+Advanced > Delete objects
+  ( ) Emit matching deletes
+  (*) Ignore
+  ( ) Fail
+----
+
+=== Problem: TID-Fehler beim Schreiben
+
+**Symptom**: Pipeline bricht mit `Duplicate TID` oder `Missing TID` ab.
+
+**Ursachen und Lösungen**:
+
+|===
+| Fehler | Ursache | Lösung
+
+| Duplicate TID
+| Zwei oder mehr Rows haben dieselbe TID. | Prüfen Sie die Eindeutigkeit der TID-Spalte.
+
+| Missing TID
+| Eine Row hat keine TID (null oder leer). | Setzen Sie im Dialog _Missing TID = Generate UUID_ oder stellen Sie sicher, dass alle Rows eine TID haben.
+
+| TID enthält ungültige Zeichen
+| INTERLIS-TIDs dürfen bestimmte Zeichen nicht enthalten (z. B. Leerzeichen). | Bereinigen Sie die TID-Werte vor dem Output.
+|===
+
+=== Problem: Geometrie-Fehler
+
+**Symptom**: `InterlisGeometryException` oder `null`-Geometrien.
+
+**Ursachen und Lösungen**:
+
+|===
+| Ursache | Lösung
+
+| Falsche Geometrie-Typen (z. B. Point statt Surface)
+| Prüfen Sie, ob das Input-Geometrie-Feld den korrekten Typ hat. Der `INTERLIS Output` validiert den Geometrietyp gegen das Modell.
+
+| Null-Geometrien (z. B. aus fehlgeschlagenem Join)
+| Filtern Sie null-Geometrien heraus oder ersetzen Sie sie durch gültige Geometrien.
+
+| SRID-Mismatch
+| Stellen Sie sicher, dass die Geometrie-SRID mit dem Modell-CRS übereinstimmt.
+
+| Korrupte WKB-Daten
+| Dies ist selten und deutet auf einen Bug hin. Melden Sie das Problem mit einer minimalen Reproduktion.
+|===
+
+[TIP]
+====
+Um die Fehleranalyse zu erleichtern, aktivieren Sie das Detailed Logging:
+
+Advanced > Enable trace messages: Yes
+
+Dann erscheinen zusätzliche Informationen im Log:
+
+- Geladene Modell-Repositories
+- Schema-Plan-Details
+- Geometrie-Konvertierungen
+- Feld-Bindings
+====
+
+=== Häufig gestellte Fragen (FAQ)
+
+**Q: Unterstützt das Plugin INTERLIS 1 (ITF)?**
+A: Nein. Nur XTF 2.3 und XTF 2.4. ITF-Dateien werden mit einer klaren Fehlermeldung abgelehnt.
+
+**Q: Kann ich mehrere Klassen aus der gleichen XTF-Datei parallel lesen?**
+A: Ja, mit zwei Ansätzen:
+1. Mehrere `INTERLIS Input`-Transforms mit derselben Datei (je einer pro Klasse)
+2. Ein `INTERLIS Transfer Input` für alle Klassen, gefolgt von `INTERLIS Object to Row`
+
+**Q: Wie gross können XTF-Dateien sein?**
+A: Das Plugin arbeitet streaming. Die Dateigrösse ist praktisch nur durch Festplattenplatz und Bearbeitungszeit begrenzt. Auch mehrere GB grosse Dateien sind problemlos möglich.
+
+**Q: Kann ich XTF-Dateien remote lesen (HTTP)?**
+A: Nein. Der `INTERLIS Input` liest nur lokale Dateien. Laden Sie die Datei zuerst herunter (z. B. mit dem `HTTP client`-Transform).
+
+**Q: Geht der Roundtrip 100% verlustfrei?**
+A: Für die meisten Datentypen ja. Einschränkungen:
+- XML-Kommentare und Formatierung werden nicht erhalten
+- Basket-Metadaten (start/end state, consistency) sind nur im Transfer-Modus vollständig
+- Einige spezielle INTERLIS-Konstrukte werden möglicherweise nicht unterstützt
+
+**Q: Wo finde ich Hilfe?**
+A:
+- Plugin-Repository: https://github.com/edigonzales/hop-interlis-plugin
+- Apache Hop Community: https://hop.apache.org/community/
+- INTERLIS Forum: https://interlis.ch/forum/

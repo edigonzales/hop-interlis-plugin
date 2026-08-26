@@ -1241,7 +1241,7 @@ selectedChildFields[]
 ## 20.3 Output RowMeta
 
 ```text
-_parent_tid       String
+_ili_parent_tid   String
 _ili_parent_key   String optional
 _ili_index        Integer for LIST, optional for BAG
 <selected child fields...>
@@ -1281,7 +1281,7 @@ Inputs müssen nach Parent-Key sortiert sein:
 
 ```text
 Parent stream: _ili_tid ascending
-Child stream:  _parent_tid ascending, _ili_index ascending
+Child stream:  _ili_parent_tid ascending, _ili_index ascending
 ```
 
 Meta:

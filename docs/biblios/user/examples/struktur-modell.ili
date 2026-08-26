@@ -1,0 +1,28 @@
+INTERLIS 2.3;
+
+/** Beispielmodell mit einwertiger Struktur (Adresse).
+    Zeigt das Flattening von Strukturattributen.
+**/
+
+MODEL DemoStruktur (de)
+AT "https://github.com/edigonzales/hop-interlis-plugin"
+VERSION "2024-01-01" =
+
+  TOPIC Personen =
+
+    STRUCTURE Adresse =
+      Strasse : TEXT*80;
+      Hausnummer : TEXT*10;
+      PLZ : TEXT*10;
+      Ort : TEXT*40;
+    END Adresse;
+
+    CLASS Person =
+      Name : TEXT*100;
+      Vorname : TEXT*100;
+      Adresse : Adresse;
+    END Person;
+
+  END Personen;
+
+END DemoStruktur.

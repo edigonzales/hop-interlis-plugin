@@ -1,0 +1,317 @@
+== XTF schreiben: Der INTERLIS Output-Transform
+
+Der `INTERLIS Output`-Transform schreibt typisierte Hop-Rows als INTERLIS-XTF-Datei. Er ist das Gegenstück zum `INTERLIS Input`-Transform und ermöglicht den vollständigen Roundtrip.
+
+[TIP]
+====
+Der `INTERLIS Output` schreibt _eine Klasse pro Transform_. Wenn Sie mehrere Klassen in eine XTF-Datei schreiben möchten, verwenden Sie den `INTERLIS Transfer Output`-Transform mit dem `INTERLIS Row to Object`-Transform (siehe <<erweiterte-transforms>>).
+====
+
+=== Dialog-Übersicht
+
+[source,text]
+----
++================================================================================+
+| INTERLIS Output                                                                |
++================================================================================+
+| Transform name [ Gebäude schreiben                                       ]     |
+|                                                                                 |
+| Target                                                                          |
+| XTF file       [ ${PROJECT_HOME}/out/buildings.xtf                     ] ...   |
+| Existing file  [ Fail if exists                                       v]      |
+|                                                                                 |
+| Model                                                                           |
+| Models         [ DemoBodenbedeckung                                    ]      |
+| Model dirs     [ https://models.interlis.ch/                           ]      |
+| Class          [ DemoBodenbedeckung.Bodenbedeckung.Gebaeude           v]      |
+|                                                                                 |
+| Identity                                                                        |
+| TID field      [ _ili_tid                                              v]      |
+| Missing TID    [ Fail                                                 v]      |
+|                                                                                 |
+| Basket                                                                          |
+| Policy         [ From field                                           v]      |
+| BID field      [ _ili_bid                                              v]      |
+| Fixed BID      [ b1                                                    ]      |
+|                                                                                 |
+| Field mapping                                                                   |
+| +--------------------------------------------------------------------------+   |
+| | INTERLIS property      | Input field          | Required | Status         |   |
+| | Art                     | Art                  | no       | OK             |   |
+| | Name                    | Name                 | no       | OK             |   |
+| | Geometrie               | Geometrie            | yes      | Geometry       |   |
+| +--------------------------------------------------------------------------+   |
+| [ Get incoming fields ] [ Auto-map by name ]                                   |
+|                                                                                 |
+| > Validation                                                                    |
+| > Advanced                                                                      |
+|                                                                                 |
+|                                                     [ OK ] [ Cancel ]           |
++================================================================================+
+----
+
+=== Zieldatei
+
+- **XTF file**: Pfad zur Ausgabedatei. Variablen wie `${PROJECT_HOME}` werden aufgelöst.
+- **Existing file**: Was passiert, wenn die Datei bereits existiert?
+  - `Fail`: Pipeline bricht ab
+  - `Overwrite`: Datei wird überschrieben
+  - `Append`: Daten werden angehängt (nicht empfohlen für XTF)
+
+[IMPORTANT]
+====
+XTF ist ein XML-Format. _Append_ führt zu ungültigem XML, es sei denn, Sie wissen genau, was Sie tun. Verwenden Sie _Overwrite_ oder schreiben Sie in separate Dateien pro Basket.
+====
+
+=== Modell und Klasse
+
+Die Modell-Konfiguration ist identisch zum `INTERLIS Input` (siehe <<xtf-lesen, Abschnitt Modellquelle konfigurieren>>).
+
+Die Klasse muss mit dem Input-Schema übereinstimmen. Der Transform prüft zur Laufzeit, ob die Input-Felder mit den INTERLIS-Attributen kompatibel sind.
+
+=== Identität: TID
+
+Jedes INTERLIS-Objekt benötigt eine eindeutige TID.
+
+==== TID-Feld
+
+Wählen Sie das Input-Feld, das die TID enthält:
+
+[source,text]
+----
+TID field [ _ili_tid  v]
+----
+
+Standardmässig wird `_ili_tid` verwendet. Falls Sie die TID in einem anderen Feld haben, können Sie es hier auswählen.
+
+==== Missing TID
+
+Was passiert, wenn ein Input-Row keine TID hat?
+
+[cols="1,2"]
+|===
+| Option | Verhalten
+
+| Fail
+| Pipeline bricht ab (Default)
+
+| Generate UUID
+| Automatisch eine UUID als TID generieren (nur wenn das Modell dies erlaubt)
+|===
+
+[CAUTION]
+====
+Die Option _Generate UUID_ ist nur zulässig, wenn das INTERLIS-Modell eine UUID-kompatible OID-Domain verwendet (z. B. `INTERLIS.UUIDOID`). Bei anderen OID-Domains bricht die Pipeline ab.
+====
+
+=== Basket-Handling
+
+Baskets organisieren Objekte thematisch. Der `INTERLIS Output` unterstützt mehrere Basket-Policies:
+
+[cols="1,2"]
+|===
+| Policy | Verhalten
+
+| From field (Default)
+| Die BID wird aus einem Input-Feld gelesen (z. B. `_ili_bid`). Objekte mit derselben BID werden im selben Basket geschrieben.
+
+| Single basket
+| Alle Objekte werden in einen einzigen Basket mit fester BID geschrieben.
+
+| Group by BID
+| Ähnlich wie _From field_, aber mit expliziter Gruppierungslogik.
+|===
+
+[IMPORTANT]
+====
+**Sortierung bei mehreren Baskets**: Bei `From field` oder `Group by BID` muss der Input-Stream nach BID sortiert sein. Wenn derselbe BID nach einem anderen Basket wieder erscheint, bricht die Pipeline ab, da XTF keine verschachtelten Baskets erlaubt.
+
+Fehlerbeispiel:
+----
+Input: b1, b1, b2, b1  <-- FEHLER: b1 erscheint nach b2 erneut
+Input: b1, b1, b2, b2  <-- OK: gruppiert nach BID
+----
+====
+
+=== Feld-Mapping
+
+Die Tabelle zeigt die Zuordnung zwischen INTERLIS-Attributen und Input-Feldern:
+
+[source,text]
+----
++--------------------------------------------------------------------------+
+| INTERLIS property | Input field | Required | Status                      |
+|--------------------------------------------------------------------------|
+| Art               | Art         | no       | OK                          |
+| Name              | Name        | no       | OK                          |
+| Geometrie         | Geometrie   | yes      | Geometry check passed       |
+| Adresse.Strasse   | Adresse_Str | no       | OK                          |
++--------------------------------------------------------------------------+
+----
+
+Spalten:
+
+- **INTERLIS property**: Das Attribut im INTERLIS-Modell
+- **Input field**: Das zugeordnete Hop-Feld aus dem Input-Stream
+- **Required**: Ob das Attribut im Modell mandatory ist
+- **Status**: Kompatibilitätsprüfung (z. B. Typ-Check für Geometrie)
+
+#### Auto-map by name
+
+Der Button **Auto-map by name** versucht, Input-Felder automatisch zuzuordnen:
+
+1. Exakte Übereinstimmung des gespeicherten Pfads
+2. Exakte Übereinstimmung des Hop-Feldnamens
+3. Default-Flatten-Name (z. B. `Adresse_Strasse`)
+4. Case-insensitive als Fallback (nur Vorschlag)
+
+[TIP]
+====
+Nach dem Auto-Mapping sollten Sie die Zuordnung prüfen, insbesondere bei komplexen Strukturen oder umbenannten Feldern.
+====
+
+=== Strukturen zurückschreiben
+
+#### Einwertige Strukturen (Flatten)
+
+Wenn Sie Strukturen als geflattete Felder eingelesen haben (z. B. `Adresse_Strasse`, `Adresse_Nummer`), werden sie automatisch wieder in Strukturen zurückverwandelt:
+
+- Alle geflatteten Felder, die zum gleichen Struktur-Attribut gehören, werden zusammengeführt.
+- Wenn mindestens ein Feld nicht null ist, wird die Struktur erzeugt.
+- Wenn alle Felder null sind und die Struktur optional ist, wird keine Struktur erzeugt.
+
+[source,text]
+----
+Input:
+_ili_tid | Name | Adresse_Strasse | Adresse_Nummer | Adresse_PLZ | Adresse_Ort
+"p1"     | Meier| Hauptstrasse    | 42             | 4500        | Solothurn
+
+Output-IOM:
+<Person TID="p1">
+  <Name>Meier</Name>
+  <Adresse>
+    <Strasse>Hauptstrasse</Strasse>
+    <Hausnummer>42</Hausnummer>
+    <PLZ>4500</PLZ>
+    <Ort>Solothurn</Ort>
+  </Adresse>
+</Person>
+----
+
+#### Mehrwertige Strukturen (LIST/BAG)
+
+Für `LIST OF`/`BAG OF` müssen Sie die Struktur vor dem Schreiben zusammenführen:
+
+1. Lesen Sie die Parent-Rows und Child-Rows (z. B. via `INTERLIS Structure Explode`)
+2. Transformieren Sie die Child-Rows nach Bedarf
+3. Führen Sie sie mit `INTERLIS Structure Collect` zusammen
+4. Schreiben Sie das Ergebnis mit `INTERLIS Output`
+
+Pipeline:
+
+[source,text]
+----
+INTERLIS Input (Parent)
+  |
+  +--> INTERLIS Structure Explode --> [Child-Transformations] --> INTERLIS Structure Collect
+  |                                                                         |
+  +-------------------------------------------------------------------------+
+                                    |
+                                    v
+                            INTERLIS Output
+----
+
+[IMPORTANT]
+====
+Die Child-Rows müssen nach `_ili_parent_tid` und `_ili_index` (bei LIST) sortiert sein, damit der `INTERLIS Structure Collect` sie korrekt zuordnen kann.
+====
+
+=== Assoziationen zurückschreiben
+
+Komplexe Assoziationen (m:n, attributiert) werden automatisch als Link-Objekte zurückgeschrieben, wenn das Input-Schema die entsprechenden `_ref`-Felder enthält.
+
+Beispiel:
+
+[source,text]
+----
+Input:
+_ili_tid | person_ref | organisation_ref | Share | Since
+"a1"     | "p1"       | "o1"             | 50    | 2020-01-01
+
+Output-IOM:
+<Association TID="a1">
+  <person REF="p1"></person>
+  <organisation REF="o1"></organisation>
+  <Share>50</Share>
+  <Since>2020-01-01</Since>
+</Association>
+----
+
+[NOTE]
+====
+Attributierte Assoziationen werden in XTF immer als separate Link-Objekte geschrieben, nie als Embedded Links mit Attributen.
+====
+
+=== Roundtrip
+
+Der vollständige Roundtrip testet die Qualität der Abbildung:
+
+[source,text]
+----
+XTF-Datei --[INTERLIS Input]--> Rows --[Transformationen]--> Rows --[INTERLIS Output]--> XTF-Datei
+----
+
+Was muss im Roundtrip erhalten bleiben:
+
+- Alle Attributwerte (inkl. Präzision bei Dezimalzahlen)
+- Alle Geometrien (inkl. Kreisbögen)
+- Alle TIDs und BIDs
+- Struktur-Inhalte (auch LIST-Ordnung)
+- Rollen/Referenzen
+- Basket-Zugehörigkeit
+
+Sie können den Roundtrip testen, indem Sie:
+
+1. Eine XTF-Datei mit `INTERLIS Input` lesen
+2. Die Rows unverändert (oder minimal transformiert) an `INTERLIS Output` weitergeben
+3. Die Ausgabe-XTF mit der Original-XTF vergleichen (z. B. mit `diff` oder ilivalidator)
+
+[source,bash]
+----
+# Beispiel: XTF validieren
+$ java -jar ilivalidator.jar original.xtf
+$ java -jar ilivalidator.jar output.xtf
+----
+
+[TIP]
+====
+Für vollständige Roundtrip-Tests empfiehlt es sich, `ilivalidator` zu verwenden. Wenn beide Dateien validieren und die Objektanzahl übereinstimmt, ist der Roundtrip erfolgreich.
+====
+
+=== Validierung
+
+Optional kann die Ausgabe-XTF nach dem Schreiben validiert werden:
+
+[source,text]
+----
+v Validation
+  [x] Validate generated transfer
+  
+  Validator config [                                      ] [...]
+  
+  [x] Validate attribute/role multiplicity
+  [ ] Stop after first error
+  Max errors [ 10000                                     ]
+----
+
+[CAUTION]
+====
+Die Validierung nach dem Schreiben erfordert einen zusätzlichen Lesedurchlauf. Bei grossen Dateien kann dies die Gesamtzeit deutlich erhöhen.
+====
+
+=== Performance-Tipps
+
+- **Batching**: Der Transform puffert Objekte und schreibt sie effizient.
+- **Sortierung**: Sortieren Sie vor dem Output nach BID, falls Sie mehrere Baskets haben.
+- **Geometrie**: Das Plugin verwendet vorkompilierte WKB-Converter pro Transform-Instanz.
+- **TID-Cache**: Bei UUID-Generierung wird ein Cache verwendet, um Duplikate zu vermeiden.

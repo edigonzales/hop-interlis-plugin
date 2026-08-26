@@ -1,0 +1,26 @@
+INTERLIS 2.3;
+
+/** Beispielmodell mit Kreisbogen.
+    Zeigt die verlustfreie Behandlung von Bögen.
+**/
+
+MODEL DemoBogen (de)
+AT "https://github.com/edigonzales/hop-interlis-plugin"
+VERSION "2024-01-01" =
+
+  DOMAIN
+    Coord2 = COORD
+      2000000.000 .. 3000000.000,
+      1000000.000 .. 1400000.000;
+
+  TOPIC Verkehr =
+
+    CLASS Strassenachse =
+      Name : TEXT*100;
+      Geometrie : POLYLINE WITH (ARCS, STRAIGHTS)
+        VERTEX Coord2;
+    END Strassenachse;
+
+  END Verkehr;
+
+END DemoBogen.

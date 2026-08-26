@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="hop-interlis-plugin-doc" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="DemoListe" VERSION="2024-01-01" URI="https://github.com/edigonzales/hop-interlis-plugin"/>
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <DemoListe.Gebaeude BID="b1">
+      <DemoListe.Gebaeude.Gebaeude TID="g1">
+        <Name>Rathaus</Name>
+        <Qualitaeten>
+          <DemoListe.Gebaeude.Qualitaet>
+            <Code>Q100</Code>
+            <Beschreibung>Brandschutz geprüft</Beschreibung>
+            <Pruefdatum>2024-01-15</Pruefdatum>
+          </DemoListe.Gebaeude.Qualitaet>
+          <DemoListe.Gebaeude.Qualitaet>
+            <Code>Q200</Code>
+            <Beschreibung>Statik geprüft</Beschreibung>
+            <Pruefdatum>2024-02-20</Pruefdatum>
+          </DemoListe.Gebaeude.Qualitaet>
+        </Qualitaeten>
+      </DemoListe.Gebaeude.Gebaeude>
+    </DemoListe.Gebaeude>
+  </DATASECTION>
+</TRANSFER>

@@ -1,0 +1,116 @@
+== Glossar
+
+Dieses Glossar erklärt die wichtigsten Fachbegriffe aus dem INTERLIS-Umfeld und dem Plugin.
+
+[cols="1,3"]
+|===
+| Begriff | Erklärung
+
+| Auflösen (Structure Explode)
+| Das Zerlegen einer mehrwertigen Struktur in einzelne Child-Rows (`INTERLIS Structure Explode`).
+
+| Basket (BID)
+| Eine Sammlung von INTERLIS-Objekten eines Topics. Jeder Basket hat eine eindeutige ID (BID). Ein Transfer kann mehrere Baskets enthalten.
+
+| BID
+| _Basket Identifier_ -- die eindeutige ID eines Baskets innerhalb des Transfers.
+
+| Domain
+| Ein benutzerdefinierter Datentyp in INTERLIS, z. B. `Coord2` für 2D-Koordinaten.
+
+| Enumeration
+| Eine feste Liste erlaubter Werte, z. B. `(Wohngebaeude, Gewerbegebaeude)`.
+
+| Extends
+| Vererbung in INTERLIS. Eine Klasse erbt Attribute und Rollen von einer anderen.
+
+| Flattening
+| Das Überführen einer verschachtelten Struktur in flache Felder, z. B. `Adresse_Strasse` statt `Adresse.Strasse`.
+
+| Geometrie (INTERLIS)
+| Räumliche Daten: COORD (Punkt), POLYLINE (Linie), SURFACE/AREA (Fläche). Bögen werden mit `WITH (ARCS)` gekennzeichnet.
+
+| Hop-Row
+| Ein `Object[]` mit zugehörigem `IRowMeta` -- die Grundeinheit der Datenverarbeitung in Apache Hop.
+
+| ili2c
+| Der INTERLIS-Modellcompiler. Kompiliert `.ili`-Dateien in eine `TransferDescription`.
+
+| IOM
+| _INTERLIS Object Model_ -- die interne Objektrepräsentation in iox-ili.
+
+| iox-ili
+| Die I/O-Bibliothek für INTERLIS. Liest und schreibt XTF/ITF und bietet Validierung.
+
+| ITF
+| _INTERLIS Transfer Format_ -- das ältere INTERLIS-1-Format (nicht von diesem Plugin unterstützt).
+
+| Klasse
+| Eine Entität im INTERLIS-Modell mit Attributen und Rollen. Entspricht in etwa einer Tabelle in einer Datenbank.
+
+| LIST OF / BAG OF
+| Mehrwertige Strukturattribute. LIST ist geordnet, BAG ist ungeordnet.
+
+| m:n-Assoziation
+| Eine Beziehung zwischen mehreren Objekten, bei der jedes Objekt auf der einen Seite mit mehreren auf der anderen Seite verbunden sein kann.
+
+| Model Repository
+| Ein online verfügbarer Katalog von INTERLIS-Modellen, z. B. https://models.interlis.ch/.
+
+| OID
+| _Object Identifier_ -- definiert den Typ bzw. Wertebereich der TIDs, z. B. `UUIDOID`.
+
+| Referenz (Rolle)
+| Eine Beziehung zwischen zwei INTERLIS-Objekten. Einfache Referenzen verweisen auf ein Zielobjekt (1:1), komplexe auf mehrere.
+
+| Rolle
+| Ein INTERLIS-Konstrukt, das eine Beziehung zwischen Klassen darstellt. Siehe auch _Referenz_.
+
+| Roundtrip
+| Der vollständige Kreislauf: Lesen → Transformieren → Schreiben → Validieren.
+
+| RowSchemaPlan
+| Der vorberechnete Plan, der beschreibt, wie ein INTERLIS-Objekt auf Hop-Felder abgebildet wird.
+
+| Schema Preview
+| Die Vorschau der Hop-Felder im Dialog, bevor die Pipeline ausgeführt wird.
+
+| Single-Page-Rendering
+| Ein thoth-biblios-Modus, bei dem alle Kapitel in einer einzigen HTML-Seite dargestellt werden.
+
+| SQL/MM WKB
+| Ein Standard für die binäre Kodierung von Geometrien mit Unterstützung für Kurven (Kreisbögen).
+
+| Struktur
+| Ein zusammengesetztes Attribut in INTERLIS, das mehrere Unterattribute gruppiert.
+
+| SURFACE / AREA
+| INTERLIS-Geometrietypen für Flächen. AREA garantiert topologische Korrektheit (keine Überlappungen).
+
+| thoth-biblios
+| Ein JVM-basierter Static-Site-Generator für AsciiDoc-Dokumentation (https://github.com/edigonzales/thoth).
+
+| TID
+| _Transfer Identifier_ -- die eindeutige ID eines Objekts innerhalb des gesamten Transfers.
+
+| Topic
+| Ein thematischer Bereich in einem INTERLIS-Modell, der verwandte Klassen und Strukturen gruppiert.
+
+| Transfer
+| Eine XTF-Datei, die Objekte einer oder mehrerer Klassen enthält.
+
+| ValueMetaGeometry
+| Der Hop-Datentyp für Geometrien, bereitgestellt durch das `hop-geometry-type-plugin`.
+
+| Vererbung
+| In INTERLIS: Eine Klasse erweitert (`EXTENDS`) eine andere und übernimmt deren Attribute.
+
+| WKB
+| _Well-Known Binary_ -- ein binäres Format für Geometrie (hier: SQL/MM-WKB mit Kurvenunterstützung).
+
+| XTF
+| _XML Transfer Format_ -- das moderne INTERLIS-2-Transferformat (XML-basiert).
+
+| Zusammenführen (Structure Collect)
+| Das Wiederherstellen der Parent-Struktur aus Child-Rows (`INTERLIS Structure Collect`).
+|===

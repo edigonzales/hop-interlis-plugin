@@ -1,0 +1,38 @@
+= hop-interlis-plugin – Benutzerhandbuch
+Stefan Ziegler <https://github.com/edigonzales/hop-interlis-plugin>
+:toc: left
+:toclevels: 3
+:sectnums:
+:sectnumlevels: 3
+:source-highlighter: rouge
+:rouge-style: github
+:icons: font
+:icon-set: fas
+:tip-caption: Tipp
+:note-caption: Hinweis
+:warning-caption: Achtung
+:important-caption: Wichtig
+:caution-caption: Vorsicht
+
+// Master-Datei für das Einzelseiten-Rendering von thoth-biblios.
+// Alle Kapitel werden per include eingebunden.
+
+include::01-einfuehrung.adoc[]
+
+include::02-konzepte.adoc[]
+
+include::03-installation.adoc[]
+
+include::04-erste-pipeline.adoc[]
+
+include::05-xtf-lesen.adoc[]
+
+include::06-xtf-schreiben.adoc[]
+
+include::07-erweiterte-transforms.adoc[]
+
+include::08-beispiele.adoc[]
+
+include::09-troubleshooting.adoc[]
+
+include::10-glossar.adoc[]

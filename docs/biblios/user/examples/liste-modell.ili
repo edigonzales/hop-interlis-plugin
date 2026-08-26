@@ -1,0 +1,26 @@
+INTERLIS 2.3;
+
+/** Beispielmodell mit LIST OF-Struktur (Qualitäten).
+    Zeigt das Auflösen und Zusammenführen von mehrwertigen Strukturen.
+**/
+
+MODEL DemoListe (de)
+AT "https://github.com/edigonzales/hop-interlis-plugin"
+VERSION "2024-01-01" =
+
+  TOPIC Gebaeude =
+
+    STRUCTURE Qualitaet =
+      Code : TEXT*20;
+      Beschreibung : TEXT*200;
+      Pruefdatum : TEXT*10;
+    END Qualitaet;
+
+    CLASS Gebaeude =
+      Name : TEXT*100;
+      Qualitaeten : LIST OF Qualitaet;
+    END Gebaeude;
+
+  END Gebaeude;
+
+END DemoListe.

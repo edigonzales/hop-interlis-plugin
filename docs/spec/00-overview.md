@@ -45,7 +45,7 @@ Das Plugin muss:
 - Kreisbögen und SQL/MM-Curve-Geometrien im XTF-Pfad verlustfrei erhalten.
 - Vererbung korrekt auflösen und für ETL-Zwecke standardmässig als vollständiges flaches Row-Schema anbieten.
 - `STRUCTURE 0..1` / `STRUCTURE 1` komfortabel flatten können.
-- `BAG/LIST OF STRUCTURE` als Child-Rows explodieren und wieder sammeln können.
+- `BAG/LIST OF STRUCTURE` als Child-Rows auflösen und wieder zusammenführen können.
 - einfache Rollen als Referenzfelder darstellen.
 - komplexe bzw. m:n-Assoziationen als eigene Rows/Streams behandeln.
 - `ORDERED` und `LIST`-Reihenfolgen erhalten.

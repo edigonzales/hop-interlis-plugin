@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+  <HEADERSECTION SENDER="hop-interlis-plugin-doc" VERSION="2.3">
+    <MODELS>
+      <MODEL NAME="DemoRolle" VERSION="2024-01-01" URI="https://github.com/edigonzales/hop-interlis-plugin"/>
+    </MODELS>
+  </HEADERSECTION>
+  <DATASECTION>
+    <DemoRolle.Verwaltung BID="b1">
+      <DemoRolle.Verwaltung.Gemeinde TID="gem1">
+        <Name>Solothurn</Name>
+        <BFS_Nummer>2549</BFS_Nummer>
+        <Geometrie>
+          <SURFACE>
+            <BOUNDARY>
+              <POLYLINE>
+                <COORD><C1>2600000.0</C1><C2>1200000.0</C2></COORD>
+                <COORD><C1>2600500.0</C1><C2>1200000.0</C2></COORD>
+                <COORD><C1>2600500.0</C1><C2>1200500.0</C2></COORD>
+                <COORD><C1>2600000.0</C1><C2>1200500.0</C2></COORD>
+                <COORD><C1>2600000.0</C1><C2>1200000.0</C2></COORD>
+              </POLYLINE>
+            </BOUNDARY>
+          </SURFACE>
+        </Geometrie>
+      </DemoRolle.Verwaltung.Gemeinde>
+      <DemoRolle.Verwaltung.Gebaeude TID="g1">
+        <Name>Rathaus</Name>
+        <Geometrie>
+          <SURFACE>
+            <BOUNDARY>
+              <POLYLINE>
+                <COORD><C1>2600100.0</C1><C2>1200100.0</C2></COORD>
+                <COORD><C1>2600200.0</C1><C2>1200100.0</C2></COORD>
+                <COORD><C1>2600200.0</C1><C2>1200200.0</C2></COORD>
+                <COORD><C1>2600100.0</C1><C2>1200200.0</C2></COORD>
+                <COORD><C1>2600100.0</C1><C2>1200100.0</C2></COORD>
+              </POLYLINE>
+            </BOUNDARY>
+          </SURFACE>
+        </Geometrie>
+      </DemoRolle.Verwaltung.Gebaeude>
+      <DemoRolle.Verwaltung.GebaeudeGemeinde>
+        <GebaeudeRef REF="g1"></GebaeudeRef>
+        <Zugehoerigkeit REF="gem1"></Zugehoerigkeit>
+      </DemoRolle.Verwaltung.GebaeudeGemeinde>
+    </DemoRolle.Verwaltung>
+  </DATASECTION>
+</TRANSFER>
