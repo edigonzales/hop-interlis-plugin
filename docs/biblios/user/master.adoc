@@ -10,7 +10,7 @@ Stefan Ziegler <https://github.com/edigonzales/hop-interlis-plugin>
 :icon-set: fas
 :tip-caption: Tipp
 :note-caption: Hinweis
-:warning-caption: Achtung
+:warning-caption: Warnung
 :important-caption: Wichtig
 :caution-caption: Vorsicht
 

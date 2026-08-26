@@ -36,7 +36,7 @@ content:
       sidebar_toc_numbers: on
 
 pdf:
-  enabled: true
+  enabled: false
   attributes:
     source-highlighter: rouge
     rouge-style: github
