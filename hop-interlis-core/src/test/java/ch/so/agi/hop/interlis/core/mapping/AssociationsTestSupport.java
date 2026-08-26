@@ -69,9 +69,19 @@ final class AssociationsTestSupport {
 
   /** All objects of the fixture keyed by scoped name. */
   static Map<String, List<InterlisObjectEnvelope>> allObjects() throws Exception {
+    return readAllObjects("/data/HopIli_Associations_V1_valid.xtf");
+  }
+
+  /** Objects of the external-reference fixture (the Task role carries an ili:bid). */
+  static Map<String, List<InterlisObjectEnvelope>> allObjectsExtRef() throws Exception {
+    return readAllObjects("/data/HopIli_Associations_V1_extref.xtf");
+  }
+
+  private static Map<String, List<InterlisObjectEnvelope>> readAllObjects(String resource)
+      throws Exception {
     try (XtfTransferReader reader =
         XtfTransferReader.open(
-            TestResources.path("/data/HopIli_Associations_V1_valid.xtf"),
+            TestResources.path(resource),
             compileModel().transferDescription())) {
       List<InterlisObjectEnvelope> objects = new ArrayList<>();
       InterlisObjectEnvelope event;

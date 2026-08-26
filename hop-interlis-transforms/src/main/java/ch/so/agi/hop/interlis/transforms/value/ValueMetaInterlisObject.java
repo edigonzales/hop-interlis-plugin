@@ -70,6 +70,16 @@ public final class ValueMetaInterlisObject extends ValueMetaBase {
     return iomObject.toString();
   }
 
+  /**
+   * Binary consumers (e.g. Text file output) fall back to this for custom types; render the same
+   * XML preview as {@link #getString(Object)}.
+   */
+  @Override
+  public byte[] getBinaryString(Object object) throws HopValueException {
+    String string = getString(object);
+    return string == null ? null : string.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+  }
+
   @Override
   public Object getNativeDataType(Object object) throws HopValueException {
     return object instanceof IomObject ? object : null;

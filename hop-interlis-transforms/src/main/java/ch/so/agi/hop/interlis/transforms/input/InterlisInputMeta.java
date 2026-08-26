@@ -52,6 +52,7 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
   @HopMetadataProperty private boolean includeBid;
   @HopMetadataProperty private boolean includeClassName;
   @HopMetadataProperty private boolean includeTopicName;
+  @HopMetadataProperty private boolean includeOperation;
   @HopMetadataProperty private String defaultSrid;
   @HopMetadataProperty private boolean keepSourceObject;
   @HopMetadataProperty private String sourceObjectFieldName;
@@ -73,6 +74,7 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
     includeBid = true;
     includeClassName = false;
     includeTopicName = false;
+    includeOperation = false;
     defaultSrid = "";
     keepSourceObject = false;
     sourceObjectFieldName = DEFAULT_SOURCE_OBJECT_FIELD;
@@ -202,7 +204,7 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
         includeBid,
         includeClassName,
         includeTopicName,
-        false,
+        includeOperation,
         true,
         "_",
         resolvedDefaultSrid(variables).orElse(null),
@@ -322,6 +324,14 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
 
   public void setIncludeTopicName(boolean includeTopicName) {
     this.includeTopicName = includeTopicName;
+  }
+
+  public boolean isIncludeOperation() {
+    return includeOperation;
+  }
+
+  public void setIncludeOperation(boolean includeOperation) {
+    this.includeOperation = includeOperation;
   }
 
   public String getDefaultSrid() {

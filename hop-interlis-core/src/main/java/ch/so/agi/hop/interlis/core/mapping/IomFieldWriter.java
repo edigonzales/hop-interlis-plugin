@@ -188,7 +188,7 @@ public final class IomFieldWriter {
       InterlisFieldPlan field, String contextName, RowWriteOptions options)
       throws InterlisMappingException {
     InterlisAttributeDescriptor descriptor = field.attributeDescriptor();
-    if (options.strict() && descriptor != null && descriptor.mandatory()) {
+    if (options.strict() && !options.isDelete() && descriptor != null && descriptor.mandatory()) {
       throw new InterlisMappingException(
           "Mandatory attribute " + descriptor.name() + " is null for " + contextName);
     }

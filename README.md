@@ -10,6 +10,45 @@ The authoritative architecture and implementation specification lives in [`docs/
 
 ## Status
 
+**Phase 6** (validation, enumerations, transfer control) is implemented:
+
+- `INTERLIS Validate` validates an XTF file with the iox-ili streaming
+  validator and emits one error row per finding (13-field schema:
+  severity, message, source file/line, model/topic/class/TID context,
+  attribute path, constraint name); options for config file, multiplicity
+  checks, max errors, stop-on-first-error, severity filter and
+  fail-after-completion;
+- `INTERLIS Enumerations` lists a model's enumeration values (incl.
+  sub-enumeration hierarchy) as lookup rows;
+- basket metadata (consistency, kind, start/end state) survives the generic
+  envelope roundtrip (four new envelope fields, writer support with clear
+  errors for invalid UPDATE baskets);
+- DELETE/UPDATE operations work in the typed workflow: `INTERLIS Input`
+  exposes `_ili_operation`, `INTERLIS Output` writes it back (verified for
+  DELETE through the full typed roundtrip).
+
+**Phase 5** (advanced envelope and generic transfer transforms) is implemented:
+
+- `INTERLIS Transfer Input` streams the complete XTF event stream as canonical
+  envelope rows with a constant schema (`_ili_event_type`, `_ili_model`,
+  `_ili_topic`, `_ili_bid`, `_ili_class`, `_ili_tid`, `_ili_operation`,
+  `_ili_object`, `_ili_line`, `_ili_column`) in `OBJECTS` or lossless `EVENTS`
+  mode – any number of classes travel in one Hop stream;
+- `INTERLIS Object to Row` projects the `_ili_object` payload onto typed class
+  rows (incl. flattened association attributes) and `INTERLIS Row to Object` maps
+  typed rows back to envelope rows (incl. regenerated association link objects),
+  so several classes can be merged into one stream;
+- `INTERLIS Transfer Output` writes envelope rows back as XTF – object mode
+  derives transfer/basket events (basket grouping by `_ili_bid`), event mode
+  writes the explicit event sequence; INSERT/UPDATE/DELETE operations are
+  preserved (`ili:operation`, verified for DELETE through the full roundtrip);
+- the lossless generic roundtrip `Transfer Input (EVENTS) → Transfer Output
+  (EVENTS)` is verified in unit, pipeline and `hop-run` E2E tests (mixed classes,
+  baskets preserved);
+- the `InterlisObject` Hop value type now also serves binary consumers
+  (`getBinaryString()`), and the canonical envelope layout lives centrally in
+  `InterlisEnvelopeRowLayout`.
+
 **Phase 4** (associations and role join) is implemented:
 
 - associations are first-class transfer viewables: `m:n`/`n`-ary/attributed
@@ -77,7 +116,9 @@ Phase 0 (project foundation) is implemented as well:
 - plugin packaging as installable ZIP with a distribution checker;
 - one-command local development workflow and `hop-run` E2E suite.
 
-See [`docs/progress/phase-04.md`](docs/progress/phase-04.md),
+See [`docs/progress/phase-06.md`](docs/progress/phase-06.md),
+[`docs/progress/phase-05.md`](docs/progress/phase-05.md),
+[`docs/progress/phase-04.md`](docs/progress/phase-04.md),
 [`docs/progress/phase-03.md`](docs/progress/phase-03.md),
 [`docs/progress/phase-02.md`](docs/progress/phase-02.md),
 [`docs/progress/phase-01.md`](docs/progress/phase-01.md) and
@@ -129,8 +170,8 @@ bash scripts/run-e2e.sh "$HOP_HOME"
 
 | Module | Purpose |
 |---|---|
-| `hop-interlis-core` | Model compilation, schema descriptors (classes, structures, associations), transfer reader/writer, mapping plans, structure plans/explode/collect, geometry mapper. No SWT, no Hop runtime. |
-| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`, `INTERLIS Output`, `INTERLIS Structure Explode`, `INTERLIS Structure Collect`, `INTERLIS Role Join`), `InterlisObject` value type. |
+| `hop-interlis-core` | Model compilation, schema descriptors (classes, structures, associations), enumeration extraction, transfer reader/writer, canonical envelope + validation row layouts, basket metadata, mapping plans, structure plans/explode/collect, geometry mapper. No SWT, no Hop runtime. |
+| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`, `INTERLIS Output`, `INTERLIS Structure Explode`, `INTERLIS Structure Collect`, `INTERLIS Role Join`, `INTERLIS Transfer Input`, `INTERLIS Object to Row`, `INTERLIS Row to Object`, `INTERLIS Transfer Output`, `INTERLIS Validate`, `INTERLIS Enumerations`), `InterlisObject` value type. |
 | `assemblies/assemblies-hop-interlis` | Installable plugin ZIP. |
 
 ## License

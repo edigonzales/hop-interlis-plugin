@@ -76,7 +76,8 @@ class InterlisObjectToRowMapperAssociationTest {
             AssociationsTestSupport.root(schema, AssociationsTestSupport.ASSOC_PERSON_TASK),
             new ProjectionOptions(
                 true, true, false, false, false, true, "_", null, java.util.Set.of(), true, true));
-    List<InterlisObjectEnvelope> links = objects.get(AssociationsTestSupport.ASSOC_PERSON_TASK);
+    List<InterlisObjectEnvelope> links =
+        AssociationsTestSupport.allObjectsExtRef().get(AssociationsTestSupport.ASSOC_PERSON_TASK);
 
     Object[] second = mapper.map(links.get(1), plan);
     // _ili_bid, Person_ref, Person_ref_bid, Task_ref, Task_ref_bid, Task_order_pos

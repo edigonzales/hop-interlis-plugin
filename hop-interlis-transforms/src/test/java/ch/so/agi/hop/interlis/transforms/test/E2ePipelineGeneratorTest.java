@@ -84,6 +84,37 @@ class E2ePipelineGeneratorTest {
         associationRowsRoundtripCheckPipeline("12-association-rows-roundtrip-check",
             outputFile(outputDir, "association-rows-roundtrip.xtf"),
             outputFile(outputDir, "interlis-association-rows-roundtrip")));
+    write(outputDir.resolve("13-generic-transfer-roundtrip.hpl"),
+        genericTransferRoundtripPipeline("13-generic-transfer-roundtrip",
+            inputFile(inputDir, "HopIli_Associations_V1_valid.xtf"),
+            outputFile(outputDir, "generic-transfer-roundtrip.xtf")));
+    write(outputDir.resolve("14-generic-transfer-check.hpl"),
+        genericTransferCheckPipeline("14-generic-transfer-check",
+            outputFile(outputDir, "generic-transfer-roundtrip.xtf"),
+            outputFile(outputDir, "interlis-generic-transfer")));
+    write(outputDir.resolve("15-generic-delete-roundtrip.hpl"),
+        genericDeleteRoundtripPipeline("15-generic-delete-roundtrip",
+            inputFile(inputDir, "HopIli_Associations_V1_delete.xtf"),
+            outputFile(outputDir, "generic-delete-roundtrip.xtf")));
+    write(outputDir.resolve("16-generic-delete-check.hpl"),
+        genericDeleteCheckPipeline("16-generic-delete-check",
+            outputFile(outputDir, "generic-delete-roundtrip.xtf"),
+            outputFile(outputDir, "interlis-generic-delete")));
+    write(outputDir.resolve("17-validate.hpl"),
+        validatePipeline("17-validate",
+            inputFile(inputDir, "HopIli_Enums_V1_invalid.xtf"),
+            outputFile(outputDir, "interlis-validate")));
+    write(outputDir.resolve("18-enumerations.hpl"),
+        enumerationsPipeline("18-enumerations",
+            outputFile(outputDir, "interlis-enumerations")));
+    write(outputDir.resolve("19-delete-roundtrip.hpl"),
+        deleteRoundtripPipeline("19-delete-roundtrip",
+            inputFile(inputDir, "HopIli_Associations_V1_delete.xtf"),
+            outputFile(outputDir, "delete-roundtrip.xtf")));
+    write(outputDir.resolve("20-delete-check.hpl"),
+        deleteCheckPipeline("20-delete-check",
+            outputFile(outputDir, "delete-roundtrip.xtf"),
+            outputFile(outputDir, "interlis-delete-roundtrip")));
   }
 
   @Test
@@ -494,6 +525,224 @@ class E2ePipelineGeneratorTest {
     output.setBasketId("b1");
     output.setOverwrite(true);
     return output;
+  }
+
+  private static PipelineMeta genericTransferRoundtripPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta input =
+        genericTransferInput(inputFile, "EVENTS");
+
+    ch.so.agi.hop.interlis.transforms.transferoutput.InterlisTransferOutputMeta output =
+        genericTransferOutput(outputFile, inputFile, true);
+
+    TransformMeta source =
+        new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", input);
+    source.setLocation(100, 100);
+    TransformMeta sink =
+        new TransformMeta("INTERLIS Transfer Output", output);
+    sink.setLocation(300, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    return pipelineMeta;
+  }
+
+  private static PipelineMeta genericTransferCheckPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta input =
+        genericTransferInput(inputFile, "OBJECTS");
+
+    TransformMeta source =
+        new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", input);
+    source.setLocation(100, 100);
+    TransformMeta sink = new TransformMeta("Text file output", csvOutput(outputFile));
+    sink.setLocation(300, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    return pipelineMeta;
+  }
+
+  private static PipelineMeta genericDeleteRoundtripPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta input =
+        genericTransferInput(inputFile, "EVENTS");
+    ch.so.agi.hop.interlis.transforms.transferoutput.InterlisTransferOutputMeta output =
+        genericTransferOutput(outputFile, inputFile, true);
+
+    TransformMeta source =
+        new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", input);
+    source.setLocation(100, 100);
+    TransformMeta sink = new TransformMeta("INTERLIS Transfer Output", output);
+    sink.setLocation(300, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    return pipelineMeta;
+  }
+
+  private static PipelineMeta genericDeleteCheckPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta input =
+        genericTransferInput(inputFile, "OBJECTS");
+
+    TransformMeta source =
+        new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", input);
+    source.setLocation(100, 100);
+    TransformMeta sink = new TransformMeta("Text file output", csvOutput(outputFile));
+    sink.setLocation(300, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    return pipelineMeta;
+  }
+
+  private static ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta
+      genericTransferInput(String inputFile, String mode) {
+    ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta input =
+        new ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setMode(mode);
+    return input;
+  }
+
+  private static ch.so.agi.hop.interlis.transforms.transferoutput.InterlisTransferOutputMeta
+      genericTransferOutput(String outputFile, String inputFile, boolean eventMode) {
+    ch.so.agi.hop.interlis.transforms.transferoutput.InterlisTransferOutputMeta output =
+        new ch.so.agi.hop.interlis.transforms.transferoutput.InterlisTransferOutputMeta();
+    output.setFileName(outputFile);
+    output.setModelNames("HopIli_Associations_V1");
+    output.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    output.setOverwrite(true);
+    output.setEventMode(eventMode);
+    return output;
+  }
+
+  private static PipelineMeta validatePipeline(String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    ch.so.agi.hop.interlis.transforms.validate.InterlisValidateMeta validate =
+        new ch.so.agi.hop.interlis.transforms.validate.InterlisValidateMeta();
+    validate.setFileName(inputFile);
+    validate.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    validate.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+
+    TransformMeta source = new TransformMeta("INTERLIS_VALIDATE", "INTERLIS Validate", validate);
+    source.setLocation(100, 100);
+    TransformMeta sink = new TransformMeta("Text file output", csvOutput(outputFile));
+    sink.setLocation(300, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    return pipelineMeta;
+  }
+
+  private static PipelineMeta enumerationsPipeline(String name, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    ch.so.agi.hop.interlis.transforms.enumerations.InterlisEnumerationsMeta enumerations =
+        new ch.so.agi.hop.interlis.transforms.enumerations.InterlisEnumerationsMeta();
+    enumerations.setModelNames("HopIli_Enums_V1");
+    enumerations.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : TestDataDirectory());
+
+    TransformMeta source =
+        new TransformMeta("INTERLIS_ENUMERATIONS", "INTERLIS Enumerations", enumerations);
+    source.setLocation(100, 100);
+    TransformMeta sink = new TransformMeta("Text file output", csvOutput(outputFile));
+    sink.setLocation(300, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    return pipelineMeta;
+  }
+
+  private static PipelineMeta deleteRoundtripPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setClassName("HopIli_Associations_V1.Data.Person");
+    input.setIncludeTid(true);
+    input.setIncludeBid(true);
+    input.setIncludeOperation(true);
+
+    InterlisOutputMeta output = new InterlisOutputMeta();
+    output.setFileName(outputFile);
+    output.setModelNames("HopIli_Associations_V1");
+    output.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    output.setClassName("HopIli_Associations_V1.Data.Person");
+    output.setObjectIdField("_ili_tid");
+    output.setBasketIdField("_ili_bid");
+    output.setBasketId("b1");
+    output.setOperationField("_ili_operation");
+    output.setOverwrite(true);
+
+    return twoStepPipeline(pipelineMeta, input, output);
+  }
+
+  private static PipelineMeta deleteCheckPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames("HopIli_Associations_V1");
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setClassName("HopIli_Associations_V1.Data.Person");
+    input.setIncludeTid(true);
+    input.setIncludeBid(true);
+    input.setIncludeOperation(true);
+
+    TransformMeta source = new TransformMeta("INTERLIS_INPUT", "INTERLIS Input", input);
+    source.setLocation(100, 100);
+    TransformMeta sink = new TransformMeta("Text file output", csvOutput(outputFile));
+    sink.setLocation(300, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    return pipelineMeta;
+  }
+
+  private static String TestDataDirectory() {
+    if (PARAMETERIZED) {
+      return "${E2E_INPUT_DIR}";
+    }
+    try {
+      return Path.of(
+              E2ePipelineGeneratorTest.class.getResource("/models/HopIli_Enums_V1.ili").toURI())
+          .getParent()
+          .toString();
+    } catch (Exception e) {
+      throw new IllegalStateException(e);
+    }
   }
 
   private static PipelineMeta threeStepPipeline(

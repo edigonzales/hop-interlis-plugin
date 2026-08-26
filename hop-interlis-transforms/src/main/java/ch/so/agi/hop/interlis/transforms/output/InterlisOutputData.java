@@ -18,6 +18,7 @@ public class InterlisOutputData extends BaseTransformData {
   int objectIdFieldIndex;
   int basketIdFieldIndex;
   int sourceObjectFieldIndex;
+  int operationFieldIndex;
   String currentBid;
   long writtenObjects;
 }

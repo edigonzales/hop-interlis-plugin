@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:HopIli_Enums_V1="http://www.interlis.ch/xtf/2.4/HopIli_Enums_V1">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>HopIli_Enums_V1</ili:model>
+    </ili:models>
+    <ili:sender>hop-interlis-plugin-tests</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+    <HopIli_Enums_V1:Data ili:bid="b1">
+      <HopIli_Enums_V1:Sample ili:tid="s1">
+        <HopIli_Enums_V1:Kind>two</HopIli_Enums_V1:Kind>
+        <HopIli_Enums_V1:Nested>beta.beta_1</HopIli_Enums_V1:Nested>
+      </HopIli_Enums_V1:Sample>
+    </HopIli_Enums_V1:Data>
+  </ili:datasection>
+</ili:transfer>

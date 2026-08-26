@@ -42,6 +42,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
   private Button wIncludeBid;
   private Button wIncludeClassName;
   private Button wIncludeTopicName;
+  private Button wIncludeOperation;
   private TextVar wDefaultSrid;
   private Button wKeepSourceObject;
   private TextVar wSourceObjectField;
@@ -179,11 +180,12 @@ public class InterlisInputDialog extends BaseTransformDialog {
     wIncludeBid = checkbox("_ili_bid", wIncludeTid, 0);
     wIncludeClassName = checkbox("_ili_class", wIncludeBid, 0);
     wIncludeTopicName = checkbox("_ili_topic", wIncludeClassName, 0);
+    wIncludeOperation = checkbox("_ili_operation (INSERT/UPDATE/DELETE)", wIncludeTopicName, 0);
 
     Label wlSrid = new Label(shell, SWT.RIGHT);
     wlSrid.setText("Default SRID");
     PropsUi.setLook(wlSrid);
-    FormData fdlSrid = labelData(wIncludeTopicName, margin);
+    FormData fdlSrid = labelData(wIncludeOperation, margin);
     wlSrid.setLayoutData(fdlSrid);
 
     wDefaultSrid = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -191,7 +193,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
     FormData fdSrid = new FormData();
     fdSrid.left = new FormAttachment(props.getMiddlePct(), 0);
     fdSrid.right = new FormAttachment(100, 0);
-    fdSrid.top = new FormAttachment(wIncludeTopicName, margin);
+    fdSrid.top = new FormAttachment(wIncludeOperation, margin);
     wDefaultSrid.setLayoutData(fdSrid);
 
     // Structures: keep the source object for downstream Structure Explode
@@ -335,6 +337,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
       wIncludeBid.setSelection(input.isIncludeBid());
       wIncludeClassName.setSelection(input.isIncludeClassName());
       wIncludeTopicName.setSelection(input.isIncludeTopicName());
+      wIncludeOperation.setSelection(input.isIncludeOperation());
       wDefaultSrid.setText(input.getDefaultSrid() == null ? "" : input.getDefaultSrid());
       wKeepSourceObject.setSelection(input.isKeepSourceObject());
       wSourceObjectField.setText(
@@ -408,6 +411,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
       input.setIncludeBid(wIncludeBid.getSelection());
       input.setIncludeClassName(wIncludeClassName.getSelection());
       input.setIncludeTopicName(wIncludeTopicName.getSelection());
+      input.setIncludeOperation(wIncludeOperation.getSelection());
       input.setDefaultSrid(wDefaultSrid.getText());
       input.setKeepSourceObject(wKeepSourceObject.getSelection());
       input.setSourceObjectFieldName(wSourceObjectField.getText());

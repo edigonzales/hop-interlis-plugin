@@ -43,6 +43,7 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
   @HopMetadataProperty private String objectIdField;
   @HopMetadataProperty private String basketIdField;
   @HopMetadataProperty private String basketId;
+  @HopMetadataProperty private String operationField;
   @HopMetadataProperty private String sourceObjectField;
   @HopMetadataProperty private boolean overwrite;
 
@@ -59,6 +60,7 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
     objectIdField = "_ili_tid";
     basketIdField = "_ili_bid";
     basketId = "b1";
+    operationField = "";
     sourceObjectField = "";
     overwrite = false;
   }
@@ -266,5 +268,13 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
 
   public void setSourceObjectField(String sourceObjectField) {
     this.sourceObjectField = sourceObjectField;
+  }
+
+  public String getOperationField() {
+    return operationField;
+  }
+
+  public void setOperationField(String operationField) {
+    this.operationField = operationField;
   }
 }

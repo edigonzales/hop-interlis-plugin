@@ -55,6 +55,18 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       handleBasket(row);
       Object[] values =
           InterlisRowBindings.values(row, data.inputIndexes);
+      ch.so.agi.hop.interlis.core.io.InterlisObjectOperation operation =
+          ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.NONE;
+      if (data.operationFieldIndex >= 0) {
+        Object operationValue = row[data.operationFieldIndex];
+        if (operationValue != null && !operationValue.toString().isBlank()) {
+          operation =
+              ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.valueOf(
+                  operationValue.toString().trim());
+        }
+      }
+      RowWriteOptions writeOptions =
+          new RowWriteOptions(true, resolve(meta.getBasketId()), operation);
       RowToIomMapper.InterlisWriteResult result;
       if (data.sourceObjectFieldIndex >= 0) {
         Object carrier = row[data.sourceObjectFieldIndex];
@@ -77,13 +89,17 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
                 carrierObject,
                 values,
                 data.plan,
-                new RowWriteOptions(true, resolve(meta.getBasketId())));
+                writeOptions);
       } else {
         result =
             data.mapper.mapAll(
-                values, data.plan, new RowWriteOptions(true, resolve(meta.getBasketId())));
+                values, data.plan, writeOptions);
       }
       for (IomObject object : result.allObjects()) {
+        if (data.operationFieldIndex >= 0 && object == result.object()
+            && operation != ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.NONE) {
+          object.setobjectoperation(operation.toIom());
+        }
         data.writer.writeObject(object);
         data.writtenObjects++;
       }
@@ -147,6 +163,14 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       if (!sourceObjectField.isBlank() && data.sourceObjectFieldIndex < 0) {
         throw new HopException(
             "Source object field <" + sourceObjectField + "> not found in the input");
+      }
+
+      String operationField = resolve(meta.getOperationField() == null ? "" : meta.getOperationField());
+      data.operationFieldIndex =
+          operationField.isBlank() ? -1 : getInputRowMeta().indexOfValue(operationField);
+      if (!operationField.isBlank() && data.operationFieldIndex < 0) {
+        throw new HopException(
+            "Operation field <" + operationField + "> not found in the input");
       }
 
       data.writer =

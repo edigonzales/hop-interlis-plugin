@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:HopIli_Associations_V1="http://www.interlis.ch/xtf/2.4/HopIli_Associations_V1">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>HopIli_Associations_V1</ili:model>
+    </ili:models>
+    <ili:sender>hop-interlis-plugin-tests</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+    <HopIli_Associations_V1:Data ili:bid="b1" ili:consistency="INCOMPLETE" ili:kind="UPDATE" ili:startstate="started" ili:endstate="finished">
+      <HopIli_Associations_V1:Person ili:tid="p1">
+        <HopIli_Associations_V1:Name>Meier</HopIli_Associations_V1:Name>
+      </HopIli_Associations_V1:Person>
+    </HopIli_Associations_V1:Data>
+  </ili:datasection>
+</ili:transfer>

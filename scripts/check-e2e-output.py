@@ -163,6 +163,85 @@ assert val(link1, 3) == "0", f"order position missing: {link1}"
 assert val(link2, 1) == "p2" and val(link2, 2) == "t2", f"unexpected link row: {link2}"
 assert val(link2, 3) == "1", f"order position missing: {link2}"
 
+generic_csv = output_dir / "interlis-generic-transfer.csv"
+if not generic_csv.exists():
+    raise SystemExit(f"missing output {generic_csv}")
+
+with generic_csv.open(newline="", encoding="utf-8") as f:
+    rows = list(csv.reader(f, delimiter=";"))
+
+# 14 object rows of mixed classes through the lossless generic event roundtrip.
+assert len(rows) == 15, f"expected 1 header + 14 object rows, got {len(rows)}"
+header = rows[0]
+assert header[0] == "_ili_event_type" and header[4] == "_ili_class", f"unexpected header: {header}"
+classes = {val(row, 4) for row in rows[1:]}
+assert "HopIli_Associations_V1.Data.Membership" in classes, f"membership link missing: {classes}"
+assert "HopIli_Associations_V1.Data.Person" in classes, f"person missing: {classes}"
+assert all(val(row, 3) == "b1" for row in rows[1:]), "basket id not preserved"
+assert all(val(row, 0) == "OBJECT" for row in rows[1:]), "unexpected event rows in OBJECTS mode"
+
+generic_delete_csv = output_dir / "interlis-generic-delete.csv"
+if not generic_delete_csv.exists():
+    raise SystemExit(f"missing output {generic_delete_csv}")
+
+with generic_delete_csv.open(newline="", encoding="utf-8") as f:
+    rows = list(csv.reader(f, delimiter=";"))
+
+assert len(rows) == 2, f"expected 1 header + 1 delete row, got {len(rows)}"
+delete_row = rows[1]
+assert val(delete_row, 0) == "OBJECT", f"unexpected event: {delete_row}"
+assert val(delete_row, 6) == "DELETE", f"delete operation lost: {delete_row}"
+assert val(delete_row, 5) == "p1", f"unexpected TID: {delete_row}"
+
+validate_csv = output_dir / "interlis-validate.csv"
+if not validate_csv.exists():
+    raise SystemExit(f"missing output {validate_csv}")
+
+with validate_csv.open(newline="", encoding="utf-8") as f:
+    rows = list(csv.reader(f, delimiter=";"))
+
+header = rows[0]
+assert header[0] == "_ili_severity" and header[1] == "_ili_message", f"unexpected header: {header}"
+assert len(rows) > 1, "expected validation error rows"
+assert any(val(row, 0) == "ERROR" for row in rows[1:]), "no ERROR severity rows"
+assert any("Sample" in val(row, 8) for row in rows[1:]), "class context missing"
+
+enumerations_csv = output_dir / "interlis-enumerations.csv"
+if not enumerations_csv.exists():
+    raise SystemExit(f"missing output {enumerations_csv}")
+
+with enumerations_csv.open(newline="", encoding="utf-8") as f:
+    rows = list(csv.reader(f, delimiter=";"))
+
+header = rows[0]
+assert header[:6] == [
+    "enum_definition",
+    "enum_value",
+    "enum_path",
+    "parent_value",
+    "depth",
+    "is_leaf",
+], f"unexpected header: {header}"
+values = {val(row, 1) for row in rows[1:]}
+assert "beta" in values and "beta_1" in values, f"sub-enumeration values missing: {values}"
+beta1 = next(row for row in rows[1:] if val(row, 1) == "beta_1")
+assert val(beta1, 3) == "beta" and val(beta1, 4) == "1", f"hierarchy broken: {beta1}"
+
+delete_roundtrip_csv = output_dir / "interlis-delete-roundtrip.csv"
+if not delete_roundtrip_csv.exists():
+    raise SystemExit(f"missing output {delete_roundtrip_csv}")
+
+with delete_roundtrip_csv.open(newline="", encoding="utf-8") as f:
+    rows = list(csv.reader(f, delimiter=";"))
+
+assert len(rows) == 2, f"expected 1 header + 1 delete row, got {len(rows)}"
+header = rows[0]
+assert "_ili_operation" in header, f"operation field missing: {header}"
+delete_row = rows[1]
+assert val(delete_row, 0) == "p1", f"unexpected TID: {delete_row}"
+operation = val(delete_row, header.index("_ili_operation"))
+assert operation == "DELETE", f"delete operation lost through the typed roundtrip: {delete_row}"
+
 if with_gpkg:
     gpkg = output_dir / "interlis-arcs.gpkg"
     if not gpkg.exists():
@@ -203,5 +282,10 @@ print(f"  {roundtrip_csv}: XTF write/read roundtrip, arc still a CIRCULARSTRING"
 print(f"  {structures_roundtrip_csv}: LIST explode/collect roundtrip with order, geometry and nested structure")
 print(f"  {associations_csv}: association attributes flattened from link objects and written back")
 print(f"  {association_rows_csv}: association rows roundtrip with ORDERED role order positions")
+print(f"  {generic_csv}: lossless generic event roundtrip with mixed classes and baskets")
+print(f"  {generic_delete_csv}: delete operation preserved through the generic roundtrip")
+print(f"  {validate_csv}: validation error rows with severity, class and line context")
+print(f"  {enumerations_csv}: enumeration values incl. sub-enumeration hierarchy")
+print(f"  {delete_roundtrip_csv}: DELETE operation preserved through the typed roundtrip")
 if with_gpkg:
     print("  interlis-arcs.gpkg: 2 curve features, axis stored as COMPOUNDCURVE")

@@ -36,6 +36,7 @@ public final class XtfTransferReader implements InterlisTransferReader {
   private IoxReader reader;
   private String currentTopic;
   private String currentBasketId;
+  private InterlisBasketMetadata currentBasketMetadata;
   private List<String> detectedModelNames;
   private boolean transferEnded;
 
@@ -104,6 +105,12 @@ public final class XtfTransferReader implements InterlisTransferReader {
       if (event instanceof StartBasketEvent startBasketEvent) {
         currentTopic = startBasketEvent.getType();
         currentBasketId = startBasketEvent.getBid();
+        currentBasketMetadata =
+            InterlisBasketMetadata.fromIom(
+                startBasketEvent.getConsistency(),
+                startBasketEvent.getKind(),
+                startBasketEvent.getStartstate(),
+                startBasketEvent.getEndstate());
         return new InterlisObjectEnvelope(
             InterlisEventType.START_BASKET,
             modelNameOf(currentTopic),
@@ -112,7 +119,8 @@ public final class XtfTransferReader implements InterlisTransferReader {
             null,
             null,
             InterlisObjectOperation.NONE,
-            null);
+            null,
+            currentBasketMetadata);
       }
       if (event instanceof ObjectEvent objectEvent) {
         IomObject object = objectEvent.getIomObject();
@@ -123,10 +131,14 @@ public final class XtfTransferReader implements InterlisTransferReader {
             currentBasketId,
             object == null ? null : object.getobjecttag(),
             object == null ? null : object.getobjectoid(),
-            InterlisObjectOperation.NONE,
-            object);
+            object == null
+                ? InterlisObjectOperation.NONE
+                : InterlisObjectOperation.fromIom(object.getobjectoperation()),
+            object,
+            currentBasketMetadata);
       }
       if (event instanceof EndBasketEvent) {
+        InterlisBasketMetadata basketMetadata = currentBasketMetadata;
         return new InterlisObjectEnvelope(
             InterlisEventType.END_BASKET,
             modelNameOf(currentTopic),
@@ -135,7 +147,8 @@ public final class XtfTransferReader implements InterlisTransferReader {
             null,
             null,
             InterlisObjectOperation.NONE,
-            null);
+            null,
+            basketMetadata);
       }
       if (event instanceof EndTransferEvent) {
         transferEnded = true;
@@ -172,7 +185,16 @@ public final class XtfTransferReader implements InterlisTransferReader {
   }
 
   private static List<String> detectModelNames(XtfStartTransferEvent event) {
-    Map<String, IomObject> headerObjects = event.getHeaderObjects();
+    return detectModelNames(event.getHeaderObjects());
+  }
+
+  /**
+   * Detects the model names declared in an XTF transfer header.
+   *
+   * @param headerObjects the header objects of a {@code XtfStartTransferEvent}
+   * @return model names in header order
+   */
+  public static List<String> detectModelNames(Map<String, IomObject> headerObjects) {
     if (headerObjects == null) {
       return List.of();
     }

@@ -94,7 +94,7 @@
 
       <HopIli_Associations_V1:PersonTask>
         <HopIli_Associations_V1:Person ili:ref="p2"/>
-        <HopIli_Associations_V1:Task ili:ref="t2" ili:bid="b2" ili:order_pos="1"/>
+        <HopIli_Associations_V1:Task ili:ref="t2" ili:order_pos="1"/>
       </HopIli_Associations_V1:PersonTask>
       
 

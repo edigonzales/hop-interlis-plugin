@@ -23,6 +23,20 @@ public interface InterlisTransferWriter extends AutoCloseable {
    */
   void startBasket(String topicScopedName, String bid) throws InterlisWriteException;
 
+  /**
+   * Opens a basket with transfer metadata (consistency, kind, lifecycle states). Values set to
+   * {@code null} are omitted.
+   *
+   * @param topicScopedName qualified topic name, e.g. {@code Model.Topic}
+   * @param bid basket identifier
+   * @param metadata basket metadata, may be {@code null}
+   */
+  default void startBasket(
+      String topicScopedName, String bid, InterlisBasketMetadata metadata)
+      throws InterlisWriteException {
+    startBasket(topicScopedName, bid);
+  }
+
   /** Writes one transfer object into the current basket. */
   void writeObject(IomObject object) throws InterlisWriteException;
 

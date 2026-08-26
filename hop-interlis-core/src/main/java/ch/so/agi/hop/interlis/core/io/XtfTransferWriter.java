@@ -90,6 +90,46 @@ public final class XtfTransferWriter implements InterlisTransferWriter {
   }
 
   @Override
+  public void startBasket(String topicScopedName, String bid, InterlisBasketMetadata metadata)
+      throws InterlisWriteException {
+    ensureTransferStarted();
+    if (basketOpen) {
+      throw new InterlisWriteException("A basket is already open for " + file);
+    }
+    if (metadata != null) {
+      boolean nonFullKind = metadata.kind() != null && !"FULL".equals(metadata.kind());
+      // The iox-ili 2.4 writer writes startstate/endstate without null guards for non-FULL
+      // baskets; fail with a clear message instead of an NPE.
+      if (nonFullKind && (metadata.endState() == null
+          || ("UPDATE".equals(metadata.kind()) && metadata.startState() == null))) {
+        throw new InterlisWriteException(
+            "XTF 2.4 baskets with kind "
+                + metadata.kind()
+                + " require an end state"
+                + ("UPDATE".equals(metadata.kind()) ? " and a start state" : "")
+                + "; cannot write basket <" + bid + "> of " + topicScopedName);
+      }
+    }
+    StartBasketEvent event = new StartBasketEvent(topicScopedName, bid);
+    if (metadata != null) {
+      if (metadata.consistency() != null) {
+        event.setConsistency(metadata.consistencyIom());
+      }
+      if (metadata.kind() != null) {
+        event.setKind(metadata.kindIom());
+      }
+      if (metadata.startState() != null) {
+        event.setStartstate(metadata.startState());
+      }
+      if (metadata.endState() != null) {
+        event.setEndstate(metadata.endState());
+      }
+    }
+    write(event);
+    basketOpen = true;
+  }
+
+  @Override
   public void writeObject(IomObject object) throws InterlisWriteException {
     ensureBasketOpen();
     write(new ObjectEvent(object));

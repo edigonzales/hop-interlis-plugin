@@ -179,7 +179,7 @@ public final class RowToIomMapper {
     }
 
     // Strict check for entirely empty mandatory top-level structures.
-    if (options.strict()) {
+    if (options.strict() && !options.isDelete()) {
       for (InterlisPropertyDescriptor property : plan.root().effectiveProperties()) {
         if (property instanceof InterlisAttributeDescriptor attribute
             && attribute.kind().isStructure()

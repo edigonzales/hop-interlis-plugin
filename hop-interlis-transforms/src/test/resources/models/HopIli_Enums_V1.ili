@@ -1,0 +1,16 @@
+INTERLIS 2.4;
+
+/** Test model covering enumerations with sub-enumerations. */
+MODEL HopIli_Enums_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-08-26" =
+  TOPIC Data =
+    DOMAIN
+      Kind_ = (one, two, three);
+
+    CLASS Sample =
+      Kind : MANDATORY Kind_;
+      Nested : (alpha, beta (beta_1, beta_2), gamma);
+      Optional : TEXT*40;
+    END Sample;
+  END Data;
+END HopIli_Enums_V1.

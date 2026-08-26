@@ -1048,7 +1048,7 @@ INTERLIS_TRANSFER_INPUT
 
 ## 16.2 Output RowMeta
 
-Konstant:
+Konstant (zentral definiert in `InterlisEnvelopeRowLayout`):
 
 ```text
 _ili_event_type   String
@@ -1075,6 +1075,9 @@ public enum TransferInputMode {
 ```
 
 OBJECTS filtert Transfer-/Basket-Events, hält deren Kontext aber in den Feldern.
+EVENTS reproduziert die exakte IOX-Ereignissequenz (Phase 5 implementiert beide
+Modi; Delete-Objekte kommen als OBJECT-Zeilen mit `_ili_operation=DELETE`,
+weil iox Object-Events mit Operation liefert).
 
 # 17. Transform: INTERLIS Object to Row
 
@@ -1099,18 +1102,24 @@ Normalerweise ist der Model Context bereits im Envelope semantisch identifizierb
 Input-Felder können wahlweise:
 
 - ersetzt werden (`replace envelope` Default), oder
-- durch typed fields ergänzt werden.
+- durch typed fields ergänzt werden (`appendEnvelopeFields`).
 
-Default für UX:
+Default für UX (Phase 5 umgesetzt):
 
 ```text
-Remove _ili_object and envelope technical fields except _ili_tid/_ili_bid
-Add typed class fields
+Replace envelope fields
+Add typed class fields (_ili_tid/_ili_bid aus der Projektion)
 ```
+
+Flattening attributierter Assoziationen puffert pro Basket (Flush bei
+END-Events oder BID-Wechsel); der Envelope-Stream muss dafür basket-gruppiert
+sein.
 
 # 18. Transform: INTERLIS Row to Object
 
-Inverse Operation.
+Inverse Operation (Phase 5 umgesetzt). Regenerierte Link-Objekte aus geflatteten
+Assoziationsattributen (`RowToIomMapper.mapAll`) werden als zusätzliche
+OBJECT-Envelope-Zeilen direkt nach ihrer Klassenzeile emittiert.
 
 Output ist ein stabiles Envelope-Schema und kann danach via `Append Streams`/Merge zusammengeführt werden.
 
@@ -1136,7 +1145,13 @@ Verantwortlich für:
 - Event mode, falls explizite Events angeliefert werden.
 - Fehler bei ungültiger Eventreihenfolge.
 
-## 19.1 State machine
+**Phase 5 umgesetzt:** Object Mode (Default) leitet die Ereignisse aus den
+OBJECT-Zeilen ab (Basket-Gruppierung über `_ili_bid`, explizite Event-Zeilen sind
+ein Fehler); Event Mode schreibt die explizite Sequenz (State-Machine des
+Writers prüft die Reihenfolge). Operationen werden auf das IOM-Objekt übertragen;
+explizite Modellnamen sind Pflicht (der Envelope-Stream trägt keinen Header).
+
+### 19.1 State machine
 
 ```text
 NEW
@@ -1331,34 +1346,36 @@ INTERLIS-Rollenmetadaten (ili.kind/target/min/max) leben im Plan/Deskriptor.
 
 # 23. Transform: INTERLIS Validate
 
-## 23.1 Phase-4 File Mode
+## 23.1 Phase-6 File Mode (umgesetzt)
 
-Ein Input-Transform ohne Row-Input kann eine XTF-Datei validieren und Validation Error Rows ausgeben.
+Ein Input-Transform ohne Row-Input validiert eine XTF-Datei mit dem
+iox-ili-Streaming-Validator und gibt Validation Error Rows aus.
 
 Meta:
 
 ```text
 fileName
 modelNames/modelDirectories
-validationConfig
-metaConfig
+configFile          (lokale TOML-Config; ilidata/MetaConfig eingeschränkt)
 validateMultiplicity
 maxErrors
-severityFilter
+stopOnFirstError
+includeWarnings / includeInfo
+failOnErrors
 ```
 
-Output RowMeta siehe Architektur-Dokument.
+Output RowMeta siehe Architektur-Dokument (`InterlisValidationRowLayout`).
 
 ## 23.2 Stream mode später
 
 Envelope-Stream validieren ist komplexer, weil Constraints u.U. globale/zweipassige Informationen benötigen. Deshalb:
 
-- Phase 4: robuste File-Validation.
-- Phase 5/7: Stream Validation mit `PipelinePool` und korrekter Second-Pass-Semantik.
+- Phase 6: robuste File-Validation.
+- Phase 7/8: Stream Validation mit `PipelinePool` und korrekter Second-Pass-Semantik.
 
 # 24. Transform: INTERLIS Enumerations
 
-Inputloser Transform.
+Inputloser Transform (Phase 6 umgesetzt).
 
 Meta:
 
@@ -1368,16 +1385,18 @@ enumerationFilter optional
 includeNonLeafValues
 ```
 
-Output:
+Output (umgesetzte Feldnamen, siehe `InterlisEnumerationsMeta`):
 
 ```text
-definition
-value
-full_path
-parent
+enum_definition
+enum_value
+enum_path
+parent_value
 depth
 is_leaf
 ```
+
+(ITF-Enum-Codes folgen mit Phase 7.)
 
 # 25. GUI Support Services
 

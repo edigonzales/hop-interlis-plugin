@@ -17,6 +17,23 @@ The authoritative implementation specification lives in `docs/spec/` (or, while 
 
 Read the relevant specification documents before making architectural changes. Do not replace the architecture described there without a concrete technical reason and an accompanying specification update.
 
+## INTERLIS library versions (pinned)
+
+The INTERLIS libraries form a matching pair and are pinned in the parent POM
+(`hop-interlis-plugin/pom.xml`); do not change them without an explicit request:
+
+```text
+ili2c     5.6.8
+iox-ili   1.24.4
+iox-api   1.0.3
+ehibasics 1.4.1
+```
+
+Note: not every ili2c version has a matching `ili2c-tool` release (e.g. 5.6.5
+exists only as SNAPSHOT), and newer/older iox-ili versions contain known XTF 2.4
+reader bugs (external basket references on standalone association roles duplicate
+their REF member and crash the 2.4 writer). Keep the pair as-is.
+
 ## Related repositories
 
 Important implementation references:

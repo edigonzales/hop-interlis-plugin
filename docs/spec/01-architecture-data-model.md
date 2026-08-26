@@ -122,7 +122,9 @@ _ili_line           Integer
 _ili_column         Integer
 ```
 
-Die Positionen sind konstant und werden in `InterlisEnvelopeRowLayout` zentral definiert.
+Die Positionen sind konstant und werden in `InterlisEnvelopeRowLayout` zentral
+definiert (Phase 5 umgesetzt; die Schema-Factory `InterlisEnvelopeSchemaFactory`
+und alle generischen Transforms verwenden exakt dieses Layout).
 
 ## 4. Typed row projection
 
@@ -845,22 +847,23 @@ Der separate Transform ist wichtig, damit ETL-Pipelines Validierung als eigene f
 
 ### 20.1 Fehlerdatenmodell
 
-Validation errors werden als normale Rows repräsentiert:
+Validation errors werden als normale Rows repräsentiert (Phase 6 umgesetzt;
+Namen mit `_ili_`-Präfix, zentral in `InterlisValidationRowLayout`):
 
 ```text
-severity
-message
-source_file
-line
-column
-model
-topic
-basket_id
-class_name
-object_id
-attribute_path
-constraint_name
-raw_event_type
+_ili_severity
+_ili_message
+_ili_source_file
+_ili_line
+_ili_column
+_ili_model
+_ili_topic
+_ili_bid
+_ili_class
+_ili_tid
+_ili_attribute_path
+_ili_constraint_name
+_ili_raw_event_type
 ```
 
 Wo iox-ili/Validator nicht alle Werte liefert, bleiben Felder `null`.
