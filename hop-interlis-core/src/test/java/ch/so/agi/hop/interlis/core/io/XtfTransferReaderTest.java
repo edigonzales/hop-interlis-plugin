@@ -1,14 +1,31 @@
 package ch.so.agi.hop.interlis.core.io;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import ch.interlis.iom.IomObject;
 import ch.so.agi.hop.interlis.core.TestResources;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 class XtfTransferReaderTest {
+
+  @Test
+  void rejects_interlis_1_itf_transfers_with_a_clear_message(@TempDir Path tempDir)
+      throws Exception {
+    Path itfFile = tempDir.resolve("legacy.itf");
+    Files.writeString(
+        itfFile,
+        "SCNT  UNDEFINIERT\n% HopIli_Legacy 1\n\nTABL TOPIC Class\n");
+
+    assertThatThrownBy(() -> XtfTransferReader.open(itfFile))
+        .isInstanceOf(InterlisReadException.class)
+        .hasMessageContaining("INTERLIS 1 (ITF) transfers are not supported");
+  }
 
   @Test
   void reads_xtf_transfer_events_in_order() throws Exception {

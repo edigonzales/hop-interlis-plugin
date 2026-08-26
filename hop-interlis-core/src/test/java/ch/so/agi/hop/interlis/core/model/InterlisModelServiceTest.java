@@ -117,6 +117,23 @@ class InterlisModelServiceTest {
   }
 
   @Test
+  void model_cache_is_shared_across_service_instances() throws Exception {
+    // The cache is static: every transform creates its own service instance, but the compiled
+    // model is shared JVM-wide (design-time, immutable result).
+    ModelSource source =
+        new ModelSource(
+            List.of(TestResources.path("/models/HopIli_Primitives_V1.ili")),
+            List.of(),
+            List.of());
+    CompiledInterlisModel first =
+        new InterlisModelServiceImpl().compile(source, primitivesOptions());
+    CompiledInterlisModel second =
+        new InterlisModelServiceImpl().compile(source, primitivesOptions());
+
+    assertThat(second.transferDescription()).isSameAs(first.transferDescription());
+  }
+
+  @Test
   void model_cache_key_changes_when_model_configuration_changes() throws Exception {
     CompiledInterlisModel first =
         service.compile(

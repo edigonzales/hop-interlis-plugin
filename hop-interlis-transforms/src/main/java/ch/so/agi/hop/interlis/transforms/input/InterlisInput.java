@@ -9,6 +9,7 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisAssociationLinkLookup;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor;
+import ch.so.agi.hop.interlis.transforms.InterlisParallelCopies;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
 import java.nio.file.Path;
@@ -194,6 +195,7 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
   }
 
   private void doInitialize() throws HopException {
+    InterlisParallelCopies.rejectParallelCopies(getCopy(), getTransformName());
     InterlisRuntimeSupport.initialize();
 
     String resolvedFile = resolve(meta.getFileName());

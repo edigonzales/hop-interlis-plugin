@@ -10,6 +10,25 @@ The authoritative architecture and implementation specification lives in [`docs/
 
 ## Status
 
+**Phase 8** (hardening, performance, compatibility) is implemented – the roadmap
+is complete except for Phase 7, which was deliberately skipped (see below):
+
+- the compiled-model cache is JVM-wide (one compile per model set and Hop
+  session); a 50k-object streaming baseline test documents the
+  performance characteristics;
+- an explicit threading policy: file-based transforms reject parallel
+  copies with an actionable error, per-row transforms support them;
+- `http(s)://` INTERLIS model repositories work as model directories
+  (local cache, timeouts, offline diagnostics, local overrides);
+- the CI compatibility matrix covers OS × JDK and the Hop version is a
+  single Maven property; a release workflow attaches the plugin ZIP to
+  GitHub releases; runnable parameterized example pipelines live in
+  `examples/`.
+
+**Phase 7 (ITF/INTERLIS 1) is intentionally not supported:** `.itf` files are
+rejected with a clear error message instead of being half-interpreted.
+See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
+
 **Phase 6** (validation, enumerations, transfer control) is implemented:
 
 - `INTERLIS Validate` validates an XTF file with the iox-ili streaming
@@ -99,7 +118,8 @@ The authoritative architecture and implementation specification lives in [`docs/
   date/time, enumerations), inherited attributes, multiple geometry attributes as real Hop
   `Geometry` fields, flattened `0..1`/`1` structures and simple roles as `<role>_ref`;
 - models are detected from the transfer file (`%DATA`) or configured explicitly,
-  with model directories and `%XTF_DIR` resolution;
+  with model directories, `%XTF_DIR` resolution and `http(s)://` model repositories
+  (cached, with offline diagnostics and local overrides);
 - **circular arcs survive as SQL/MM curves** (verified in unit, pipeline and `hop-run` E2E
   tests, including a GeoPackage round trip via the GeoTools plugin with a registered
   `COMPOUNDCURVE` column);
@@ -116,7 +136,9 @@ Phase 0 (project foundation) is implemented as well:
 - plugin packaging as installable ZIP with a distribution checker;
 - one-command local development workflow and `hop-run` E2E suite.
 
-See [`docs/progress/phase-06.md`](docs/progress/phase-06.md),
+See [`docs/progress/phase-08.md`](docs/progress/phase-08.md),
+[`docs/progress/phase-07.md`](docs/progress/phase-07.md),
+[`docs/progress/phase-06.md`](docs/progress/phase-06.md),
 [`docs/progress/phase-05.md`](docs/progress/phase-05.md),
 [`docs/progress/phase-04.md`](docs/progress/phase-04.md),
 [`docs/progress/phase-03.md`](docs/progress/phase-03.md),

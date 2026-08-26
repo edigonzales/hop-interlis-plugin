@@ -117,6 +117,8 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
   }
 
   private void initialize() throws HopException {
+    ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.rejectParallelCopies(
+        getCopy(), getTransformName());
     InterlisRuntimeSupport.initialize();
 
     String resolvedFile = resolve(meta.getFileName());

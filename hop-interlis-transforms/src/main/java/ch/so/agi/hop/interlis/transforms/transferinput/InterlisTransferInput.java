@@ -5,6 +5,7 @@ import ch.so.agi.hop.interlis.core.io.InterlisEventType;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectEnvelope;
 import ch.so.agi.hop.interlis.core.io.XtfTransferReader;
 import ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory;
+import ch.so.agi.hop.interlis.transforms.InterlisParallelCopies;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.nio.file.Path;
 import java.util.Arrays;
@@ -74,6 +75,7 @@ public class InterlisTransferInput
   }
 
   private void doInitialize() throws HopException {
+    InterlisParallelCopies.rejectParallelCopies(getCopy(), getTransformName());
     InterlisRuntimeSupport.initialize();
 
     String resolvedFile = resolve(meta.getFileName());

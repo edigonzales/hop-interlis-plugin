@@ -1327,6 +1327,11 @@ Typed Output erhält später optional ein Operation Field.
 
 # 56. Phase 7 – ITF / INTERLIS 1
 
+> **Entscheid vom 2026-08-26: Phase 7 wird übersprungen.** INTERLIS 1 (ITF)
+> wird von `hop-interlis-plugin` nicht unterstützt; Phase 8 wurde vorgezogen.
+> Details und Konsequenzen (explizite ITF-Ablehnung mit Actionable Message):
+> `docs/progress/phase-07.md`.
+
 ## 56.1 Ziel
 
 INTERLIS 1 wird bewusst nach dem stabilen XTF-Kern umgesetzt, weil AREA/SURFACE und Linetables besondere Semantik besitzen.

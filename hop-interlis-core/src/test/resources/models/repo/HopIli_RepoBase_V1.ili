@@ -1,0 +1,13 @@
+INTERLIS 2.4;
+
+MODEL HopIli_RepoBase_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-01-01" =
+  DOMAIN
+    Name_ = TEXT*40;
+
+  TOPIC BaseTopic =
+    CLASS Base =
+      Name : MANDATORY Name_;
+    END Base;
+  END BaseTopic;
+END HopIli_RepoBase_V1.

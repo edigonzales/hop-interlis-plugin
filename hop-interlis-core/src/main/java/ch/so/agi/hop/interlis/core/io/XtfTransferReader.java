@@ -54,6 +54,7 @@ public final class XtfTransferReader implements InterlisTransferReader {
     XtfTransferReader transferReader =
         new XtfTransferReader(file, transferDescription);
     try {
+      rejectUnsupportedFormat(file);
       transferReader.reader =
           new ReaderFactory().createReader(file.toFile(), null);
       if (transferReader.reader instanceof IoxIliReader ioxIliReader
@@ -61,9 +62,28 @@ public final class XtfTransferReader implements InterlisTransferReader {
         ioxIliReader.setModel(transferDescription);
       }
       return transferReader;
+    } catch (InterlisReadException e) {
+      throw e;
     } catch (Exception e) {
       throw new InterlisReadException(
           "Failed to open XTF file " + file + ": " + e.getMessage(), e);
+    }
+  }
+
+  /**
+   * INTERLIS 1 (ITF) transfers are intentionally not supported by this plugin; fail fast with an
+   * actionable message instead of producing half-interpreted data.
+   */
+  public static void rejectUnsupportedFormat(Path file) throws InterlisReadException {
+    if (file == null) {
+      return;
+    }
+    String name = file.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+    if (name.endsWith(".itf") || name.endsWith(".ili1")) {
+      throw new InterlisReadException(
+          "INTERLIS 1 (ITF) transfers are not supported by hop-interlis-plugin: " + file
+              + ". Convert the data to INTERLIS 2 (XTF) with ili2c or use a different tool "
+              + "for INTERLIS 1 data");
     }
   }
 

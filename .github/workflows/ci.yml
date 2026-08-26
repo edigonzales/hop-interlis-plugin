@@ -7,17 +7,23 @@ on:
 jobs:
   verify:
     strategy:
+      fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
+        # Compatibility matrix: the plugin builds against the Hop version in the parent POM
+        # (hop.version property, currently 2.18.1 - the minimum supported Hop release line).
+        # Newer Hop releases can be added by appending to this list once they are available;
+        # the build uses the Maven property, so no pom changes are needed.
+        jdk: ['21', '25']
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: Set up JDK ${{ matrix.jdk }}
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: ${{ matrix.jdk }}
 
       - name: Check out hop-geometry-type-plugin
         uses: actions/checkout@v4
@@ -37,5 +43,5 @@ jobs:
       - name: Upload plugin distribution
         uses: actions/upload-artifact@v4
         with:
-          name: hop-interlis-plugin-${{ matrix.os }}
+          name: hop-interlis-plugin-${{ matrix.os }}-jdk${{ matrix.jdk }}
           path: assemblies/assemblies-hop-interlis/target/hop-interlis-plugin-*.zip

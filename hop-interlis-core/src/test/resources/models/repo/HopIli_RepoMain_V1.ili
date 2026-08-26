@@ -1,0 +1,12 @@
+INTERLIS 2.4;
+
+MODEL HopIli_RepoMain_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-01-01" =
+  IMPORTS HopIli_RepoBase_V1;
+
+  TOPIC MainTopic =
+    CLASS Main =
+      Name : MANDATORY HopIli_RepoBase_V1.Name_;
+    END Main;
+  END MainTopic;
+END HopIli_RepoMain_V1.

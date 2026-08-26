@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.enumerations;
 
 import ch.so.agi.hop.interlis.core.model.InterlisEnumerationExtractor;
 import ch.so.agi.hop.interlis.core.model.InterlisEnumerationRow;
+import ch.so.agi.hop.interlis.transforms.InterlisParallelCopies;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.util.ArrayList;
 import java.util.List;
@@ -49,6 +50,7 @@ public class InterlisEnumerations
   }
 
   private void doInitialize() throws HopException {
+    InterlisParallelCopies.rejectParallelCopies(getCopy(), getTransformName());
     InterlisRuntimeSupport.initialize();
 
     try {

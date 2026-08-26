@@ -19,6 +19,7 @@ import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
+import ch.so.agi.hop.interlis.transforms.InterlisParallelCopies;
 import ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.nio.file.Path;
@@ -74,6 +75,7 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
   }
 
   private void runValidation() throws HopException {
+    InterlisParallelCopies.rejectParallelCopies(getCopy(), getTransformName());
     InterlisRuntimeSupport.initialize();
 
     String resolvedFile = resolve(meta.getFileName());
@@ -83,6 +85,11 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
     Path file = Path.of(resolvedFile);
     if (!java.nio.file.Files.isRegularFile(file)) {
       throw new HopException("INTERLIS transfer file does not exist: " + file);
+    }
+    try {
+      ch.so.agi.hop.interlis.core.io.XtfTransferReader.rejectUnsupportedFormat(file);
+    } catch (ch.so.agi.hop.interlis.core.io.InterlisReadException e) {
+      throw new HopException(e.getMessage(), e);
     }
 
     try {

@@ -142,6 +142,23 @@ public final class InterlisModelService {
 6. `InterlisSchemaDescriptor` erzeugen.
 7. Resultat cachen.
 
+### Modellrepositorys (Phase 8)
+
+Model directories dürfen zusätzlich zu lokalen Verzeichnissen
+`http(s)://`-Repository-URIs enthalten. Nicht lokal gefundene Modelle werden
+über die ilirepository-Maschinerie (`RepositoryAccess`, ili2c-tool)
+aufgelöst:
+
+- Index `ilimodels.xml` und Modell-Dateien landen im lokalen Cache
+  (`~/.ilicache` Default, 24 h TTL, 15 s/40 s Timeouts, überschreibbar via
+  System-Property `hop.interlis.repository.cache`);
+- lokale Directories haben Vorrang (Override-Semantik);
+- Imports innerhalb des Repositorys löst der ili2c `IliManager` auf;
+- Fehlerfälle (unreachable, unbekanntes Modell) ergeben actionable
+  Diagnostik mit Repository-Liste und Offline-/Override-Hinweisen;
+- der kompilierte Model-Cache ist JVM-weit statisch (ein Compile pro
+  Modell-Set und Hop-Sitzung).
+
 ### Cache-Key
 
 Mindestens:
@@ -1546,6 +1563,33 @@ pipeline stop -> dispose closes reader/writer
 ```
 
 `dispose()` muss idempotent sein.
+
+# 31a. Threading-Policy (Phase 8)
+
+Für jeden Transform ist die Parallel-Copy-Unterstützung explizit:
+
+| Transform | parallel copies | Begründung |
+|---|---|---|
+| `INTERLIS Input` | **nein** | gleiche Datei mehrfach lesen = doppelte Rows |
+| `INTERLIS Transfer Input` | **nein** | dito |
+| `INTERLIS Output` | **nein** | konkurrierendes Schreiben auf dieselbe Datei korrumpiert |
+| `INTERLIS Transfer Output` | **nein** | dito |
+| `INTERLIS Validate` | **nein** | doppelte Error-Rows pro Kopie |
+| `INTERLIS Enumerations` | **nein** | doppelte Rows pro Kopie |
+| `INTERLIS Structure Explode` | ja | row-stateless |
+| `INTERLIS Structure Collect` | ja | row-stateless |
+| `INTERLIS Role Join` | ja | row-stateless (Lookup read-only) |
+| `INTERLIS Object to Row` | ja | row-stateless |
+| `INTERLIS Row to Object` | ja | row-stateless |
+
+Datei-Transforms brechen bei parallelen Kopien mit einer klaren
+Fehlermeldung ab („Set Number of copies back to 1"); sie scheitern nie
+stillschweigend. Zentrale Hilfsklasse: `InterlisParallelCopies`.
+
+Geteilte Dienste: `InterlisModelService` ist thread-sicher (statischer
+Cache, serialisierte Compiles); Mapper und Pläne sind nach der
+Initialisierung unveränderlich; Reader/Writer werden nie zwischen
+Transform-Kopien geteilt.
 
 # 32. Backward compatibility
 

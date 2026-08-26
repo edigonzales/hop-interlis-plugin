@@ -148,6 +148,8 @@ public class InterlisTransferOutput
   }
 
   private void doInitialize() throws HopException {
+    ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.rejectParallelCopies(
+        getCopy(), getTransformName());
     InterlisRuntimeSupport.initialize();
 
     String resolvedFile = resolve(meta.getFileName());
