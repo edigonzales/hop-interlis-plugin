@@ -25,14 +25,23 @@ import java.util.concurrent.ConcurrentHashMap;
  * The cache is static: compiled models are shared by all service instances (and therefore all
  * transforms) in the JVM. A {@link CompiledInterlisModel} is immutable after construction, so
  * sharing it is safe; model compilation is a design-time operation.
+ *
+ * <p><b>Thread-safety rule:</b> the INTERLIS libraries (ili2c, iox-ili, ehibasics) are
+ * single-threaded by design and not thread-safe. ili2c keeps static compiler state, therefore
+ * every compilation must run under {@link #MODEL_LOCK}. The resulting
+ * {@code TransferDescription} is treated as immutable afterwards and may be shared freely
+ * (verified: its getters return fresh deep copies or are pure reads).
  */
 public final class InterlisModelServiceImpl implements InterlisModelService {
 
   /**
-   * ili2c uses shared static state internally and is not safe for concurrent compilation; all
-   * compiles are serialized through this lock (model compilation is a design-time operation).
+   * Central serialization point for every ili2c use in the plugin. ili2c uses shared static
+   * state internally and is not safe for concurrent compilation; all compiles are serialized
+   * through this lock (model compilation is a design-time operation). Readers and writers on
+   * the other hand are per-instance and never shared between threads, so they do not need this
+   * lock.
    */
-  private static final Object COMPILE_LOCK = new Object();
+  private static final Object MODEL_LOCK = new Object();
 
   private static final ConcurrentHashMap<String, CompiledInterlisModel> cache =
       new ConcurrentHashMap<>();
@@ -47,12 +56,18 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
       return cached;
     }
 
-    CompiledInterlisModel compiled;
-    synchronized (COMPILE_LOCK) {
-      compiled = doCompile(source, options);
+    synchronized (MODEL_LOCK) {
+      // Double-checked: a thread waiting for the lock may find the result another thread
+      // compiled in the meantime; compiling again would break the one-compile guarantee and
+      // could hand out a second TransferDescription instance for the same request.
+      cached = cache.get(cacheKey);
+      if (cached != null) {
+        return cached;
+      }
+      CompiledInterlisModel compiled = doCompile(source, options);
+      cache.put(cacheKey, compiled);
+      return compiled;
     }
-    cache.put(cacheKey, compiled);
-    return compiled;
   }
 
   private CompiledInterlisModel doCompile(ModelSource source, ModelCompileOptions options)

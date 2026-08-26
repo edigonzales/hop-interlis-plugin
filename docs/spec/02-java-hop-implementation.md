@@ -1591,6 +1591,30 @@ Cache, serialisierte Compiles); Mapper und Pläne sind nach der
 Initialisierung unveränderlich; Reader/Writer werden nie zwischen
 Transform-Kopien geteilt.
 
+### Thread-Safety der INTERLIS-Bibliotheken
+
+ili2c, iox-ili und ehibasics sind **nicht thread-safe** (single-threaded by
+design, gebaut für CLI-Tools). Die Architektur trägt dem wie folgt Rechnung:
+
+1. **Compile nur unter dem globalen `MODEL_LOCK`** (`InterlisModelServiceImpl`;
+   ili2c hält statischen Compiler-State).
+2. **`TransferDescription` nach dem Compile als immutable behandeln** – nur
+   lesen, nie mutieren; das Teilen über Threads ist verifiziert sicher
+   (Modell-Getter liefern frische tiefe Kopien, z. B.
+   `EnumerationType.getConsolidatedEnumeration()`, oder sind reine
+   Reads/Statik-freie Walks, z. B. `Type.findReal()`).
+3. **Reader/Writer/Validator-Instanzen nie teilen** – weder zwischen
+   Transform-Kopien noch zwischen Transforms (instanzbasierter
+   Streaming-State, keine Thread-Safety-Garantie).
+4. **Datei-Transforms bleiben Single-Copy** (Tabelle oben); parallele Kopien
+   sind ein Konfigurationsfehler mit Actionable Message.
+5. **Globale Initialisierung nur über `InterlisRuntimeSupport`**
+   (synchronized, idempotent); `Settings`-Instanzen werden pro Nutzung frisch
+   erzeugt.
+
+Ein Concurrency-Stresstest (zwei parallele Inputs + zwei parallele Validates
+auf dem geteilten Modell) sichert diese Invarianten ab.
+
 # 32. Backward compatibility
 
 Ab erster öffentlicher 0.x-Version gelten stabile Plugin IDs. Namen dürfen übersetzt/verbessert werden, IDs nicht.

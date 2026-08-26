@@ -207,6 +207,24 @@ Follow the mapping rules from the specification:
 - complex/m:n associations: association rows;
 - hide XTF embedded-link encoding details from normal users.
 
+### Thread safety of the INTERLIS libraries
+
+ili2c, iox-ili and ehibasics are single-threaded by design (built for CLI tools
+such as ili2c, ilivalidator and ili2db); they are not thread-safe.
+
+Rules:
+
+- compile models only under the global `MODEL_LOCK` in `InterlisModelServiceImpl`
+  (ili2c keeps static compiler state);
+- treat a compiled `TransferDescription` as immutable: only read it, never
+  mutate it; it may be shared across threads (verified: model getters return
+  fresh copies or are pure reads);
+- never share `IoxReader` / `IoxWriter` / validator instances across threads,
+  transform copies or transforms;
+- keep file-based transforms single-copy (parallel copies fail with an
+  actionable error, see the threading table in the specification);
+- global initialization goes through `InterlisRuntimeSupport` (idempotent).
+
 ### UI
 
 GUI quality is part of the feature, not optional polish.
