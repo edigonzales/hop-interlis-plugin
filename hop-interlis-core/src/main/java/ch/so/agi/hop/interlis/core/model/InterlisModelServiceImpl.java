@@ -202,6 +202,20 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
   }
 
   @Override
+  public java.util.List<String> detectModelNames(java.nio.file.Path transferFile)
+      throws InterlisModelException {
+    try (ch.so.agi.hop.interlis.core.io.XtfTransferReader reader =
+        ch.so.agi.hop.interlis.core.io.XtfTransferReader.open(transferFile)) {
+      reader.next(); // START_TRANSFER carries the model header
+      return reader.detectedModelNames();
+    } catch (ch.so.agi.hop.interlis.core.io.InterlisReadException e) {
+      throw new InterlisModelException(
+          "Failed to detect model names from transfer file " + transferFile + ": " + e.getMessage(),
+          e);
+    }
+  }
+
+  @Override
   public void clearCache() {
     cache.clear();
   }

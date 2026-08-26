@@ -8,6 +8,7 @@ import ch.interlis.ili2c.metamodel.CompositionType;
 import ch.interlis.ili2c.metamodel.CoordType;
 import ch.interlis.ili2c.metamodel.Element;
 import ch.interlis.ili2c.metamodel.EnumerationType;
+import ch.interlis.ili2c.metamodel.FormattedType;
 import ch.interlis.ili2c.metamodel.LineForm;
 import ch.interlis.ili2c.metamodel.LineType;
 import ch.interlis.ili2c.metamodel.MultiCoordType;
@@ -22,6 +23,7 @@ import ch.interlis.ili2c.metamodel.TextType;
 import ch.interlis.ili2c.metamodel.Topic;
 import ch.interlis.ili2c.metamodel.TransferDescription;
 import ch.interlis.ili2c.metamodel.Type;
+import ch.interlis.ili2c.metamodel.TypeAlias;
 import ch.interlis.ili2c.metamodel.Viewable;
 import ch.interlis.ili2c.metamodel.ViewableTransferElement;
 import java.util.ArrayList;
@@ -134,77 +136,59 @@ public final class InterlisSchemaExtractor {
     String scopedName = attribute.getScopedName(null);
     InterlisCardinality cardinality = cardinalityOf(type);
     boolean mandatory = domain != null && domain.isMandatoryConsideringAliases();
+    String aliasDomainName = aliasDomainName(domain);
 
     if (type instanceof CompositionType composition) {
       Table component = composition.getComponentType();
-      String structureName =
-          component == null ? null : component.getScopedName(null);
-      return new InterlisAttributeDescriptor(
-          attribute.getName(),
+      String structureName = component == null ? null : component.getScopedName(null);
+      return attribute(
+          attribute,
           scopedName,
           cardinality,
           mandatory,
-          InterlisAttributeKind.STRUCTURE,
+          InterlisValueKind.STRUCTURE,
           "STRUCTURE " + (structureName == null ? "?" : structureName),
           inherited,
           null,
           null,
           false,
-          structureName);
+          structureName,
+          -1,
+          -1);
     }
 
     if (type instanceof MultiSurfaceType) {
       return geometryAttribute(
-          attribute, scopedName, cardinality, mandatory, inherited, InterlisGeometryKind.MULTISURFACE, null, allowsArcs(type));
+          attribute, scopedName, cardinality, mandatory, inherited,
+          InterlisGeometryKind.MULTISURFACE, null, allowsArcs(type));
     }
     if (type instanceof SurfaceOrAreaType) {
-      InterlisGeometryKind kind =
+      InterlisGeometryKind geometryKind =
           type instanceof ch.interlis.ili2c.metamodel.AreaType
               ? InterlisGeometryKind.AREA
               : InterlisGeometryKind.SURFACE;
       return geometryAttribute(
-          attribute, scopedName, cardinality, mandatory, inherited, kind, null, allowsArcs(type));
+          attribute, scopedName, cardinality, mandatory, inherited, geometryKind, null,
+          allowsArcs(type));
     }
     if (type instanceof MultiPolylineType) {
       return geometryAttribute(
-          attribute,
-          scopedName,
-          cardinality,
-          mandatory,
-          inherited,
-          InterlisGeometryKind.MULTIPOLYLINE,
-          null,
-          allowsArcs(type));
+          attribute, scopedName, cardinality, mandatory, inherited,
+          InterlisGeometryKind.MULTIPOLYLINE, null, allowsArcs(type));
     }
     if (type instanceof PolylineType) {
       return geometryAttribute(
-          attribute,
-          scopedName,
-          cardinality,
-          mandatory,
-          inherited,
-          InterlisGeometryKind.POLYLINE,
-          null,
-          allowsArcs(type));
+          attribute, scopedName, cardinality, mandatory, inherited,
+          InterlisGeometryKind.POLYLINE, null, allowsArcs(type));
     }
     if (type instanceof MultiCoordType) {
       return geometryAttribute(
-          attribute,
-          scopedName,
-          cardinality,
-          mandatory,
-          inherited,
-          InterlisGeometryKind.MULTICOORD,
-          null,
-          false);
+          attribute, scopedName, cardinality, mandatory, inherited,
+          InterlisGeometryKind.MULTICOORD, null, false);
     }
     if (type instanceof CoordType coordType) {
       return geometryAttribute(
-          attribute,
-          scopedName,
-          cardinality,
-          mandatory,
-          inherited,
+          attribute, scopedName, cardinality, mandatory, inherited,
           InterlisGeometryKind.COORD,
           coordType.getDimensions() == null ? null : coordType.getDimensions().length,
           false);
@@ -214,47 +198,73 @@ public final class InterlisSchemaExtractor {
       // INTERLIS BOOLEAN is modelled as a predefined enumeration; detect it on the
       // unresolved domain so the TypeAlias chain is still visible.
       if (domain != null && domain.isBoolean()) {
-        return new InterlisAttributeDescriptor(
-            attribute.getName(),
-            scopedName,
-            cardinality,
-            mandatory,
-            InterlisAttributeKind.PRIMITIVE,
-            "BOOLEAN",
-            inherited,
-            null,
-            null,
-            false,
-            null);
+        return attribute(
+            attribute, scopedName, cardinality, mandatory, InterlisValueKind.BOOLEAN,
+            "BOOLEAN", inherited, null, null, false, null, -1, -1);
       }
-      EnumerationType enumerationType = (EnumerationType) type;
-      return new InterlisAttributeDescriptor(
-          attribute.getName(),
-          scopedName,
-          cardinality,
-          mandatory,
-          InterlisAttributeKind.ENUM,
-          "ENUMERATION",
-          inherited,
-          null,
-          null,
-          false,
-          null);
+      return attribute(
+          attribute, scopedName, cardinality, mandatory, InterlisValueKind.ENUM,
+          "ENUMERATION", inherited, null, null, false, null, -1, -1);
     }
 
-    String typeName = formatPrimitiveType(type, domain);
-    return new InterlisAttributeDescriptor(
-        attribute.getName(),
-        scopedName,
-        cardinality,
-        mandatory,
-        InterlisAttributeKind.PRIMITIVE,
-        typeName,
-        inherited,
-        null,
-        null,
-        false,
-        null);
+    if (type instanceof TextType textType) {
+      InterlisValueKind valueKind = textualKind(aliasDomainName);
+      return attribute(
+          attribute, scopedName, cardinality, mandatory, valueKind,
+          valueKind + "*" + textType.getMaxLength(),
+          inherited, null, null, false, null, textType.getMaxLength(), -1);
+    }
+
+    if (type instanceof NumericType numericType) {
+      int decimalPlaces =
+          Math.max(
+              numericType.getMinimum() == null ? 0 : numericType.getMinimum().getAccuracy(),
+              numericType.getMaximum() == null ? 0 : numericType.getMaximum().getAccuracy());
+      InterlisValueKind valueKind = decimalPlaces > 0 ? InterlisValueKind.DECIMAL : InterlisValueKind.INTEGER;
+      return attribute(
+          attribute, scopedName, cardinality, mandatory, valueKind,
+          numericType.getMinimum() + " .. " + numericType.getMaximum(),
+          inherited, null, null, false, null, -1, valueKind == InterlisValueKind.DECIMAL ? decimalPlaces : -1);
+    }
+
+    if (type instanceof FormattedType formattedType) {
+      InterlisValueKind valueKind = temporalKind(aliasDomainName);
+      return attribute(
+          attribute, scopedName, cardinality, mandatory, valueKind,
+          "FORMAT " + String.valueOf(formattedType.getFormat()).trim(),
+          inherited, null, null, false, null, -1, -1);
+    }
+
+    return attribute(
+        attribute, scopedName, cardinality, mandatory, InterlisValueKind.TEXT,
+        type == null ? "?" : type.getClass().getSimpleName(),
+        inherited, null, null, false, null, -1, -1);
+  }
+
+  private InterlisValueKind textualKind(String aliasDomainName) {
+    return switch (aliasDomainName) {
+      case "INTERLIS.MTEXT" -> InterlisValueKind.MTEXT;
+      case "INTERLIS.NAME" -> InterlisValueKind.NAME;
+      case "INTERLIS.URI" -> InterlisValueKind.URI;
+      default -> InterlisValueKind.TEXT;
+    };
+  }
+
+  private InterlisValueKind temporalKind(String aliasDomainName) {
+    return switch (aliasDomainName) {
+      case "INTERLIS.XMLDate" -> InterlisValueKind.DATE;
+      case "INTERLIS.XMLDateTime" -> InterlisValueKind.DATETIME;
+      case "INTERLIS.XMLTime" -> InterlisValueKind.TIME;
+      default -> InterlisValueKind.TEXT;
+    };
+  }
+
+  private String aliasDomainName(Type domain) {
+    if (domain instanceof TypeAlias alias) {
+      String name = alias.getAliasing() == null ? null : alias.getAliasing().getScopedName(null);
+      return name == null ? "" : name;
+    }
+    return "";
   }
 
   private InterlisAttributeDescriptor geometryAttribute(
@@ -266,18 +276,50 @@ public final class InterlisSchemaExtractor {
       InterlisGeometryKind kind,
       Integer dimension,
       boolean allowsArcs) {
-    return new InterlisAttributeDescriptor(
-        attribute.getName(),
+    return attribute(
+        attribute,
         scopedName,
         cardinality,
         mandatory,
-        InterlisAttributeKind.GEOMETRY,
+        InterlisValueKind.GEOMETRY,
         kind.name() + (dimension != null ? " " + dimension + "D" : ""),
         inherited,
         kind,
         dimension,
         allowsArcs,
-        null);
+        null,
+        -1,
+        -1);
+  }
+
+  private InterlisAttributeDescriptor attribute(
+      AttributeDef attribute,
+      String scopedName,
+      InterlisCardinality cardinality,
+      boolean mandatory,
+      InterlisValueKind kind,
+      String typeName,
+      boolean inherited,
+      InterlisGeometryKind geometryKind,
+      Integer dimension,
+      boolean allowsArcs,
+      String structureScopedName,
+      int textMaxLength,
+      int decimalPlaces) {
+    return new InterlisAttributeDescriptor(
+        attribute.getName(),
+        scopedName,
+        cardinality,
+        mandatory,
+        kind,
+        typeName,
+        inherited,
+        geometryKind,
+        dimension,
+        allowsArcs,
+        structureScopedName,
+        textMaxLength,
+        decimalPlaces);
   }
 
   private InterlisRoleDescriptor extractRole(RoleDef role, boolean inherited) {
@@ -326,22 +368,5 @@ public final class InterlisSchemaExtractor {
       }
     }
     return false;
-  }
-
-  private String formatPrimitiveType(Type type, Type domain) {
-    if (type == null) {
-      return "?";
-    }
-    if (type instanceof TextType textType) {
-      return "TEXT*" + textType.getMaxLength();
-    }
-    if (type instanceof NumericType numericType) {
-      return numericType.getMinimum() + " .. " + numericType.getMaximum();
-    }
-    if (type instanceof ch.interlis.ili2c.metamodel.FormattedType formattedType) {
-      String format = formattedType.getFormat();
-      return format == null || format.isBlank() ? "FORMATTED" : "FORMAT " + format.trim();
-    }
-    return type.getClass().getSimpleName();
   }
 }

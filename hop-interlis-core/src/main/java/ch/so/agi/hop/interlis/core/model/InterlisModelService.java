@@ -28,6 +28,18 @@ public interface InterlisModelService {
   /** Finds a class by its qualified name, e.g. {@code Model.Topic.Class}. */
   Optional<InterlisClassDescriptor> findClass(CompiledInterlisModel model, String qualifiedName);
 
+  /**
+   * Detects the model names declared in the header of a transfer file.
+   *
+   * <p>This reads only the transfer header; the file is closed again afterwards.
+   *
+   * @param transferFile the transfer (XTF) file
+   * @return model names in header order; empty if the header declares none
+   * @throws InterlisModelException if the header cannot be read
+   */
+  java.util.List<String> detectModelNames(java.nio.file.Path transferFile)
+      throws InterlisModelException;
+
   /** Drops all cached compilation results. */
   void clearCache();
 }

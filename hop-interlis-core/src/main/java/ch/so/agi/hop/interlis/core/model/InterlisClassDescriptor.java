@@ -46,7 +46,7 @@ public record InterlisClassDescriptor(
   /** All effective geometry attributes in model order. */
   public List<InterlisAttributeDescriptor> geometryAttributes() {
     return attributes().stream()
-        .filter(a -> a.kind() == InterlisAttributeKind.GEOMETRY)
+        .filter(a -> a.kind() == InterlisValueKind.GEOMETRY)
         .toList();
   }
 }

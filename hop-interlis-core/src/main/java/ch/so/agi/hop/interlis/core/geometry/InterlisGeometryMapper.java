@@ -4,6 +4,7 @@ import ch.interlis.iom.IomObject;
 import ch.interlis.iox_j.wkb.Iox2wkb;
 import ch.interlis.iox_j.wkb.Wkb2iox;
 import ch.so.agi.hop.interlis.core.model.InterlisGeometryKind;
+import com.atolcd.hop.gis.geometry.curve.CircularString;
 import com.atolcd.hop.gis.geometry.curve.CompoundCurve;
 import com.atolcd.hop.gis.geometry.curve.CurveGeometrySupport;
 import com.atolcd.hop.gis.geometry.curve.CurvePolygon;
@@ -144,15 +145,15 @@ public final class InterlisGeometryMapper {
   }
 
   /**
-   * Replaces curve-only representations with their plain counterparts when no curve is present:
-   * a {@link CompoundCurve} consisting solely of straight segments becomes a {@link LineString}
-   * and a {@link CurvePolygon} with straight-only rings becomes a {@link Polygon}.
+   * Replaces curve-only representations with their plain counterparts when no true curve is
+   * present: a {@link CompoundCurve} consisting solely of straight segments becomes a
+   * {@link LineString} and a {@link CurvePolygon} with straight-only rings becomes a
+   * {@link Polygon}. Straight {@code CompoundCurve} rings inside a {@code CurvePolygon} do not
+   * count as curves.
    */
   private Geometry normalizeStraightOnly(Geometry geometry) {
     if (geometry instanceof CompoundCurve compoundCurve) {
-      boolean hasCurve =
-          compoundCurve.getComponents().stream()
-              .anyMatch(CurveGeometrySupport::isCurveGeometry);
+      boolean hasCurve = containsTrueCurve(compoundCurve);
       if (!hasCurve) {
         Geometry plain = geometry.getFactory().createLineString(compoundCurve.getCoordinates());
         plain.setSRID(geometry.getSRID());
@@ -161,8 +162,7 @@ public final class InterlisGeometryMapper {
     }
     if (geometry instanceof CurvePolygon curvePolygon) {
       boolean hasCurve =
-          curvePolygon.getCurveRings().stream()
-              .anyMatch(CurveGeometrySupport::isCurveGeometry);
+          curvePolygon.getCurveRings().stream().anyMatch(this::containsTrueCurve);
       if (!hasCurve) {
         Geometry plain = plainPolygon(curvePolygon);
         plain.setSRID(geometry.getSRID());
@@ -170,6 +170,26 @@ public final class InterlisGeometryMapper {
       }
     }
     return geometry;
+  }
+
+  /** {@code true} if the geometry contains at least one circular string segment. */
+  private boolean containsTrueCurve(Geometry geometry) {
+    if (geometry instanceof CircularString) {
+      return true;
+    }
+    if (geometry instanceof CompoundCurve compoundCurve) {
+      return compoundCurve.getComponents().stream().anyMatch(this::containsTrueCurve);
+    }
+    if (geometry instanceof CurvePolygon curvePolygon) {
+      return curvePolygon.getCurveRings().stream().anyMatch(this::containsTrueCurve);
+    }
+    if (geometry instanceof com.atolcd.hop.gis.geometry.curve.MultiCurve multiCurve) {
+      return multiCurve.getCurves().stream().anyMatch(this::containsTrueCurve);
+    }
+    if (geometry instanceof com.atolcd.hop.gis.geometry.curve.MultiSurface multiSurface) {
+      return multiSurface.getSurfaces().stream().anyMatch(this::containsTrueCurve);
+    }
+    return false;
   }
 
   private Geometry plainPolygon(CurvePolygon curvePolygon) {

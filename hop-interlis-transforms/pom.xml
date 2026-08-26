@@ -25,6 +25,11 @@
       <artifactId>hop-engine</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hop</groupId>
+      <artifactId>hop-ui</artifactId>
+      <scope>provided</scope>
+    </dependency>
 
     <dependency>
       <groupId>ch.so.agi</groupId>
@@ -54,6 +59,18 @@
     <dependency>
       <groupId>org.apache.hop</groupId>
       <artifactId>hop-transform-writetolog</artifactId>
+      <version>${hop.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hop</groupId>
+      <artifactId>hop-transform-textfile</artifactId>
+      <version>${hop.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hop</groupId>
+      <artifactId>hop-transform-selectvalues</artifactId>
       <version>${hop.version}</version>
       <scope>test</scope>
     </dependency>

@@ -1,0 +1,34 @@
+INTERLIS 2.3;
+
+/** Test model covering inheritance, single structures and simple roles. */
+MODEL HopIli_Spike_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-08-25" =
+  DOMAIN
+    Coord = COORD 2460000.000 .. 2870000.000, 1045000.000 .. 1310000.000;
+  TOPIC Data =
+    STRUCTURE Address =
+      Street : TEXT*80;
+      Number : TEXT*10;
+    END Address;
+
+    CLASS Base =
+      Note : TEXT*100;
+    END Base;
+
+    CLASS Building EXTENDS Base =
+      Code : 0 .. 999;
+      Location : Coord;
+      Address : Address;
+    END Building;
+
+    CLASS Municipality =
+      Name : TEXT*60;
+      Code : 0 .. 999;
+    END Municipality;
+
+    ASSOCIATION BuildingMunicipality =
+      Municipality -- {1} Municipality;
+      Building -- {0..*} Building;
+    END BuildingMunicipality;
+  END Data;
+END HopIli_Spike_V1.

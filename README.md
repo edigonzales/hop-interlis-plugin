@@ -10,19 +10,32 @@ The authoritative architecture and implementation specification lives in [`docs/
 
 ## Status
 
-**Phase 0** (project foundation and technical verification) is implemented:
+**Phase 1** (`INTERLIS Input` for XTF) is implemented:
+
+- `INTERLIS Input` transform reads one INTERLIS class from an XTF file and emits stable,
+  typed Hop rows: TID/BID, primitives (text, boolean, integer, decimal without precision loss,
+  date/time, enumerations), inherited attributes, multiple geometry attributes as real Hop
+  `Geometry` fields, flattened `0..1`/`1` structures and simple roles as `<role>_ref`;
+- models are detected from the transfer file (`%DATA`) or configured explicitly,
+  with model directories and `%XTF_DIR` resolution;
+- **circular arcs survive as SQL/MM curves** (verified in unit, pipeline and `hop-run` E2E
+  tests, including a GeoPackage round trip via the GeoTools plugin with a registered
+  `COMPOUNDCURVE` column);
+- dialog with model source, class browser and live schema preview; probing failures never
+  make the dialog unusable;
+- central mapping plan shared by `getFields()`, runtime and GUI (no schema drift).
+
+Phase 0 (project foundation) is implemented as well:
 
 - multi-module Maven build (Java 21, Apache Hop 2.18.1, iox-ili 1.24.4, ili2c 5.6.8);
 - INTERLIS model compilation and schema extraction (`TransferDescription` → descriptors);
 - streaming XTF reader on top of iox-ili;
-- INTERLIS ↔ Hop geometry bridge via SQL/MM WKB with verified **ARC roundtrip**
-  (`IomObject` → Hop geometry → `IomObject`, no implicit linearization);
+- INTERLIS ↔ Hop geometry bridge via SQL/MM WKB;
 - plugin packaging as installable ZIP with a distribution checker;
-- experimental `INTERLIS Test` transform registered in the `sogeo-geometry` classloader group,
-  executed in real Hop pipelines;
-- one-command local development workflow.
+- one-command local development workflow and `hop-run` E2E suite.
 
-See [`docs/progress/phase-00.md`](docs/progress/phase-00.md) for details and known limitations.
+See [`docs/progress/phase-01.md`](docs/progress/phase-01.md) and
+[`docs/progress/phase-00.md`](docs/progress/phase-00.md) for details and known limitations.
 
 ## Quick start for developers
 
@@ -51,19 +64,27 @@ Build without installing:
 python3 scripts/check-distribution.py
 ```
 
+Run the packaged-plugin E2E suite against a Hop installation (optionally builds and
+installs `hop-geotools-plugin` for the GeoPackage pipeline):
+
+```bash
+bash scripts/run-e2e.sh "$HOP_HOME"
+```
+
 ### Requirements
 
 - Java 21 (a local `.sdkmanrc` pins the SDKMAN identifier used for development; Apache Hop 2.18 requires Java 21)
 - Maven 3.x or the included Maven wrapper
 - an Apache Hop 2.18.x installation for local testing (`HOP_HOME`)
 - a checkout of `hop-geometry-type-plugin` next to this repository
+- a checkout of `hop-geotools-plugin` next to this repository (only for the GeoPackage E2E)
 
 ## Modules
 
 | Module | Purpose |
 |---|---|
-| `hop-interlis-core` | Model compilation, schema descriptors, transfer reader, geometry mapper. No SWT, no Hop runtime. |
-| `hop-interlis-transforms` | Hop transforms (experimental `INTERLIS Test` transform in Phase 0). |
+| `hop-interlis-core` | Model compilation, schema descriptors, transfer reader, mapping plans, geometry mapper. No SWT, no Hop runtime. |
+| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`). |
 | `assemblies/assemblies-hop-interlis` | Installable plugin ZIP. |
 
 ## License

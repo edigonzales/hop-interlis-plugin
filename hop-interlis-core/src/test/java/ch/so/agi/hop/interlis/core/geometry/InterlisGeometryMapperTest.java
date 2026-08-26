@@ -117,6 +117,8 @@ class InterlisGeometryMapperTest {
     Geometry hopGeometry = mapper.toHopGeometry(surface, InterlisGeometryKind.SURFACE, 2);
 
     assertThat(hopGeometry).isInstanceOf(Polygon.class);
+    // Straight-only surfaces must not remain SQL/MM curve polygons.
+    assertThat(hopGeometry).isNotInstanceOf(com.atolcd.hop.gis.geometry.curve.CurvePolygon.class);
     Polygon polygon = (Polygon) hopGeometry;
     assertThat(polygon.getNumInteriorRing()).isZero();
     assertThat(polygon.getExteriorRing().getNumPoints()).isEqualTo(4);

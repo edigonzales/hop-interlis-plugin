@@ -67,20 +67,31 @@ class InterlisSchemaExtractorTest {
 
     // INTERLIS 2 attributes are optional unless declared MANDATORY.
     InterlisAttributeDescriptor text = attributeOf(primitive, "Text");
-    assertThat(text.kind()).isEqualTo(InterlisAttributeKind.PRIMITIVE);
+    assertThat(text.kind()).isEqualTo(InterlisValueKind.TEXT);
     assertThat(text.typeName()).isEqualTo("TEXT*80");
+    assertThat(text.textMaxLength()).isEqualTo(80);
     assertThat(text.cardinality()).isEqualTo(new InterlisCardinality(1, 1));
     assertThat(text.mandatory()).isTrue();
 
     InterlisAttributeDescriptor count = attributeOf(primitive, "Count");
-    assertThat(count.kind()).isEqualTo(InterlisAttributeKind.PRIMITIVE);
+    assertThat(count.kind()).isEqualTo(InterlisValueKind.INTEGER);
     assertThat(count.typeName()).contains("0", "9999999999");
     assertThat(count.cardinality()).isEqualTo(new InterlisCardinality(0, 1));
     assertThat(count.mandatory()).isFalse();
 
+    InterlisAttributeDescriptor value = attributeOf(primitive, "Value");
+    assertThat(value.kind()).isEqualTo(InterlisValueKind.DECIMAL);
+    assertThat(value.decimalPlaces()).isEqualTo(3);
+
     InterlisAttributeDescriptor flag = attributeOf(primitive, "Flag");
-    assertThat(flag.kind()).isEqualTo(InterlisAttributeKind.PRIMITIVE);
+    assertThat(flag.kind()).isEqualTo(InterlisValueKind.BOOLEAN);
     assertThat(flag.typeName()).isEqualTo("BOOLEAN");
+
+    assertThat(attributeOf(primitive, "Label").kind()).isEqualTo(InterlisValueKind.NAME);
+    assertThat(attributeOf(primitive, "Link").kind()).isEqualTo(InterlisValueKind.URI);
+    assertThat(attributeOf(primitive, "Mtext").kind()).isEqualTo(InterlisValueKind.TEXT);
+    assertThat(attributeOf(primitive, "At").kind()).isEqualTo(InterlisValueKind.DATE);
+    assertThat(attributeOf(primitive, "Ts").kind()).isEqualTo(InterlisValueKind.TIME);
   }
 
   @Test
@@ -88,7 +99,7 @@ class InterlisSchemaExtractorTest {
     InterlisClassDescriptor primitive = classOf(primitives, "Primitive");
     InterlisAttributeDescriptor kind = attributeOf(primitive, "Kind");
 
-    assertThat(kind.kind()).isEqualTo(InterlisAttributeKind.ENUM);
+    assertThat(kind.kind()).isEqualTo(InterlisValueKind.ENUM);
     assertThat(kind.cardinality()).isEqualTo(new InterlisCardinality(1, 1));
     assertThat(kind.typeName()).isNotBlank();
   }
@@ -135,7 +146,7 @@ class InterlisSchemaExtractorTest {
     InterlisClassDescriptor building = classOf(spike, "Building");
     InterlisAttributeDescriptor address = attributeOf(building, "Address");
 
-    assertThat(address.kind()).isEqualTo(InterlisAttributeKind.STRUCTURE);
+    assertThat(address.kind()).isEqualTo(InterlisValueKind.STRUCTURE);
     assertThat(address.structureScopedName()).isEqualTo("HopIli_Spike_V1.Data.Address");
 
     Optional<InterlisStructureDescriptor> structure =
