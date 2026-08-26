@@ -68,6 +68,22 @@ class E2ePipelineGeneratorTest {
         structuresRoundtripCheckPipeline("08-structures-roundtrip-check",
             outputFile(outputDir, "structures-roundtrip.xtf"),
             outputFile(outputDir, "interlis-structures-roundtrip")));
+    write(outputDir.resolve("09-associations-roundtrip.hpl"),
+        associationsRoundtripPipeline("09-associations-roundtrip",
+            inputFile(inputDir, "HopIli_Associations_V1_valid.xtf"),
+            outputFile(outputDir, "associations-roundtrip.xtf")));
+    write(outputDir.resolve("10-associations-roundtrip-check.hpl"),
+        associationsRoundtripCheckPipeline("10-associations-roundtrip-check",
+            outputFile(outputDir, "associations-roundtrip.xtf"),
+            outputFile(outputDir, "interlis-associations-roundtrip")));
+    write(outputDir.resolve("11-association-rows-roundtrip.hpl"),
+        associationRowsRoundtripPipeline("11-association-rows-roundtrip",
+            inputFile(inputDir, "HopIli_Associations_V1_valid.xtf"),
+            outputFile(outputDir, "association-rows-roundtrip.xtf")));
+    write(outputDir.resolve("12-association-rows-roundtrip-check.hpl"),
+        associationRowsRoundtripCheckPipeline("12-association-rows-roundtrip-check",
+            outputFile(outputDir, "association-rows-roundtrip.xtf"),
+            outputFile(outputDir, "interlis-association-rows-roundtrip")));
   }
 
   @Test
@@ -377,6 +393,107 @@ class E2ePipelineGeneratorTest {
     pipelineMeta.addTransform(sink);
     pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
     return pipelineMeta;
+  }
+
+  private static PipelineMeta associationsRoundtripPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setClassName("HopIli_Associations_V1.Data.Person");
+    input.setIncludeTid(true);
+    input.setIncludeBid(true);
+
+    InterlisOutputMeta output = associationOutput(outputFile, "HopIli_Associations_V1.Data.Person",
+        inputFile);
+    return twoStepPipeline(pipelineMeta, input, output);
+  }
+
+  private static PipelineMeta associationsRoundtripCheckPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames("HopIli_Associations_V1");
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setClassName("HopIli_Associations_V1.Data.Person");
+    input.setIncludeTid(true);
+    input.setIncludeBid(true);
+
+    TransformMeta source = new TransformMeta("INTERLIS_INPUT", "INTERLIS Input", input);
+    source.setLocation(100, 100);
+    TransformMeta sink = new TransformMeta("Text file output", csvOutput(outputFile));
+    sink.setLocation(300, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    return pipelineMeta;
+  }
+
+  private static PipelineMeta associationRowsRoundtripPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setClassName("HopIli_Associations_V1.Data.PersonTask");
+    input.setIncludeTid(true);
+    input.setIncludeBid(true);
+
+    InterlisOutputMeta output =
+        associationOutput(outputFile, "HopIli_Associations_V1.Data.PersonTask", inputFile);
+    return twoStepPipeline(pipelineMeta, input, output);
+  }
+
+  private static PipelineMeta associationRowsRoundtripCheckPipeline(
+      String name, String inputFile, String outputFile) {
+    PipelineMeta pipelineMeta = new PipelineMeta();
+    pipelineMeta.setName(name);
+
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setFileName(inputFile);
+    input.setModelNames("HopIli_Associations_V1");
+    input.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    input.setClassName("HopIli_Associations_V1.Data.PersonTask");
+    input.setIncludeTid(true);
+    input.setIncludeBid(true);
+
+    TransformMeta source = new TransformMeta("INTERLIS_INPUT", "INTERLIS Input", input);
+    source.setLocation(100, 100);
+    TransformMeta sink = new TransformMeta("Text file output", csvOutput(outputFile));
+    sink.setLocation(300, 100);
+    pipelineMeta.addTransform(source);
+    pipelineMeta.addTransform(sink);
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    return pipelineMeta;
+  }
+
+  private static InterlisOutputMeta associationOutput(
+      String outputFile, String className, String inputFile) {
+    InterlisOutputMeta output = new InterlisOutputMeta();
+    output.setFileName(outputFile);
+    output.setModelNames("HopIli_Associations_V1");
+    output.setModelDirectories(
+        PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
+    output.setClassName(className);
+    output.setObjectIdField("_ili_tid");
+    output.setBasketIdField("_ili_bid");
+    output.setBasketId("b1");
+    output.setOverwrite(true);
+    return output;
   }
 
   private static PipelineMeta threeStepPipeline(

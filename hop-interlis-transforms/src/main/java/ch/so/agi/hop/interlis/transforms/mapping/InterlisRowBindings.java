@@ -32,8 +32,8 @@ public final class InterlisRowBindings {
         throw new HopTransformException(
             "Incoming row is missing field <"
                 + field.hopFieldName()
-                + "> required by class "
-                + plan.classDescriptor().scopedName());
+                + "> required by "
+                + plan.root().scopedName());
       }
       inputIndexes[field.outputIndex()] = index;
     }

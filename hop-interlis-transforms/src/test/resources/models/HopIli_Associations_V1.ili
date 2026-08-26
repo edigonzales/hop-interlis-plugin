@@ -1,0 +1,53 @@
+INTERLIS 2.4;
+
+/** Test model covering associations: simple roles, association attributes, m:n, n-ary and ordered roles. */
+MODEL HopIli_Associations_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-08-26" =
+  DOMAIN
+    Share_ = 0.0 .. 1.0;
+  TOPIC Data =
+    CLASS Person =
+      Name : MANDATORY TEXT*60;
+    END Person;
+
+    CLASS Organisation =
+      Name : MANDATORY TEXT*60;
+    END Organisation;
+
+    CLASS Address =
+      Street : MANDATORY TEXT*80;
+    END Address;
+
+    CLASS Project =
+      Name : MANDATORY TEXT*60;
+    END Project;
+
+    CLASS Task =
+      Title : MANDATORY TEXT*80;
+    END Task;
+
+    ASSOCIATION AddressOwnership =
+      Person -- {1} Person;
+      Address -- {1} Address;
+      Share : Share_;
+    END AddressOwnership;
+
+    ASSOCIATION Membership =
+      Person -- {0..*} Person;
+      Organisation -- {0..*} Organisation;
+      Function : TEXT*40;
+      Entry : INTERLIS.XMLDate;
+    END Membership;
+
+    ASSOCIATION PersonProject =
+      ProjectPerson -- {0..*} Person;
+      ProjectOrganisation -- {0..*} Organisation;
+      ProjectProject -- {0..*} Project;
+    END PersonProject;
+
+    ASSOCIATION PersonTask =
+      Person -- {1} Person;
+      Task (ORDERED) -- {0..*} Task;
+    END PersonTask;
+  END Data;
+END HopIli_Associations_V1.

@@ -21,4 +21,19 @@ public interface InterlisObjectToRowMapper {
    */
   Object[] map(InterlisObjectEnvelope envelope, InterlisRowMappingPlan mappingPlan)
       throws InterlisMappingException;
+
+  /**
+   * Maps one object envelope to a row with a link lookup for flattened association attributes.
+   *
+   * @param envelope the transfer object
+   * @param mappingPlan the precomputed projection
+   * @param linkLookup resolves association link objects; may be {@code null}
+   * @return the row; never {@code null}
+   * @throws InterlisMappingException if a field value cannot be mapped
+   */
+  Object[] map(
+      InterlisObjectEnvelope envelope,
+      InterlisRowMappingPlan mappingPlan,
+      InterlisAssociationLinkLookup linkLookup)
+      throws InterlisMappingException;
 }

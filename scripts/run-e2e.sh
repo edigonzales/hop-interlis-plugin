@@ -98,6 +98,10 @@ run_pipeline "$PROJECT_DIR/e2e/pipelines/05-xtf-roundtrip.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/06-roundtrip-check.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/07-structures-roundtrip.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/08-structures-roundtrip-check.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/09-associations-roundtrip.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/10-associations-roundtrip-check.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/11-association-rows-roundtrip.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/12-association-rows-roundtrip-check.hpl"
 if [[ "$RUN_GPKG" == "true" ]]; then
   run_pipeline "$PROJECT_DIR/e2e/pipelines/04-interlis-to-gpkg.hpl"
 fi

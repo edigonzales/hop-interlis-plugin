@@ -1,5 +1,6 @@
 package ch.so.agi.hop.interlis.core.mapping;
 
+import ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisAttributeDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisRoleDescriptor;
 
@@ -12,7 +13,9 @@ import ch.so.agi.hop.interlis.core.model.InterlisRoleDescriptor;
  * @param source where the value comes from
  * @param propertyPath path inside the IOM object tree
  * @param attributeDescriptor leaf attribute descriptor (null for technical fields and role refs)
- * @param roleDescriptor role descriptor (only for {@link InterlisFieldSource#ROLE_REFERENCE})
+ * @param roleDescriptor role descriptor (only for role/association fields)
+ * @param associationDescriptor association descriptor (only for flattened association
+ *     attributes)
  */
 public record InterlisFieldPlan(
     int outputIndex,
@@ -20,7 +23,8 @@ public record InterlisFieldPlan(
     InterlisFieldSource source,
     InterlisPropertyPath propertyPath,
     InterlisAttributeDescriptor attributeDescriptor,
-    InterlisRoleDescriptor roleDescriptor) {
+    InterlisRoleDescriptor roleDescriptor,
+    InterlisAssociationDescriptor associationDescriptor) {
 
   /** {@code true} if the field carries a geometry value. */
   public boolean isGeometry() {

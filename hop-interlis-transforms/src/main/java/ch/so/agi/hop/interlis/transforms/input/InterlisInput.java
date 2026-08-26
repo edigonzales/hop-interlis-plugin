@@ -1,16 +1,23 @@
 package ch.so.agi.hop.interlis.transforms.input;
 
+import ch.interlis.iom.IomObject;
 import ch.so.agi.hop.interlis.core.io.InterlisEventType;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectEnvelope;
 import ch.so.agi.hop.interlis.core.io.XtfTransferReader;
 import ch.so.agi.hop.interlis.core.mapping.DefaultInterlisObjectToRowMapper;
+import ch.so.agi.hop.interlis.core.mapping.InterlisAssociationLinkLookup;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
+import ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.pipeline.Pipeline;
 import org.apache.hop.pipeline.PipelineMeta;
@@ -18,10 +25,14 @@ import org.apache.hop.pipeline.transform.BaseTransform;
 import org.apache.hop.pipeline.transform.TransformMeta;
 
 /**
- * INTERLIS Input: reads one INTERLIS class from an XTF file and emits typed Hop rows.
+ * INTERLIS Input: reads one INTERLIS class or association from an XTF file and emits typed Hop
+ * rows.
  *
  * <p>The transform streams the transfer file: per {@code processRow()} call at most one row is
- * emitted; objects of other classes are skipped.
+ * emitted; objects of other classes are skipped. When the projection contains flattened
+ * association attributes (attributed associations are transferred as separate link objects), the
+ * rows of the selected class are buffered per basket and emitted at basket end, once every link
+ * object of the basket has been seen.
  */
 public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInputData> {
 
@@ -42,6 +53,16 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
     }
 
     while (true) {
+      if (data.pendingOutput != null && data.pendingOutput.hasNext()) {
+        Object[] row = data.pendingOutput.next();
+        data.emittedObjects++;
+        putRow(data.outputRowMeta, row);
+        if (checkFeedback(getLinesWritten()) && isBasic()) {
+          logBasic("Read " + data.emittedObjects + " objects of " + meta.getClassName());
+        }
+        return true;
+      }
+
       InterlisObjectEnvelope envelope;
       try {
         envelope = data.reader.next();
@@ -49,6 +70,10 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
         throw new HopException("Failed to read INTERLIS transfer: " + e.getMessage(), e);
       }
       if (envelope == null) {
+        flushPending();
+        if (data.pendingOutput != null && data.pendingOutput.hasNext()) {
+          continue;
+        }
         closeReader();
         setOutputDone();
         if (isBasic()) {
@@ -63,28 +88,93 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
 
       if (envelope.eventType() == InterlisEventType.OBJECT) {
         data.readObjects++;
-        if (envelope.className() != null
-            && envelope.className().equals(data.plan.classDescriptor().scopedName())) {
-          Object[] row;
-          try {
-            row = data.mapper.map(envelope, data.plan);
-          } catch (Exception e) {
-            throw new HopException(e.getMessage(), e);
-          }
-          if (data.keepSourceObject) {
-            row = appendSourceObject(row, envelope.object());
-          }
-          data.emittedObjects++;
-          putRow(data.outputRowMeta, row);
-          if (checkFeedback(getLinesWritten()) && isBasic()) {
-            logBasic(
-                "Read " + data.emittedObjects + " objects of class " + meta.getClassName());
-          }
-          return true;
+        if (data.buffering && data.neededAssociations.contains(envelope.className())) {
+          bufferLink(envelope);
         }
+        if (envelope.className() != null
+            && envelope.className().equals(data.plan.root().scopedName())) {
+          if (data.buffering) {
+            data.pendingRows.add(envelope);
+          } else {
+            Object[] row;
+            try {
+              row = data.mapper.map(envelope, data.plan);
+            } catch (Exception e) {
+              throw new HopException(e.getMessage(), e);
+            }
+            if (data.keepSourceObject) {
+              row = appendSourceObject(row, envelope.object());
+            }
+            data.emittedObjects++;
+            putRow(data.outputRowMeta, row);
+            if (checkFeedback(getLinesWritten()) && isBasic()) {
+              logBasic("Read " + data.emittedObjects + " objects of " + meta.getClassName());
+            }
+            return true;
+          }
+        }
+      } else if (envelope.eventType() == InterlisEventType.END_BASKET
+          || envelope.eventType() == InterlisEventType.END_TRANSFER) {
+        flushPending();
       }
       // Other events and objects of other classes are skipped in the typed projection.
     }
+  }
+
+  /** Buffers one association link object for later resolution of flattened association fields. */
+  private void bufferLink(InterlisObjectEnvelope envelope) throws HopException {
+    InterlisAssociationDescriptor association =
+        data.associationsByScopedName.get(envelope.className());
+    if (association == null) {
+      return;
+    }
+    IomObject link = envelope.object();
+    for (ch.so.agi.hop.interlis.core.model.InterlisRoleDescriptor role : association.roles()) {
+      if (link.getattrvaluecount(role.name()) == 0) {
+        continue;
+      }
+      IomObject member = link.getattrobj(role.name(), 0);
+      if (member == null || member.getobjectrefoid() == null) {
+        continue;
+      }
+      data.associationLinks.put(linkKey(member.getobjectrefoid(), association.scopedName()), link);
+    }
+  }
+
+  /** Maps and emits all rows buffered for the current basket. */
+  private void flushPending() throws HopException {
+    if (data.pendingRows.isEmpty()) {
+      data.pendingOutput = null;
+      return;
+    }
+    InterlisAssociationLinkLookup lookup =
+        (objectTid, roleName) -> {
+          InterlisAssociationDescriptor association = data.plan.linkResolvedRoles().get(roleName);
+          if (association == null) {
+            return null;
+          }
+          return data.associationLinks.get(linkKey(objectTid, association.scopedName()));
+        };
+    List<Object[]> rows = new ArrayList<>(data.pendingRows.size());
+    for (InterlisObjectEnvelope envelope : data.pendingRows) {
+      Object[] row;
+      try {
+        row = data.mapper.map(envelope, data.plan, lookup);
+      } catch (Exception e) {
+        throw new HopException(e.getMessage(), e);
+      }
+      if (data.keepSourceObject) {
+        row = appendSourceObject(row, envelope.object());
+      }
+      rows.add(row);
+    }
+    data.pendingRows.clear();
+    data.associationLinks.clear();
+    data.pendingOutput = rows.iterator();
+  }
+
+  private static String linkKey(String objectTid, String associationScopedName) {
+    return objectTid + "\u0000" + associationScopedName;
   }
 
   private Object[] appendSourceObject(Object[] row, ch.interlis.iom.IomObject object)
@@ -144,14 +234,28 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
                 meta.resolvedSourceObjectFieldName()));
       }
 
+      data.buffering = data.plan.hasLinkResolvedRoles();
+      data.pendingRows = new ArrayList<>();
+      data.associationLinks = new java.util.HashMap<>();
+      data.associationsByScopedName = new java.util.HashMap<>();
+      data.neededAssociations = new HashSet<>();
+      if (data.buffering) {
+        for (InterlisAssociationDescriptor association :
+            data.plan.linkResolvedRoles().values()) {
+          data.associationsByScopedName.put(association.scopedName(), association);
+          data.neededAssociations.add(association.scopedName());
+        }
+      }
+
       if (isBasic()) {
         logBasic(
             "Reading INTERLIS class "
-                + data.plan.classDescriptor().scopedName()
+                + data.plan.root().scopedName()
                 + " from "
                 + file
                 + " (models "
                 + data.projection.modelNames()
+                + (data.buffering ? ", association links resolved per basket" : "")
                 + ")");
       }
       for (String warning : data.plan.warnings()) {

@@ -49,6 +49,8 @@ public class InterlisInputDialog extends BaseTransformDialog {
   private Text wPreview;
 
   private List<InterlisClassDescriptor> classes = List.of();
+  private List<ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor> associations =
+      List.of();
   private boolean suppressRefresh;
 
   public InterlisInputDialog(
@@ -348,6 +350,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
     syncMetaFromWidgets();
     InterlisProbeResult result = controller.probe(input, variables);
     classes = result.classes();
+    associations = result.associations();
     if (result.successful()) {
       populateClassCombo();
       refreshPreview();
@@ -368,6 +371,10 @@ public class InterlisInputDialog extends BaseTransformDialog {
           wClassName.add(descriptor.scopedName());
         }
       }
+      for (ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor association :
+          associations) {
+        wClassName.add(association.scopedName() + " (association)");
+      }
       if (classes.stream().anyMatch(c -> !c.isAbstract() && c.scopedName().equals(current))) {
         wClassName.setText(current);
       }
@@ -380,6 +387,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
     syncMetaFromWidgets();
     InterlisProbeResult result = controller.probe(input, variables);
     classes = result.classes();
+    associations = result.associations();
     if (result.successful()) {
       wStatus.setText(result.message());
       wPreview.setText(controller.formatSchemaPreview(result.projection().plan()));

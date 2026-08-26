@@ -49,6 +49,8 @@ public class InterlisOutputDialog extends BaseTransformDialog {
   private Table wMapping;
 
   private List<InterlisClassDescriptor> classes = List.of();
+  private List<ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor> associations =
+      List.of();
   private boolean suppressRefresh;
 
   public InterlisOutputDialog(
@@ -355,6 +357,7 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     syncMetaFromWidgets();
     InterlisProbeResult result = controller.probe(input, variables);
     classes = result.classes();
+    associations = result.associations();
     populateClassCombo();
     if (result.successful()) {
       wStatus.setText(result.message());
@@ -374,6 +377,10 @@ public class InterlisOutputDialog extends BaseTransformDialog {
         if (!descriptor.isAbstract()) {
           wClassName.add(descriptor.scopedName());
         }
+      }
+      for (ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor association :
+          associations) {
+        wClassName.add(association.scopedName() + " (association)");
       }
       if (classes.stream().anyMatch(c -> !c.isAbstract() && c.scopedName().equals(current))) {
         wClassName.setText(current);

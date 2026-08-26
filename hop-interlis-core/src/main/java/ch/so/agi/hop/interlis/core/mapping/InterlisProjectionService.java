@@ -5,6 +5,7 @@ import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisModelException;
 import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
+import ch.so.agi.hop.interlis.core.model.InterlisPlanRoot;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
@@ -68,9 +69,9 @@ public final class InterlisProjectionService {
     if (className == null || className.isBlank()) {
       throw new InterlisModelException("No INTERLIS class selected");
     }
-    InterlisClassDescriptor classDescriptor =
+    InterlisPlanRoot classDescriptor =
         schema
-            .findClass(className)
+            .findPlanRoot(className)
             .orElseThrow(
                 () ->
                     new InterlisModelException(
@@ -81,6 +82,11 @@ public final class InterlisProjectionService {
                             + "; available classes: "
                             + schema.classes().stream()
                                 .map(InterlisClassDescriptor::scopedName)
+                                .sorted()
+                                .toList()
+                            + "; available associations: "
+                            + schema.associations().stream()
+                                .map(a -> a.scopedName())
                                 .sorted()
                                 .toList()));
 

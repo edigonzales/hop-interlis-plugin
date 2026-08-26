@@ -42,6 +42,7 @@ public final class InterlisSchemaExtractor {
   public InterlisSchemaDescriptor extract(TransferDescription td) {
     List<InterlisClassDescriptor> classes = new ArrayList<>();
     List<InterlisStructureDescriptor> structures = new ArrayList<>();
+    List<InterlisAssociationDescriptor> associations = new ArrayList<>();
 
     for (Iterator<ch.interlis.ili2c.metamodel.Model> models = td.iterator();
         models.hasNext(); ) {
@@ -61,6 +62,8 @@ public final class InterlisSchemaExtractor {
           // identifiable tables are classes, non-identifiable ones are STRUCTUREs.
           if (child instanceof Table table && !table.isIdentifiable()) {
             structures.add(extractStructure(table));
+          } else if (child instanceof AssociationDef association) {
+            associations.add(extractAssociation(association, topic));
           } else if (child instanceof AbstractClassDef viewable
               && !(viewable instanceof AssociationDef)) {
             classes.add(extractClass(viewable, topic));
@@ -68,7 +71,7 @@ public final class InterlisSchemaExtractor {
         }
       }
     }
-    return new InterlisSchemaDescriptor(classes, structures);
+    return new InterlisSchemaDescriptor(classes, structures, associations);
   }
 
   public InterlisClassDescriptor extractClass(AbstractClassDef viewable, Topic topic) {
@@ -85,6 +88,13 @@ public final class InterlisSchemaExtractor {
         } else if (element.obj instanceof RoleDef role) {
           effective.add(extractRole(role, true));
         }
+      }
+    }
+    // ili2c exposes the "other side" of associations as opposide roles; collect them too.
+    for (Iterator<RoleDef> it = viewable.getOpposideRoles(); it.hasNext(); ) {
+      RoleDef role = it.next();
+      if (effective.stream().noneMatch(p -> p.name().equals(role.getName()))) {
+        effective.add(extractRole(role, true));
       }
     }
 
@@ -107,6 +117,28 @@ public final class InterlisSchemaExtractor {
     }
     return new InterlisStructureDescriptor(
         table.getName(), table.getScopedName(null), attributes);
+  }
+
+  public InterlisAssociationDescriptor extractAssociation(
+      AssociationDef association, Topic topic) {
+    List<InterlisRoleDescriptor> roles = new ArrayList<>();
+    List<InterlisAttributeDescriptor> attributes = new ArrayList<>();
+    for (Iterator<ViewableTransferElement> it = association.getAttributesAndRoles2();
+        it.hasNext(); ) {
+      ViewableTransferElement element = it.next();
+      if (element.obj instanceof RoleDef role) {
+        roles.add(extractRole(role, false));
+      } else if (element.obj instanceof AttributeDef attribute) {
+        attributes.add(extractAttribute(attribute, false));
+      }
+    }
+    return new InterlisAssociationDescriptor(
+        association.getName(),
+        association.getScopedName(null),
+        topic.getScopedName(null),
+        association.getOid() != null,
+        roles,
+        attributes);
   }
 
   private List<InterlisPropertyDescriptor> extractDeclaredProperties(Viewable viewable) {
@@ -335,7 +367,18 @@ public final class InterlisSchemaExtractor {
         cardinalityOf(role.getCardinality()),
         inherited,
         destination == null ? null : destination.getScopedName(null),
-        role.isOrdered());
+        role.isOrdered(),
+        associationOf(role));
+  }
+
+  /** Derives the association a role belongs to from its scoped name. */
+  private String associationOf(RoleDef role) {
+    String scopedName = role.getScopedName(null);
+    if (scopedName == null) {
+      return null;
+    }
+    int separator = scopedName.lastIndexOf('.');
+    return separator < 0 ? null : scopedName.substring(0, separator);
   }
 
   private InterlisCardinality cardinalityOf(Type type) {

@@ -43,9 +43,11 @@ public final class InterlisInputDialogController {
     InterlisProjectionResult result = projection.get();
     return new InterlisProbeResult(
         true,
-        "Model loaded: " + result.modelNames() + "; " + result.schema().classes().size() + " classes",
+        "Model loaded: " + result.modelNames() + "; " + result.schema().classes().size()
+            + " classes, " + result.schema().associations().size() + " associations",
         result,
-        result.schema().classes());
+        result.schema().classes(),
+        result.schema().associations());
   }
 
   /** Formats the projected Hop schema for the preview area, including warnings. */

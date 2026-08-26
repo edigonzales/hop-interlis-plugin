@@ -10,6 +10,21 @@ The authoritative architecture and implementation specification lives in [`docs/
 
 ## Status
 
+**Phase 4** (associations and role join) is implemented:
+
+- associations are first-class transfer viewables: `m:n`/`n`-ary/attributed
+  associations project onto their own typed rows (`<role>_ref`, `<role>_ref_bid`,
+  `<role>_order_pos` for ORDERED roles, association attributes) and round-trip
+  through `INTERLIS Input`/`INTERLIS Output` (verified in unit, pipeline and
+  `hop-run` E2E tests, incl. ORDERED order positions);
+- attributes of uniquely embeddable attributed associations are flattened onto
+  class rows (`<role>_ref`, `<role>_<attribute>`), resolved from the association
+  link objects per basket, and written back as regenerated link objects;
+- `INTERLIS Role Join` joins a role's target class fields onto the main stream
+  (model-driven key/field selection, in-memory lookup with limit, hard errors for
+  missing mandatory references and duplicate lookup TIDs, model-aware dialog);
+- reference roles support external basket references (`<role>_ref_bid`) on read.
+
 **Phase 3** (structures end to end) is implemented:
 
 - `INTERLIS Structure Explode` transform explodes one `LIST`/`BAG OF` structure
@@ -62,7 +77,8 @@ Phase 0 (project foundation) is implemented as well:
 - plugin packaging as installable ZIP with a distribution checker;
 - one-command local development workflow and `hop-run` E2E suite.
 
-See [`docs/progress/phase-03.md`](docs/progress/phase-03.md),
+See [`docs/progress/phase-04.md`](docs/progress/phase-04.md),
+[`docs/progress/phase-03.md`](docs/progress/phase-03.md),
 [`docs/progress/phase-02.md`](docs/progress/phase-02.md),
 [`docs/progress/phase-01.md`](docs/progress/phase-01.md) and
 [`docs/progress/phase-00.md`](docs/progress/phase-00.md) for details and known limitations.
@@ -113,8 +129,8 @@ bash scripts/run-e2e.sh "$HOP_HOME"
 
 | Module | Purpose |
 |---|---|
-| `hop-interlis-core` | Model compilation, schema descriptors, transfer reader/writer, mapping plans, structure plans/explode/collect, geometry mapper. No SWT, no Hop runtime. |
-| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`, `INTERLIS Output`, `INTERLIS Structure Explode`, `INTERLIS Structure Collect`), `InterlisObject` value type. |
+| `hop-interlis-core` | Model compilation, schema descriptors (classes, structures, associations), transfer reader/writer, mapping plans, structure plans/explode/collect, geometry mapper. No SWT, no Hop runtime. |
+| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`, `INTERLIS Output`, `INTERLIS Structure Explode`, `INTERLIS Structure Collect`, `INTERLIS Role Join`), `InterlisObject` value type. |
 | `assemblies/assemblies-hop-interlis` | Installable plugin ZIP. |
 
 ## License

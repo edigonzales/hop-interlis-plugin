@@ -20,5 +20,12 @@ public enum InterlisFieldSource {
       primitive, enum or geometry. */
   FLATTENED_STRUCTURE_ATTRIBUTE,
   /** Reference role projected as a TID reference field. */
-  ROLE_REFERENCE
+  ROLE_REFERENCE,
+  /** External basket identifier of a reference role ({@code <role>_ref_bid}). */
+  ROLE_REFERENCE_BID,
+  /** Order position of an ORDERED role member ({@code <role>_order_pos}). */
+  ROLE_ORDER_POS,
+  /** Association attribute of a flattenable association role
+      ({@code <role>_<attribute>}); resolved from the association link object. */
+  ASSOCIATION_ATTRIBUTE
 }

@@ -118,6 +118,51 @@ assert val(third, 3) == "Village Road", f"LIST order broken: {third}"
 assert val(fourth, 0) == "p2" and val(fourth, 2) == "0", f"unexpected fourth child: {fourth}"
 assert val(fourth, 3) == "Village Road", f"p2 address missing: {fourth}"
 
+associations_csv = output_dir / "interlis-associations-roundtrip.csv"
+if not associations_csv.exists():
+    raise SystemExit(f"missing output {associations_csv}")
+
+with associations_csv.open(newline="", encoding="utf-8") as f:
+    rows = list(csv.reader(f, delimiter=";"))
+
+header = rows[0]
+assert header[:5] == [
+    "_ili_tid",
+    "_ili_bid",
+    "Name",
+    "Address_ref",
+    "Address_Share",
+], f"unexpected associations header: {header}"
+assert len(rows) == 4, f"expected 1 header + 3 person rows, got {len(rows)}"
+
+p1, p2, p3 = rows[1], rows[2], rows[3]
+assert val(p1, 0) == "p1" and val(p1, 3) == "a1", f"flattened role ref missing: {p1}"
+assert val(p1, 4) == "0.5", f"flattened association attribute missing: {p1}"
+assert val(p2, 0) == "p2" and val(p2, 3) == "", f"unexpected p2 row: {p2}"
+assert val(p3, 0) == "p3" and val(p3, 3) == "", f"unexpected p3 row: {p3}"
+
+association_rows_csv = output_dir / "interlis-association-rows-roundtrip.csv"
+if not association_rows_csv.exists():
+    raise SystemExit(f"missing output {association_rows_csv}")
+
+with association_rows_csv.open(newline="", encoding="utf-8") as f:
+    rows = list(csv.reader(f, delimiter=";"))
+
+header = rows[0]
+assert header[:4] == [
+    "_ili_bid",
+    "Person_ref",
+    "Task_ref",
+    "Task_order_pos",
+], f"unexpected association rows header: {header}"
+assert len(rows) == 3, f"expected 1 header + 2 link rows, got {len(rows)}"
+
+link1, link2 = rows[1], rows[2]
+assert val(link1, 1) == "p1" and val(link1, 2) == "t1", f"unexpected link row: {link1}"
+assert val(link1, 3) == "0", f"order position missing: {link1}"
+assert val(link2, 1) == "p2" and val(link2, 2) == "t2", f"unexpected link row: {link2}"
+assert val(link2, 3) == "1", f"order position missing: {link2}"
+
 if with_gpkg:
     gpkg = output_dir / "interlis-arcs.gpkg"
     if not gpkg.exists():
@@ -156,5 +201,7 @@ print(f"  {geometry_csv}: 2 geometry rows, arc preserved as CIRCULARSTRING")
 print(f"  {structures_csv}: structure flattening, role reference and inheritance verified")
 print(f"  {roundtrip_csv}: XTF write/read roundtrip, arc still a CIRCULARSTRING")
 print(f"  {structures_roundtrip_csv}: LIST explode/collect roundtrip with order, geometry and nested structure")
+print(f"  {associations_csv}: association attributes flattened from link objects and written back")
+print(f"  {association_rows_csv}: association rows roundtrip with ORDERED role order positions")
 if with_gpkg:
     print("  interlis-arcs.gpkg: 2 curve features, axis stored as COMPOUNDCURVE")

@@ -18,7 +18,8 @@ public record InterlisClassDescriptor(
     String topicScopedName,
     boolean isAbstract,
     List<InterlisPropertyDescriptor> declaredProperties,
-    List<InterlisPropertyDescriptor> effectiveProperties) {
+    List<InterlisPropertyDescriptor> effectiveProperties)
+    implements InterlisPlanRoot {
 
   public InterlisClassDescriptor {
     declaredProperties =
@@ -41,6 +42,11 @@ public record InterlisClassDescriptor(
         .filter(InterlisRoleDescriptor.class::isInstance)
         .map(InterlisRoleDescriptor.class::cast)
         .toList();
+  }
+
+  /** The effective role with the given name, or {@code null}. */
+  public InterlisRoleDescriptor role(String name) {
+    return roles().stream().filter(r -> r.name().equals(name)).findFirst().orElse(null);
   }
 
   /** All effective geometry attributes in model order. */

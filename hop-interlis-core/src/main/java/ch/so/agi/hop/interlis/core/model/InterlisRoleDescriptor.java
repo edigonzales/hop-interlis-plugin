@@ -9,6 +9,8 @@ package ch.so.agi.hop.interlis.core.model;
  * @param inherited whether the role is contributed by a base class
  * @param targetClassScopedName qualified name of the role's target class
  * @param ordered whether the role is declared ORDERED
+ * @param associationScopedName qualified name of the association the role belongs to, or
+ *     {@code null} if unknown
  */
 public record InterlisRoleDescriptor(
     String name,
@@ -16,5 +18,6 @@ public record InterlisRoleDescriptor(
     InterlisCardinality cardinality,
     boolean inherited,
     String targetClassScopedName,
-    boolean ordered)
+    boolean ordered,
+    String associationScopedName)
     implements InterlisPropertyDescriptor {}

@@ -50,6 +50,23 @@ public final class IomFieldReader {
     };
   }
 
+  /**
+   * Reads a primitive or geometry attribute value directly from an owner object, ignoring the
+   * field source. Used for association attributes read from the link object.
+   */
+  public Object readAttributeFrom(IomObject owner, InterlisFieldPlan field, Integer defaultSrid)
+      throws InterlisMappingException {
+    InterlisAttributeDescriptor descriptor = field.attributeDescriptor();
+    if (descriptor == null) {
+      throw new InterlisMappingException(
+          "Field " + field.hopFieldName() + " has no attribute descriptor");
+    }
+    if (descriptor.kind().isGeometry()) {
+      return readGeometry(owner, descriptor, defaultSrid);
+    }
+    return readPrimitive(owner, descriptor);
+  }
+
   private Object readPrimitive(IomObject owner, InterlisAttributeDescriptor descriptor)
       throws InterlisMappingException {
     String raw = owner.getattrvalue(descriptor.name());

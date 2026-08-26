@@ -571,6 +571,8 @@ owner_since
 
 Das ist eine Komfortprojektion. Intern weiss `RowSchemaPlan`, dass `share` und `since` Assoziationsattribute und nicht Attribute der Zielklasse sind.
 
+**Transfer-Realität (Phase 4 verifiziert):** Attributierte Assoziationen werden in XTF immer als **separate Link-Objekte** übertragen; embedded REF-Elemente tragen keine Attribute. Die geflatteten Felder werden deshalb aus dem Link-Objekt aufgelöst: `INTERLIS Input` puffert die Link-Objekte pro Basket und emittiert Klassenzeilen am Basket-Ende. Beim Schreiben erzeugt `INTERLIS Output` das Link-Objekt aus den geflatteten Feldern (`<role>_ref` + Attribute) zusätzlich zur Klassenzeile.
+
 ## 12. m:n-, n-äre und komplexe Assoziationen
 
 Solche Assoziationen werden als eigene Row-Typen behandelt.
@@ -603,13 +605,15 @@ Diese TID wird erhalten.
 
 ### 12.2 Geordnete Rollen
 
-Für `ORDERED` wird zusätzlich ausgegeben:
+Für jede `ORDERED`-Rolle wird zusätzlich ausgegeben:
 
 ```text
-_ili_order_pos
+<role>_order_pos
 ```
 
-Beim Write wird die Reihenfolge bzw. `order_pos` wiederhergestellt.
+(Bei genau einer ORDERED-Rolle entspricht das der Roadmap-Beispielspalte `_ili_order_pos`.)
+
+Beim Write wird die Reihenfolge bzw. `order_pos` wiederhergestellt (`ili:order_pos` auf dem REF-Member des Link-Objekts).
 
 ## 13. INTERLIS Role Join
 
@@ -657,7 +661,9 @@ Wichtig: Der Join kann modellgetrieben die korrekten Schlüssel vorschlagen, ist
 - sorted/streaming join später,
 - optional delegieren an bestehende Hop-Transforms.
 
-Phase 3 implementiert zunächst in-memory Lookup mit klarer Warnung/Limit-Konfiguration.
+Phase 4 implementiert den in-memory Lookup mit klarer Warnung/Limit-Konfiguration
+(`maxLookupRows`, Default 500'000); Hop 2.x liest beide Ströme explizit via
+`findInputRowSet` (kein Info-Hop-Konzept mehr).
 
 ## 14. Vererbung
 

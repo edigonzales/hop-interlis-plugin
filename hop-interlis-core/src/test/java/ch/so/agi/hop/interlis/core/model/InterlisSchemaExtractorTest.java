@@ -167,6 +167,51 @@ class InterlisSchemaExtractorTest {
     assertThat(role.targetClassScopedName()).isEqualTo("HopIli_Spike_V1.Data.Municipality");
     assertThat(role.cardinality()).isEqualTo(new InterlisCardinality(1, 1));
     assertThat(role.ordered()).isFalse();
+    assertThat(role.associationScopedName())
+        .isEqualTo("HopIli_Spike_V1.Data.BuildingMunicipality");
+  }
+
+  @Test
+  void extracts_associations_with_roles_and_attributes() throws Exception {
+    InterlisSchemaDescriptor associations =
+        new InterlisSchemaExtractor()
+            .extract(
+                new InterlisModelServiceImpl()
+                    .compile(
+                        new ModelSource(
+                            List.of(model("HopIli_Associations_V1.ili")), List.of(), List.of()),
+                        ModelCompileOptions.defaults())
+                    .transferDescription());
+
+    assertThat(associations.associations())
+        .extracting(InterlisAssociationDescriptor::name)
+        .containsExactly("AddressOwnership", "Membership", "PersonProject", "PersonTask");
+    assertThat(associations.findClass("HopIli_Associations_V1.Data.Membership")).isEmpty();
+
+    InterlisAssociationDescriptor membership =
+        associations.findAssociation("HopIli_Associations_V1.Data.Membership").orElseThrow();
+    assertThat(membership.identifiable()).isFalse();
+    assertThat(membership.roles())
+        .extracting(InterlisRoleDescriptor::name)
+        .containsExactly("Person", "Organisation");
+    assertThat(membership.attributes())
+        .extracting(InterlisAttributeDescriptor::name)
+        .containsExactly("Function", "Entry");
+
+    InterlisAssociationDescriptor personTask =
+        associations.findAssociation("HopIli_Associations_V1.Data.PersonTask").orElseThrow();
+    assertThat(personTask.role("Task").ordered()).isTrue();
+    assertThat(personTask.role("Person").ordered()).isFalse();
+
+    // Roles of classes point back to their association.
+    InterlisClassDescriptor person =
+        associations.findClass("HopIli_Associations_V1.Data.Person").orElseThrow();
+    assertThat(person.roles())
+        .extracting(InterlisRoleDescriptor::name)
+        .contains("Address", "Organisation", "Task");
+    InterlisRoleDescriptor address = person.role("Address");
+    assertThat(address.associationScopedName())
+        .isEqualTo("HopIli_Associations_V1.Data.AddressOwnership");
   }
 
   @Test

@@ -40,7 +40,10 @@ public final class HopRowSchemaFactory {
     return switch (field.source()) {
       case OBJECT_ID, BASKET_ID, CLASS_NAME, TOPIC_NAME, OPERATION, ROLE_REFERENCE ->
           new ValueMetaString(field.hopFieldName());
-      case PRIMITIVE_ATTRIBUTE, GEOMETRY_ATTRIBUTE, FLATTENED_STRUCTURE_ATTRIBUTE ->
+      case ROLE_REFERENCE_BID -> new ValueMetaString(field.hopFieldName());
+      case ROLE_ORDER_POS -> new ValueMetaInteger(field.hopFieldName());
+      case PRIMITIVE_ATTRIBUTE, GEOMETRY_ATTRIBUTE, FLATTENED_STRUCTURE_ATTRIBUTE,
+          ASSOCIATION_ATTRIBUTE ->
           createAttributeValueMeta(field);
     };
   }

@@ -1287,7 +1287,8 @@ Eine alternative buffered Implementierung kann später hinzukommen.
 
 ## 22.1 Hop-Implementierung
 
-Zwei Info/Input-Streams:
+Zwei Input-Streams (Hop 2.x: beide via `findInputRowSet`/`getRowFrom`, analog
+StreamLookup):
 
 ```text
 main stream
@@ -1297,11 +1298,13 @@ lookup stream
 Meta kennt:
 
 ```text
-rolePath
-mainReferenceField
-lookupTidField
-lookupFields[]
-prefix
+mainInputTransform
+lookupInputTransform
+rolePath (Rolle der Main-Klasse)
+mainReferenceField      (Default <role>_ref)
+lookupTidField          (Default _ili_tid)
+lookupFields[]          (Default: alle Attribute der Zielklasse)
+prefix                  (Default <role>_)
 failOnMissingMandatoryReference
 failOnDuplicateTid
 maxLookupRows
@@ -1320,6 +1323,11 @@ int[] copiedLookupIndexes;
 ```
 
 Lookup wird einmal geladen. Bei Überschreitung `maxLookupRows` wird mit klarer Meldung abgebrochen.
+
+Die Rolle wird über das Modell aufgelöst (Main-Klasse → Rolle → Zielklasse),
+`getFields()` liefert die getypten Zielklassen-Felder (Geometrie als Hop-Geometry).
+Hinweis: Hop 2.18 hat auf `IValueMeta` keinen Attribute-Kanal; die
+INTERLIS-Rollenmetadaten (ili.kind/target/min/max) leben im Plan/Deskriptor.
 
 # 23. Transform: INTERLIS Validate
 

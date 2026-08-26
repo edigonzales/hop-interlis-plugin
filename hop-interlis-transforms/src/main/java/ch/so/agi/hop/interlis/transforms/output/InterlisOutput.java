@@ -55,7 +55,7 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       handleBasket(row);
       Object[] values =
           InterlisRowBindings.values(row, data.inputIndexes);
-      IomObject object;
+      RowToIomMapper.InterlisWriteResult result;
       if (data.sourceObjectFieldIndex >= 0) {
         Object carrier = row[data.sourceObjectFieldIndex];
         if (carrier == null) {
@@ -72,19 +72,21 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
                   + "> does not contain an INTERLIS object but "
                   + carrier.getClass().getName());
         }
-        object =
-            data.mapper.map(
+        result =
+            data.mapper.mapAll(
                 carrierObject,
                 values,
                 data.plan,
                 new RowWriteOptions(true, resolve(meta.getBasketId())));
       } else {
-        object =
-            data.mapper.map(
+        result =
+            data.mapper.mapAll(
                 values, data.plan, new RowWriteOptions(true, resolve(meta.getBasketId())));
       }
-      data.writer.writeObject(object);
-      data.writtenObjects++;
+      for (IomObject object : result.allObjects()) {
+        data.writer.writeObject(object);
+        data.writtenObjects++;
+      }
     } catch (Exception e) {
       closeWriter();
       throw new HopException(
@@ -124,10 +126,17 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       data.inputIndexes = InterlisRowBindings.bind(getInputRowMeta(), data.plan);
 
       data.objectIdFieldIndex = getInputRowMeta().indexOfValue(resolve(meta.getObjectIdField()));
-      if (data.objectIdFieldIndex < 0) {
+      boolean hasObjectIdField =
+          data.plan.fields().stream()
+              .anyMatch(
+                  f ->
+                      f.source()
+                          == ch.so.agi.hop.interlis.core.mapping.InterlisFieldSource.OBJECT_ID);
+      if (data.objectIdFieldIndex < 0 && hasObjectIdField) {
         throw new HopException(
             "Object ID field <" + resolve(meta.getObjectIdField()) + "> not found in the input");
       }
+      // Non-identifiable associations carry no TID: the object ID field is absent by design.
       String basketField = resolve(meta.getBasketIdField());
       data.basketIdFieldIndex =
           basketField.isBlank() ? -1 : getInputRowMeta().indexOfValue(basketField);
@@ -150,7 +159,7 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       if (isBasic()) {
         logBasic(
             "Writing INTERLIS class "
-                + data.plan.classDescriptor().scopedName()
+                + data.plan.root().scopedName()
                 + " to "
                 + file
                 + " (models "
@@ -179,11 +188,11 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
     }
 
     if (data.currentBid == null) {
-      data.writer.startBasket(data.plan.classDescriptor().topicScopedName(), bid);
+      data.writer.startBasket(data.plan.root().topicScopedName(), bid);
       data.currentBid = bid;
     } else if (!data.currentBid.equals(bid)) {
       data.writer.endBasket();
-      data.writer.startBasket(data.plan.classDescriptor().topicScopedName(), bid);
+      data.writer.startBasket(data.plan.root().topicScopedName(), bid);
       data.currentBid = bid;
     }
   }

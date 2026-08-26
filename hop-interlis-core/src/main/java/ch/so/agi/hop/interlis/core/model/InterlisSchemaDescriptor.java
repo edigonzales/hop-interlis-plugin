@@ -11,13 +11,23 @@ import java.util.Optional;
  *
  * @param classes transferable classes
  * @param structures STRUCTURE definitions
+ * @param associations transferable associations (link objects)
  */
 public record InterlisSchemaDescriptor(
-    List<InterlisClassDescriptor> classes, List<InterlisStructureDescriptor> structures) {
+    List<InterlisClassDescriptor> classes,
+    List<InterlisStructureDescriptor> structures,
+    List<InterlisAssociationDescriptor> associations) {
 
   public InterlisSchemaDescriptor {
     classes = classes == null ? List.of() : List.copyOf(classes);
     structures = structures == null ? List.of() : List.copyOf(structures);
+    associations = associations == null ? List.of() : List.copyOf(associations);
+  }
+
+  /** Backwards-compatible constructor for callers without associations. */
+  public InterlisSchemaDescriptor(
+      List<InterlisClassDescriptor> classes, List<InterlisStructureDescriptor> structures) {
+    this(classes, structures, List.of());
   }
 
   public Optional<InterlisClassDescriptor> findClass(String scopedName) {
@@ -26,5 +36,20 @@ public record InterlisSchemaDescriptor(
 
   public Optional<InterlisStructureDescriptor> findStructure(String scopedName) {
     return structures.stream().filter(s -> s.scopedName().equals(scopedName)).findFirst();
+  }
+
+  public Optional<InterlisAssociationDescriptor> findAssociation(String scopedName) {
+    return associations.stream()
+        .filter(a -> a.scopedName().equals(scopedName))
+        .findFirst();
+  }
+
+  /** Finds a class or an association by qualified name. */
+  public Optional<InterlisPlanRoot> findPlanRoot(String scopedName) {
+    Optional<InterlisPlanRoot> root = findClass(scopedName).map(InterlisPlanRoot.class::cast);
+    if (root.isPresent()) {
+      return root;
+    }
+    return findAssociation(scopedName).map(InterlisPlanRoot.class::cast);
   }
 }

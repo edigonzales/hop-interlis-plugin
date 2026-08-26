@@ -16,6 +16,9 @@ import java.util.Set;
  * @param defaultSrid SRID assigned to mapped geometries; {@code null} keeps SRID 0
  * @param selectedPropertyPaths dotted paths of the properties to project;
  *     empty means all supported properties
+ * @param includeRoleRefBid emit {@code <role>_ref_bid} fields for reference roles
+ * @param flattenAssociationAttributes flatten attributes of uniquely embeddable attributed
+ *     associations onto the class rows ({@code <role>_<attribute>})
  */
 public record ProjectionOptions(
     boolean includeTid,
@@ -26,11 +29,13 @@ public record ProjectionOptions(
     boolean includeInheritedProperties,
     String structureSeparator,
     Integer defaultSrid,
-    Set<String> selectedPropertyPaths) {
+    Set<String> selectedPropertyPaths,
+    boolean includeRoleRefBid,
+    boolean flattenAssociationAttributes) {
 
   public static ProjectionOptions defaults() {
     return new ProjectionOptions(
-        true, true, false, false, false, true, "_", null, Set.of());
+        true, true, false, false, false, true, "_", null, Set.of(), false, true);
   }
 
   public ProjectionOptions {
@@ -38,6 +43,31 @@ public record ProjectionOptions(
         structureSeparator == null || structureSeparator.isEmpty() ? "_" : structureSeparator;
     selectedPropertyPaths =
         selectedPropertyPaths == null ? Set.of() : Set.copyOf(selectedPropertyPaths);
+  }
+
+  /** Backwards-compatible constructor without the association flags. */
+  public ProjectionOptions(
+      boolean includeTid,
+      boolean includeBid,
+      boolean includeClassName,
+      boolean includeTopicName,
+      boolean includeOperation,
+      boolean includeInheritedProperties,
+      String structureSeparator,
+      Integer defaultSrid,
+      Set<String> selectedPropertyPaths) {
+    this(
+        includeTid,
+        includeBid,
+        includeClassName,
+        includeTopicName,
+        includeOperation,
+        includeInheritedProperties,
+        structureSeparator,
+        defaultSrid,
+        selectedPropertyPaths,
+        false,
+        true);
   }
 
   public boolean isPropertySelected(String dottedPath) {
