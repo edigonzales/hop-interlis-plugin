@@ -24,6 +24,7 @@ class InterlisModelRepositoryTest {
 
   private static HttpServer server;
   private static String repositoryUri;
+  private static String siteRootRepositoryUri;
   private static final int UNREACHABLE_PORT = findFreePort();
 
   @TempDir Path cacheDir;
@@ -35,27 +36,36 @@ class InterlisModelRepositoryTest {
         "/",
         exchange -> {
           String path = exchange.getRequestURI().getPath();
-          Path resource = Path.of("/models/repo").resolve(path.substring(1));
-          java.net.URL url = InterlisModelRepositoryTest.class.getResource(resource.toString());
-          if (url == null) {
-            try {
-              exchange.sendResponseHeaders(404, -1);
-            } catch (java.io.IOException e) {
-              throw new RuntimeException(e);
-            }
-            return;
-          }
           try {
-            byte[] content = Files.readAllBytes(Path.of(url.toURI()));
+            byte[] content;
+            if ("/site-root/ilisite.xml".equals(path)) {
+              content = siteMetadata().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            } else if ("/site-root/ilimodels.xml".equals(path)) {
+              content = emptyModelIndex().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+            } else {
+              String resourcePath = path.startsWith("/site-child/")
+                  ? "/models/repo/" + path.substring("/site-child/".length())
+                  : "/models/repo/" + path.substring(1);
+              java.net.URL url =
+                  InterlisModelRepositoryTest.class.getResource(resourcePath);
+              if (url == null) {
+                exchange.sendResponseHeaders(404, -1);
+                exchange.close();
+                return;
+              }
+              content = Files.readAllBytes(Path.of(url.toURI()));
+            }
             exchange.sendResponseHeaders(200, content.length);
             exchange.getResponseBody().write(content);
+            exchange.close();
           } catch (Exception e) {
             throw new RuntimeException(e);
           }
-          exchange.close();
         });
     server.start();
     repositoryUri = "http://127.0.0.1:" + server.getAddress().getPort() + "/";
+    siteRootRepositoryUri =
+        "http://127.0.0.1:" + server.getAddress().getPort() + "/site-root/";
   }
 
   @AfterAll
@@ -96,6 +106,20 @@ class InterlisModelRepositoryTest {
     assertThat(context.schema().classes())
         .extracting(InterlisClassDescriptor::scopedName)
         .contains("HopIli_RepoMain_V1.MainTopic.Main");
+  }
+
+  @Test
+  void resolves_models_from_a_subsidiary_repository_via_ilisite() throws Exception {
+    CompiledInterlisModel model =
+        service()
+            .compile(
+                new ModelSource(
+                    List.of(), List.of("HopIli_RepoMain_V1"), List.of(siteRootRepositoryUri)),
+                ModelCompileOptions.defaults());
+
+    assertThat(model.compiledModelNames()).contains("HopIli_RepoMain_V1");
+    assertThat(model.transferDescription().getElement("HopIli_RepoMain_V1.MainTopic.Main"))
+        .isNotNull();
   }
 
   @Test
@@ -152,5 +176,51 @@ class InterlisModelRepositoryTest {
     } catch (Exception e) {
       return 9; // discard port; connection refused
     }
+  }
+
+  private static String siteMetadata() {
+    return """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+          <HEADERSECTION SENDER="hop-interlis-tests" VERSION="2.3">
+            <MODELS><MODEL NAME="IliSite09" VERSION="2009-11-12" URI="mailto:tests@example.ch"/></MODELS>
+          </HEADERSECTION>
+          <DATASECTION>
+            <IliSite09.SiteMetadata BID="b0">
+              <IliSite09.SiteMetadata.Site TID="1">
+                <Name>test-root</Name>
+                <subsidiarySite>
+                  <IliSite09.RepositoryLocation_>
+                    <value>http://127.0.0.1:%d/site-child</value>
+                  </IliSite09.RepositoryLocation_>
+                </subsidiarySite>
+              </IliSite09.SiteMetadata.Site>
+            </IliSite09.SiteMetadata>
+          </DATASECTION>
+        </TRANSFER>
+        """.formatted(server.getAddress().getPort());
+  }
+
+  private static String emptyModelIndex() {
+    return """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
+          <HEADERSECTION SENDER="hop-interlis-tests" VERSION="2.3">
+            <MODELS><MODEL NAME="IliRepository20" VERSION="2020-01-15" URI="http://models.interlis.ch/core"/></MODELS>
+          </HEADERSECTION>
+          <DATASECTION>
+            <IliRepository20.RepositoryIndex BID="b0">
+              <IliRepository20.RepositoryIndex.ModelMetadata TID="0">
+                <Name>HopIli_Unrelated_V1</Name>
+                <SchemaLanguage>ili2_4</SchemaLanguage>
+                <File>HopIli_Unrelated_V1.ili</File>
+                <Version>2026-01-01</Version>
+                <publishingDate>2026-01-01</publishingDate>
+                <Issuer>mailto:tests@example.ch</Issuer>
+              </IliRepository20.RepositoryIndex.ModelMetadata>
+            </IliRepository20.RepositoryIndex>
+          </DATASECTION>
+        </TRANSFER>
+        """;
   }
 }

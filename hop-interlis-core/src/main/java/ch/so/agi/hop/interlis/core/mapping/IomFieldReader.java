@@ -93,7 +93,9 @@ public final class IomFieldReader {
     }
     int dimension = descriptor.coordDimension() == null ? 2 : descriptor.coordDimension();
     try {
-      Geometry geometry = geometryMapper.toHopGeometry(geometryObject, geometryKind, dimension);
+      Geometry geometry =
+          geometryMapper.toHopGeometry(
+              geometryObject, geometryKind, dimension, descriptor.geometryEncoding());
       if (geometry != null && defaultSrid != null) {
         geometry.setSRID(defaultSrid);
       }

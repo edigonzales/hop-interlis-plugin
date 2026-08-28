@@ -196,14 +196,23 @@ Fehler als harte Konfigurationsfehler gemeldet.
 
 Model directories dürfen zusätzlich zu lokalen Verzeichnissen
 `http(s)://`-Repository-URIs enthalten. Nicht lokal gefundene Modelle werden
-über die ilirepository-Maschinerie (`RepositoryAccess`, ili2c-tool)
-aufgelöst:
+über `IliManager.getConfig(...)` aus ili2c-tool aufgelöst. Damit verwendet das
+Plugin die dort implementierte Repository-Suche (`RepositoryVisitor` und
+`ModelFinder`) und muss die Repository-XML-Struktur nicht selbst nachbauen:
 
 - Index `ilimodels.xml` und Modell-Dateien landen im lokalen Cache
   (`~/.ilicache` Default, 24 h TTL, 15 s/40 s Timeouts, überschreibbar via
   System-Property `hop.interlis.repository.cache`);
 - lokale Directories haben Vorrang (Override-Semantik);
-- Imports innerhalb des Repositorys löst der ili2c `IliManager` auf;
+- die Suche startet bei den konfigurierten Quellen, einschliesslich
+  `%XTF_DIR`, `https://models.interlis.ch` und
+  `https://models.geo.admin.ch`;
+- `ilisite.xml`-Verknüpfungen zu Parent- und Subsidiary-Repositories werden
+  mit Besuchsmenge und Breitensuche verfolgt. Dadurch werden beispielsweise
+  `models.kgk-cgc.ch` und `geo.so.ch` gefunden, ohne sie statisch als Default
+  einzutragen;
+- Imports und die versionsabhängige Auswahl innerhalb des Repository-Graphen
+  löst der ili2c `IliManager` auf;
 - Fehlerfälle (unreachable, unbekanntes Modell) ergeben actionable
   Diagnostik mit Repository-Liste und Offline-/Override-Hinweisen;
 - der kompilierte Model-Cache ist JVM-weit statisch (ein Compile pro
@@ -254,6 +263,30 @@ Verbindliche Regeln:
 - AssociationDef samt Rollen und eigenen Attributen beschreiben;
 - Geometry-Art und Dimension bestimmen;
 - Enumerationshierarchie vollständig erfassen.
+
+Jeder Klassen- und Assoziationsdeskriptor führt zusätzlich den Typ des
+zugehörigen INTERLIS-Modells (`DATA`, `TYPE`, `REFSYSTEM`, `SYMBOLOGY`,
+`PREDEFINED`). Die vollständige Deskriptorliste bleibt für Imports und
+programmatische Namenauflösung erhalten. `selectableClasses()` und
+`selectableAssociations()` liefern dagegen nur Einträge aus `DATA`-Modellen;
+technische Abhängigkeiten wie `CoordSys` bleiben kompiliert, erscheinen aber
+nicht im Klassen-Dropdown.
+
+### CHLV95-Geometrie-Encodings
+
+`InterlisAttributeDescriptor.geometryEncoding` beschreibt neben der nativen
+INTERLIS-Domain auch Modell-Encodings, die semantisch eine Geometrie sind. Die
+CHBASE-V1-Strukturen
+`GeometryCHLV95_V1.MultiSurface`, `MultiLine` und `MultiDirectedLine` werden
+bei einem einzelnen Attribut mit exakt passender innerer Struktur als ein
+Geometriefeld erkannt. Der Reader entpackt die `Surfaces`-/`Lines`-Strukturen
+und aggregiert deren Polygon- bzw. Line-Komponenten; der Writer verpackt das
+Hop-Geometry wieder in dieselbe V1-Struktur. Mehrwertige normale Strukturen
+bleiben dem Structure-Explode/Collect-Pfad vorbehalten.
+
+Native `GeometryCHLV95_V2`-Domains, einschliesslich der
+`WithoutArcs`-Varianten, verwenden weiterhin das bestehende SQL/MM-WKB-
+Mapping. Bögen werden dabei nicht linearisiert.
 
 ## 4.2 `InterlisSchemaDescriptor`
 

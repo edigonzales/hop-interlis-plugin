@@ -17,6 +17,7 @@ package ch.so.agi.hop.interlis.core.model;
  * @param ordered whether a multi-valued structure is a {@code LIST} (order is semantic)
  * @param textMaxLength maximum text length for textual domains, {@code -1} if not applicable
  * @param decimalPlaces number of decimal places for decimal domains, {@code -1} if not applicable
+ * @param geometryEncoding IOM representation for geometry attributes
  */
 public record InterlisAttributeDescriptor(
     String name,
@@ -32,5 +33,46 @@ public record InterlisAttributeDescriptor(
     String structureScopedName,
     boolean ordered,
     int textMaxLength,
-    int decimalPlaces)
-    implements InterlisPropertyDescriptor {}
+    int decimalPlaces,
+    InterlisGeometryEncoding geometryEncoding)
+    implements InterlisPropertyDescriptor {
+
+  /** Backwards-compatible constructor for attributes using native geometry encoding. */
+  public InterlisAttributeDescriptor(
+      String name,
+      String scopedName,
+      InterlisCardinality cardinality,
+      boolean mandatory,
+      InterlisValueKind kind,
+      String typeName,
+      boolean inherited,
+      InterlisGeometryKind geometryKind,
+      Integer coordDimension,
+      boolean allowsArcs,
+      String structureScopedName,
+      boolean ordered,
+      int textMaxLength,
+      int decimalPlaces) {
+    this(
+        name,
+        scopedName,
+        cardinality,
+        mandatory,
+        kind,
+        typeName,
+        inherited,
+        geometryKind,
+        coordDimension,
+        allowsArcs,
+        structureScopedName,
+        ordered,
+        textMaxLength,
+        decimalPlaces,
+        InterlisGeometryEncoding.NATIVE);
+  }
+
+  public InterlisAttributeDescriptor {
+    geometryEncoding =
+        geometryEncoding == null ? InterlisGeometryEncoding.NATIVE : geometryEncoding;
+  }
+}

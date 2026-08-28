@@ -11,6 +11,7 @@ import java.util.List;
  * @param isAbstract whether the class is abstract
  * @param declaredProperties properties declared on this class in model order
  * @param effectiveProperties all properties including inherited ones, in stable model order
+ * @param modelKind kind of the owning INTERLIS model
  */
 public record InterlisClassDescriptor(
     String name,
@@ -18,14 +19,38 @@ public record InterlisClassDescriptor(
     String topicScopedName,
     boolean isAbstract,
     List<InterlisPropertyDescriptor> declaredProperties,
-    List<InterlisPropertyDescriptor> effectiveProperties)
+    List<InterlisPropertyDescriptor> effectiveProperties,
+    InterlisModelKind modelKind)
     implements InterlisPlanRoot {
+
+  /** Backwards-compatible constructor for descriptors created outside the extractor. */
+  public InterlisClassDescriptor(
+      String name,
+      String scopedName,
+      String topicScopedName,
+      boolean isAbstract,
+      List<InterlisPropertyDescriptor> declaredProperties,
+      List<InterlisPropertyDescriptor> effectiveProperties) {
+    this(
+        name,
+        scopedName,
+        topicScopedName,
+        isAbstract,
+        declaredProperties,
+        effectiveProperties,
+        InterlisModelKind.DATA);
+  }
 
   public InterlisClassDescriptor {
     declaredProperties =
         declaredProperties == null ? List.of() : List.copyOf(declaredProperties);
     effectiveProperties =
         effectiveProperties == null ? List.of() : List.copyOf(effectiveProperties);
+    modelKind = modelKind == null ? InterlisModelKind.OTHER : modelKind;
+  }
+
+  public boolean isSelectable() {
+    return modelKind.isSelectable();
   }
 
   /** All effective attributes in model order. */

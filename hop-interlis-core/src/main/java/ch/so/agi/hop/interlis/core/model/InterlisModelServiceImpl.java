@@ -8,6 +8,7 @@ import ch.interlis.ili2c.config.FileEntry;
 import ch.interlis.ili2c.config.FileEntryKind;
 import ch.interlis.ili2c.metamodel.Ili2cMetaAttrs;
 import ch.interlis.ili2c.metamodel.TransferDescription;
+import ch.interlis.ilirepository.IliManager;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -72,7 +73,7 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
 
   private CompiledInterlisModel doCompile(ModelSource source, ModelCompileOptions options)
       throws InterlisModelException {
-    List<Path> resolvedFiles = resolveModelFiles(source);
+    List<Path> resolvedFiles = resolveModelFiles(source, options);
     if (resolvedFiles.isEmpty()) {
       throw new InterlisModelException(
           "No INTERLIS models to compile: give at least one .ili file or a model name "
@@ -115,8 +116,12 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
               + source.modelNames());
     }
 
+    // IliManager returns the complete configuration, including imported model files.  Only the
+    // names explicitly requested by the caller are verification targets; imported files are
+    // dependencies and their cache filenames are not necessarily the INTERLIS model names (for
+    // example, versioned repository filenames such as Units-20120220.ili).
     List<String> compiledNames = new ArrayList<>(source.modelNames());
-    for (Path file : resolvedFiles) {
+    for (Path file : source.iliFiles()) {
       String modelName = modelNameFromFile(file);
       if (!compiledNames.contains(modelName)) {
         compiledNames.add(modelName);
@@ -158,7 +163,8 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
    * model is fetched through the ilirepository machinery into its local cache
    * ({@code ~/.ilicache} by default, 24h TTL, 15s/40s connect/read timeouts).
    */
-  private List<Path> resolveModelFiles(ModelSource source) throws InterlisModelException {
+  private List<Path> resolveModelFiles(ModelSource source, ModelCompileOptions options)
+      throws InterlisModelException {
     LinkedHashSet<Path> files = new LinkedHashSet<>();
 
     for (Path file : source.iliFiles()) {
@@ -168,6 +174,7 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
       files.add(file.toAbsolutePath().normalize());
     }
 
+    List<String> unresolvedModelNames = new ArrayList<>();
     for (String modelName : source.modelNames()) {
       Path resolved = null;
       for (String directory : source.modelDirectories()) {
@@ -181,17 +188,15 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
         }
       }
       if (resolved == null) {
-        resolved = resolveFromRepository(modelName, source.modelDirectories());
+        unresolvedModelNames.add(modelName);
+      } else {
+        files.add(resolved);
       }
-      if (resolved == null) {
-        throw new InterlisModelException(
-            "Model "
-                + modelName
-                + " was not found in the model directories "
-                + source.modelDirectories()
-                + " and no .ili file for it was given");
-      }
-      files.add(resolved);
+    }
+
+    if (!unresolvedModelNames.isEmpty()) {
+      files.addAll(
+          resolveFromRepositories(unresolvedModelNames, source.modelDirectories(), options));
     }
 
     return new ArrayList<>(files);
@@ -200,39 +205,6 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
   /** {@code true} for INTERLIS model repository URIs instead of plain directories. */
   private static boolean isRepositoryUri(String directory) {
     return directory.startsWith("http://") || directory.startsWith("https://");
-  }
-
-  /**
-   * Finds the repository file containing the model and downloads it into the local repository
-   * cache. The index carries the schema language per entry; version pinning happens by model
-   * name.
-   */
-  private static java.io.File findModelFile(
-      ch.interlis.ilirepository.impl.RepositoryAccess access,
-      String repository,
-      ch.interlis.ilirepository.IliFiles iliFiles,
-      String modelName)
-      throws Exception {
-    for (java.util.Iterator<ch.interlis.ili2c.modelscan.IliFile> files =
-            iliFiles.iteratorFile();
-        files.hasNext(); ) {
-      ch.interlis.ili2c.modelscan.IliFile file = files.next();
-      for (java.util.Iterator<ch.interlis.ili2c.modelscan.IliModel> models =
-              file.iteratorModel();
-          models.hasNext(); ) {
-        ch.interlis.ili2c.modelscan.IliModel model = models.next();
-        if (!modelName.equals(model.getName())) {
-          continue;
-        }
-        String remote = repository + (repository.endsWith("/") ? "" : "/") + file.getPath();
-        java.io.File local = access.getLocalFileLocation(remote);
-        if (local != null && local.isFile()) {
-          return local;
-        }
-        return null;
-      }
-    }
-    return null;
   }
 
   /**
@@ -249,55 +221,85 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
   }
 
   /**
-   * Looks the model up in the configured model repositories. Returns {@code null} when there is no
-   * repository to ask; fails with actionable diagnostics when a repository is unreachable or the
-   * model is unknown there.
+   * Resolves named models through ili2c's repository manager. IliManager delegates the search to
+   * RepositoryVisitor/ModelFinder, which follows the repository site graph (including subsidiary
+   * and parent sites) and returns the complete dependency configuration with cached local files.
    */
-  private Path resolveFromRepository(String modelName, List<String> directories)
+  private List<Path> resolveFromRepositories(
+      List<String> modelNames, List<String> directories, ModelCompileOptions options)
       throws InterlisModelException {
-    List<String> repositories = new ArrayList<>();
-    for (String directory : directories) {
-      if (isRepositoryUri(directory)) {
-        repositories.add(directory);
-      }
-    }
-    if (repositories.isEmpty()) {
-      return null;
+    List<String> searchPaths =
+        directories.stream().filter(directory -> directory != null && !directory.isBlank()).toList();
+    if (searchPaths.isEmpty()) {
+      throw new InterlisModelException(
+          "Models "
+              + modelNames
+              + " were not found locally and no model directories or repositories were configured in "
+              + directories
+              + ". Place the .ili files in a model directory to override repository lookup");
     }
 
-    List<String> problems = new ArrayList<>();
-    for (String repository : repositories) {
-      try {
-        ch.interlis.ilirepository.impl.RepositoryAccess access =
-            new ch.interlis.ilirepository.impl.RepositoryAccess();
-        java.io.File cacheOverride = repositoryCacheDir();
-        if (cacheOverride != null) {
-          access.setCache(cacheOverride);
-        }
-        ch.interlis.ilirepository.IliFiles iliFiles = access.getIliFiles(repository);
-        if (iliFiles == null) {
-          problems.add(
-              repository
-                  + " is unreachable (offline?); its model index could not be loaded");
-          continue;
-        }
-        java.io.File modelFile = findModelFile(access, repository, iliFiles, modelName);
-        if (modelFile != null) {
-          return modelFile.toPath().toAbsolutePath().normalize();
-        }
-        problems.add(repository + " does not contain model " + modelName);
-      } catch (Exception e) {
-        problems.add(repository + " failed: " + e.getMessage());
-      }
+    IliManager manager = new IliManager();
+    manager.setRepositories(searchPaths.toArray(String[]::new));
+    java.io.File cacheOverride = repositoryCacheDir();
+    if (cacheOverride != null) {
+      manager.setCache(cacheOverride);
     }
-    throw new InterlisModelException(
-        "Model "
-            + modelName
-            + " was not found locally and could not be resolved from the model repositories: "
-            + String.join("; ", problems)
-            + ". Place "
-            + modelName
-            + ".ili in a model directory to override the repositories");
+
+    double iliVersion = iliVersion(options);
+    try {
+      Configuration configuration =
+          manager.getConfig(new ArrayList<>(modelNames), iliVersion);
+      List<Path> resolved = new ArrayList<>();
+      for (java.util.Iterator<?> entries = configuration.iteratorFileEntry();
+          entries.hasNext(); ) {
+        FileEntry entry = (FileEntry) entries.next();
+        resolved.add(Path.of(entry.getFilename()).toAbsolutePath().normalize());
+      }
+      if (resolved.isEmpty()) {
+        throw new InterlisModelException(
+            "The model repositories returned no .ili files for models "
+              + modelNames
+              + ": "
+              + searchPaths);
+      }
+      return resolved;
+    } catch (ch.interlis.ili2c.Ili2cException e) {
+      String modelStatus =
+          modelNames.stream()
+              .map(
+                  modelName ->
+                      "The model "
+                          + modelName
+                          + " was not found (a repository may be unreachable or does not contain model "
+                          + modelName
+                          + ")")
+              .collect(java.util.stream.Collectors.joining("; "));
+      throw new InterlisModelException(
+          "Models "
+              + modelNames
+              + " were not found locally and could not be resolved through the model repository "
+              + "network "
+              + searchPaths
+              + ". "
+              + modelStatus
+              + ". The repository lookup reported: "
+              + e.getMessage()
+              + ". Place the .ili files in a model directory to override repository lookup",
+          e);
+    }
+  }
+
+  private static double iliVersion(ModelCompileOptions options) throws InterlisModelException {
+    if (options == null || options.iliLanguageVersion() == null) {
+      return 0.0;
+    }
+    try {
+      return Double.parseDouble(options.iliLanguageVersion());
+    } catch (NumberFormatException e) {
+      throw new InterlisModelException(
+          "Unsupported INTERLIS language version " + options.iliLanguageVersion(), e);
+    }
   }
 
   private String modelNameFromFile(Path file) {
@@ -328,7 +330,7 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
 
   @Override
   public List<InterlisClassDescriptor> listTransferableClasses(CompiledInterlisModel model) {
-    return schemaExtractor.extract(model.transferDescription()).classes();
+    return schemaExtractor.extract(model.transferDescription()).selectableClasses();
   }
 
   @Override

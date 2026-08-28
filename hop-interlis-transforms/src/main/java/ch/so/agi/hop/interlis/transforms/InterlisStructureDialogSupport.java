@@ -55,7 +55,7 @@ public final class InterlisStructureDialogSupport {
               ModelCompileOptions.defaults());
       InterlisSchemaDescriptor schema =
           new InterlisSchemaExtractor().extract(model.transferDescription());
-      List<InterlisClassDescriptor> classes = schema.classes();
+      List<InterlisClassDescriptor> classes = schema.selectableClasses();
 
       if (className == null || className.isBlank()) {
         return new InterlisStructureProbeResult(

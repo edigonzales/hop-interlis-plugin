@@ -14,6 +14,8 @@ class InterlisSchemaExtractorTest {
   private static InterlisSchemaDescriptor primitives;
   private static InterlisSchemaDescriptor geometry;
   private static InterlisSchemaDescriptor spike;
+  private static InterlisSchemaDescriptor chlv95V1;
+  private static InterlisSchemaDescriptor chlv95V2;
 
   @BeforeAll
   static void extract() throws Exception {
@@ -42,6 +44,22 @@ class InterlisSchemaExtractorTest {
                     new ModelSource(
                         List.of(model("HopIli_Spike_V1.ili")), List.of(), List.of()),
                     ModelCompileOptions.defaults())
+                .transferDescription());
+    chlv95V1 =
+        extractor.extract(
+            service
+                .compile(
+                    new ModelSource(
+                        List.of(model("HopIli_CHLV95_V1.ili")), List.of(), List.of()),
+                    ModelCompileOptions.defaults())
+                .transferDescription());
+    chlv95V2 =
+        extractor.extract(
+            service
+                .compile(
+                    new ModelSource(
+                        List.of(model("HopIli_CHLV95_V2.ili")), List.of(), List.of()),
+                    new ModelCompileOptions("2.4"))
                 .transferDescription());
   }
 
@@ -155,6 +173,86 @@ class InterlisSchemaExtractorTest {
     assertThat(structure.get().attributes())
         .extracting(InterlisAttributeDescriptor::name)
         .containsExactly("Street", "Number");
+  }
+
+  @Test
+  void recognizes_chlv95_v1_multi_geometry_structures_as_geometry_attributes() {
+    InterlisClassDescriptor object = classOf(chlv95V1, "TestObject");
+
+    assertThat(attributeOf(object, "MPoly").geometryKind())
+        .isEqualTo(InterlisGeometryKind.MULTISURFACE);
+    assertThat(attributeOf(object, "MPoly").geometryEncoding())
+        .isEqualTo(InterlisGeometryEncoding.CHLV95_V1_MULTISURFACE);
+    assertThat(attributeOf(object, "MLine").geometryKind())
+        .isEqualTo(InterlisGeometryKind.MULTIPOLYLINE);
+    assertThat(attributeOf(object, "MLine").geometryEncoding())
+        .isEqualTo(InterlisGeometryEncoding.CHLV95_V1_MULTILINE);
+    assertThat(attributeOf(object, "MDirectedLine").geometryEncoding())
+        .isEqualTo(InterlisGeometryEncoding.CHLV95_V1_MULTIDIRECTED_LINE);
+
+    assertThat(attributeOf(object, "NormalStructure").kind())
+        .isEqualTo(InterlisValueKind.STRUCTURE);
+    assertThat(chlv95V1.findStructure("HopIli_CHLV95_V1.Data.StructureValue")).isPresent();
+  }
+
+  @Test
+  void recognizes_chlv95_v2_native_multi_geometries_including_without_arcs() {
+    InterlisClassDescriptor object = classOf(chlv95V2, "TestObject");
+
+    assertThat(object.geometryAttributes())
+        .extracting(InterlisAttributeDescriptor::name)
+        .containsExactly(
+            "Points",
+            "Points3D",
+            "MLine",
+            "MDirectedLine",
+            "MPoly",
+            "MLinePlain",
+            "MDirectedLinePlain",
+            "MPolyPlain");
+    assertThat(object.geometryAttributes())
+        .extracting(InterlisAttributeDescriptor::geometryEncoding)
+        .containsOnly(InterlisGeometryEncoding.NATIVE);
+    assertThat(attributeOf(object, "Points").coordDimension()).isEqualTo(2);
+    assertThat(attributeOf(object, "Points3D").coordDimension()).isEqualTo(3);
+  }
+
+  @Test
+  void only_data_model_roots_are_selectable() {
+    InterlisClassDescriptor data =
+        new InterlisClassDescriptor(
+            "Data",
+            "DataModel.Topic.Data",
+            "DataModel.Topic",
+            false,
+            List.of(),
+            List.of(),
+            InterlisModelKind.DATA);
+    InterlisClassDescriptor type =
+        new InterlisClassDescriptor(
+            "Technical",
+            "TypeModel.Topic.Technical",
+            "TypeModel.Topic",
+            false,
+            List.of(),
+            List.of(),
+            InterlisModelKind.TYPE);
+    InterlisAssociationDescriptor refSystemAssociation =
+        new InterlisAssociationDescriptor(
+            "Ref",
+            "RefSystem.Topic.Ref",
+            "RefSystem.Topic",
+            false,
+            List.of(),
+            List.of(),
+            InterlisModelKind.REFSYSTEM);
+
+    InterlisSchemaDescriptor schema =
+        new InterlisSchemaDescriptor(List.of(data, type), List.of(), List.of(refSystemAssociation));
+
+    assertThat(schema.selectableClasses()).extracting(InterlisClassDescriptor::scopedName)
+        .containsExactly("DataModel.Topic.Data");
+    assertThat(schema.selectableAssociations()).isEmpty();
   }
 
   @Test

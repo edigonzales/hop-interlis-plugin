@@ -44,6 +44,16 @@ public record InterlisSchemaDescriptor(
         .findFirst();
   }
 
+  /** Classes suitable for user-facing class selectors. */
+  public List<InterlisClassDescriptor> selectableClasses() {
+    return classes.stream().filter(InterlisClassDescriptor::isSelectable).toList();
+  }
+
+  /** Associations suitable for user-facing class selectors. */
+  public List<InterlisAssociationDescriptor> selectableAssociations() {
+    return associations.stream().filter(InterlisAssociationDescriptor::isSelectable).toList();
+  }
+
   /** Finds a class or an association by qualified name. */
   public Optional<InterlisPlanRoot> findPlanRoot(String scopedName) {
     Optional<InterlisPlanRoot> root = findClass(scopedName).map(InterlisPlanRoot.class::cast);

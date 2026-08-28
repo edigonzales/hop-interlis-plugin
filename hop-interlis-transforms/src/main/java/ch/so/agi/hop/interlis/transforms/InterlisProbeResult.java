@@ -12,8 +12,9 @@ import java.util.List;
  * probe is configured even when no class has been selected yet
  * @param message status or error message for the preview area
  * @param projection the projection result; {@code null} for a model-only probe or if probing failed
- * @param classes all transferable classes of the resolved models; empty if the model could not be loaded
- * @param associations all transferable associations of the resolved models
+ * @param classes selectable data-model classes of the resolved models; empty if the model could
+ * not be loaded
+ * @param associations selectable data-model associations of the resolved models
  */
 public record InterlisProbeResult(
     boolean configured,

@@ -38,6 +38,9 @@ class InterlisOutputDialogControllerTest {
     assertThat(result.classes())
         .extracting(c -> c.scopedName())
         .contains("HopIli_Spike_V1.Data.Building");
+    assertThat(result.associations())
+        .extracting(a -> a.scopedName())
+        .contains("HopIli_Spike_V1.Data.BuildingMunicipality");
   }
 
   @Test

@@ -3,7 +3,9 @@ package ch.so.agi.hop.interlis.transforms.output;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.hop.core.util.Utils;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.pipeline.PipelineMeta;
@@ -35,6 +37,8 @@ import org.eclipse.swt.widgets.Text;
  */
 public class InterlisOutputDialog extends BaseTransformDialog {
 
+  private static final String ASSOCIATION_DISPLAY_SUFFIX = " (association)";
+
   private final InterlisOutputMeta input;
   private final InterlisOutputDialogController controller = new InterlisOutputDialogController();
 
@@ -54,6 +58,7 @@ public class InterlisOutputDialog extends BaseTransformDialog {
   private List<InterlisClassDescriptor> classes = List.of();
   private List<ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor> associations =
       List.of();
+  private final Map<String, String> classChoiceToScopedName = new HashMap<>();
   private boolean suppressRefresh;
 
   public InterlisOutputDialog(
@@ -361,22 +366,42 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     suppressRefresh = true;
     try {
       String current = wClassName.getText();
+      String currentScopedName =
+          classChoiceToScopedName.getOrDefault(current, selectedClassName());
       wClassName.removeAll();
+      classChoiceToScopedName.clear();
       for (InterlisClassDescriptor descriptor : classes) {
         if (!descriptor.isAbstract()) {
-          wClassName.add(descriptor.scopedName());
+          addClassChoice(descriptor.scopedName(), descriptor.scopedName());
         }
       }
       for (ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor association :
           associations) {
-        wClassName.add(association.scopedName() + " (association)");
+        addClassChoice(
+            association.scopedName() + ASSOCIATION_DISPLAY_SUFFIX, association.scopedName());
       }
-      if (classes.stream().anyMatch(c -> !c.isAbstract() && c.scopedName().equals(current))) {
-        wClassName.setText(current);
-      }
+      String displayName = displayNameForScopedName(currentScopedName);
+      wClassName.setText(displayName == null ? "" : displayName);
     } finally {
       suppressRefresh = false;
     }
+  }
+
+  private void addClassChoice(String displayName, String scopedName) {
+    wClassName.add(displayName);
+    classChoiceToScopedName.put(displayName, scopedName);
+  }
+
+  private String displayNameForScopedName(String scopedName) {
+    if (scopedName == null || scopedName.isBlank()) {
+      return null;
+    }
+    for (Map.Entry<String, String> entry : classChoiceToScopedName.entrySet()) {
+      if (entry.getValue().equals(scopedName)) {
+        return entry.getKey();
+      }
+    }
+    return null;
   }
 
   private void populateMapping(List<InterlisFieldMapping> mappings) {
@@ -395,7 +420,7 @@ public class InterlisOutputDialog extends BaseTransformDialog {
       input.setFileName(wFileName.getText());
       input.setModelNames(wModelNames.getText());
       input.setModelDirectories(wModelDirectories.getText());
-      input.setClassName(wClassName.getText());
+      input.setClassName(selectedClassName());
       input.setObjectIdField(wObjectIdField.getText());
       input.setBasketIdField(wBasketIdField.getText());
       input.setBasketId(wBasketId.getText());
@@ -403,6 +428,18 @@ public class InterlisOutputDialog extends BaseTransformDialog {
       input.setSourceObjectField(wSourceObjectField.getText());
       input.setOverwrite(wOverwrite.getSelection());
     }
+  }
+
+  private String selectedClassName() {
+    String displayName = wClassName.getText();
+    String scopedName = classChoiceToScopedName.get(displayName);
+    if (scopedName != null) {
+      return scopedName;
+    }
+    if (displayName.endsWith(ASSOCIATION_DISPLAY_SUFFIX)) {
+      return displayName.substring(0, displayName.length() - ASSOCIATION_DISPLAY_SUFFIX.length());
+    }
+    return displayName;
   }
 
   private void ok() {

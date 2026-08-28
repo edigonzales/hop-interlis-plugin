@@ -278,7 +278,7 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     syncMetaFromWidgets();
     try {
       InterlisRoleJoinProbeResult result = controller.probe(input, variables);
-      classes = result.schema().classes();
+      classes = result.schema().selectableClasses();
       populateClassCombo();
       populateRoleCombo(result);
       wStatus.setText(

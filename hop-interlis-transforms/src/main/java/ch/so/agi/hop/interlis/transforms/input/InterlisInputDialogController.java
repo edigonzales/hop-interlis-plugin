@@ -61,15 +61,15 @@ public final class InterlisInputDialogController {
           true,
           message,
           null,
-          context.schema().classes(),
-          context.schema().associations());
+          context.schema().selectableClasses(),
+          context.schema().selectableAssociations());
     }
     return new InterlisProbeResult(
         true,
         modelLoadedMessage(context),
         result,
-        context.schema().classes(),
-        context.schema().associations());
+        context.schema().selectableClasses(),
+        context.schema().selectableAssociations());
   }
 
   private InterlisProbeResult modelOnlyResult(InterlisModelContext context) {
@@ -77,8 +77,8 @@ public final class InterlisInputDialogController {
         true,
         modelLoadedMessage(context) + ". Select an INTERLIS class.",
         null,
-        context.schema().classes(),
-        context.schema().associations());
+        context.schema().selectableClasses(),
+        context.schema().selectableAssociations());
   }
 
   private InterlisProbeResult incompleteConfiguration() {
@@ -94,9 +94,9 @@ public final class InterlisInputDialogController {
     return "Model loaded: "
         + model.modelNames()
         + "; "
-        + model.schema().classes().size()
+        + model.schema().selectableClasses().size()
         + " classes, "
-        + model.schema().associations().size()
+        + model.schema().selectableAssociations().size()
         + " associations";
   }
 

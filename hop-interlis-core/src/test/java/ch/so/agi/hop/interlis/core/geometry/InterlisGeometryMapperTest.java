@@ -4,11 +4,16 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.interlis.iom.IomObject;
 import ch.interlis.iom_j.Iom_jObject;
+import ch.so.agi.hop.interlis.core.model.InterlisGeometryEncoding;
 import ch.so.agi.hop.interlis.core.model.InterlisGeometryKind;
 import com.atolcd.hop.gis.geometry.curve.CircularString;
 import com.atolcd.hop.gis.geometry.curve.CompoundCurve;
+import com.atolcd.hop.gis.geometry.curve.MultiCurve;
+import com.atolcd.hop.gis.geometry.curve.MultiSurface;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Point;
 import org.locationtech.jts.geom.Polygon;
@@ -129,6 +134,64 @@ class InterlisGeometryMapperTest {
   }
 
   @Test
+  void chlv95_v1_multisurface_is_unwrapped_and_wrapped_again() throws Exception {
+    Iom_jObject wrapper = new Iom_jObject("GeometryCHLV95_V1.MultiSurface", null);
+    wrapper.addattrobj("Surfaces", surfaceStructure(0.0));
+    wrapper.addattrobj("Surfaces", surfaceStructure(20.0));
+
+    Geometry hopGeometry =
+        mapper.toHopGeometry(
+            wrapper,
+            InterlisGeometryKind.MULTISURFACE,
+            2,
+            InterlisGeometryEncoding.CHLV95_V1_MULTISURFACE);
+
+    assertThat(hopGeometry).isInstanceOf(MultiSurface.class);
+    assertThat(hopGeometry.getNumGeometries()).isEqualTo(2);
+
+    IomObject roundtripped =
+        mapper.toIomGeometry(
+            hopGeometry,
+            InterlisGeometryKind.MULTISURFACE,
+            2,
+            InterlisGeometryEncoding.CHLV95_V1_MULTISURFACE);
+    assertThat(roundtripped.getobjecttag()).isEqualTo("GeometryCHLV95_V1.MultiSurface");
+    assertThat(roundtripped.getattrvaluecount("Surfaces")).isEqualTo(2);
+    assertThat(roundtripped.getattrobj("Surfaces", 0).getattrobj("Surface", 0)).isNotNull();
+  }
+
+  @Test
+  void chlv95_v1_multilines_preserve_member_order_and_encoding() throws Exception {
+    Iom_jObject wrapper = new Iom_jObject("GeometryCHLV95_V1.MultiDirectedLine", null);
+    wrapper.addattrobj("Lines", lineStructure("GeometryCHLV95_V1.DirectedLineStructure", 0.0));
+    wrapper.addattrobj("Lines", lineStructure("GeometryCHLV95_V1.DirectedLineStructure", 20.0));
+
+    Geometry hopGeometry =
+        mapper.toHopGeometry(
+            wrapper,
+            InterlisGeometryKind.MULTIPOLYLINE,
+            2,
+            InterlisGeometryEncoding.CHLV95_V1_MULTIDIRECTED_LINE);
+
+    assertThat(hopGeometry).isInstanceOf(MultiCurve.class);
+    assertThat(hopGeometry.getNumGeometries()).isEqualTo(2);
+    assertThat(hopGeometry.getGeometryN(0).getCoordinate().getX()).isEqualTo(0.0);
+    assertThat(hopGeometry.getGeometryN(1).getCoordinate().getX()).isEqualTo(20.0);
+
+    IomObject roundtripped =
+        mapper.toIomGeometry(
+            hopGeometry,
+            InterlisGeometryKind.MULTIPOLYLINE,
+            2,
+            InterlisGeometryEncoding.CHLV95_V1_MULTIDIRECTED_LINE);
+    assertThat(roundtripped.getobjecttag())
+        .isEqualTo("GeometryCHLV95_V1.MultiDirectedLine");
+    assertThat(roundtripped.getattrvaluecount("Lines")).isEqualTo(2);
+    assertThat(roundtripped.getattrobj("Lines", 0).getobjecttag())
+        .isEqualTo("GeometryCHLV95_V1.DirectedLineStructure");
+  }
+
+  @Test
   void null_geometry_stays_null() throws Exception {
     assertThat(mapper.toHopGeometry(null, InterlisGeometryKind.POLYLINE, 2)).isNull();
     assertThat(mapper.toIomGeometry(null, InterlisGeometryKind.POLYLINE, 2)).isNull();
@@ -184,6 +247,30 @@ class InterlisGeometryMapperTest {
     surface.addattrobj("boundary", boundary);
     multiSurface.addattrobj("surface", surface);
     return multiSurface;
+  }
+
+  private static IomObject surfaceStructure(double offset) {
+    Iom_jObject structure = new Iom_jObject("GeometryCHLV95_V1.SurfaceStructure", null);
+    structure.addattrobj(
+        "Surface",
+        surface(
+            polyline(
+                coord(offset, 0.0),
+                coord(offset + 10.0, 0.0),
+                coord(offset + 10.0, 10.0),
+                coord(offset, 0.0))));
+    return structure;
+  }
+
+  private static IomObject lineStructure(String tag, double offset) {
+    Iom_jObject structure = new Iom_jObject(tag, null);
+    structure.addattrobj(
+        "Line",
+        polyline(
+            coord(offset, 0.0),
+            coord(offset + 10.0, 0.0),
+            coord(offset + 10.0, 10.0)));
+    return structure;
   }
 
   private static java.util.List<String> segmentCoordinates(IomObject polyline) {

@@ -91,7 +91,8 @@ public final class IomFieldWriter {
     int dimension = descriptor.coordDimension() == null ? 2 : descriptor.coordDimension();
     try {
       IomObject iomGeometry =
-          geometryMapper.toIomGeometry(geometry, descriptor.geometryKind(), dimension);
+          geometryMapper.toIomGeometry(
+              geometry, descriptor.geometryKind(), dimension, descriptor.geometryEncoding());
       owner.addattrobj(descriptor.name(), iomGeometry);
     } catch (Exception e) {
       throw new InterlisMappingException(
@@ -150,7 +151,9 @@ public final class IomFieldWriter {
       try {
         int dimension = leaf.coordDimension() == null ? 2 : leaf.coordDimension();
         owner.addattrobj(
-            leaf.name(), geometryMapper.toIomGeometry(geometry, leaf.geometryKind(), dimension));
+            leaf.name(),
+            geometryMapper.toIomGeometry(
+                geometry, leaf.geometryKind(), dimension, leaf.geometryEncoding()));
       } catch (Exception e) {
         throw new InterlisMappingException(
             "Failed to convert geometry field " + field.hopFieldName() + ": " + e.getMessage(), e);

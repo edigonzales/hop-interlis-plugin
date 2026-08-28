@@ -39,10 +39,13 @@ public final class InterlisOutputDialogController {
         "Model loaded: "
             + result.modelNames()
             + "; "
-            + result.schema().classes().size()
-            + " classes",
+            + result.schema().selectableClasses().size()
+            + " classes, "
+            + result.schema().selectableAssociations().size()
+            + " associations",
         result,
-        result.schema().classes());
+        result.schema().selectableClasses(),
+        result.schema().selectableAssociations());
   }
 
   /** Builds the mapping grid rows for the projected plan. */

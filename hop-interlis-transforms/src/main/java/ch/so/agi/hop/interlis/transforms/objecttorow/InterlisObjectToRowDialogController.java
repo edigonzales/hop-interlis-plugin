@@ -26,7 +26,7 @@ public final class InterlisObjectToRowDialogController {
 
   /** All transferable classes of the resolved models. */
   public List<InterlisClassDescriptor> classes(InterlisProjectionResult result) {
-    return result == null ? List.of() : result.schema().classes();
+    return result == null ? List.of() : result.schema().selectableClasses();
   }
 
   /** Formats the projected Hop schema for the preview area, including warnings. */

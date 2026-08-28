@@ -17,6 +17,7 @@ import java.util.List;
  *     plain associations carry no TID)
  * @param roles roles in model order
  * @param attributes association attributes in model order
+ * @param modelKind kind of the owning INTERLIS model
  */
 public record InterlisAssociationDescriptor(
     String name,
@@ -24,12 +25,36 @@ public record InterlisAssociationDescriptor(
     String topicScopedName,
     boolean identifiable,
     List<InterlisRoleDescriptor> roles,
-    List<InterlisAttributeDescriptor> attributes)
+    List<InterlisAttributeDescriptor> attributes,
+    InterlisModelKind modelKind)
     implements InterlisPlanRoot {
+
+  /** Backwards-compatible constructor for descriptors created outside the extractor. */
+  public InterlisAssociationDescriptor(
+      String name,
+      String scopedName,
+      String topicScopedName,
+      boolean identifiable,
+      List<InterlisRoleDescriptor> roles,
+      List<InterlisAttributeDescriptor> attributes) {
+    this(
+        name,
+        scopedName,
+        topicScopedName,
+        identifiable,
+        roles,
+        attributes,
+        InterlisModelKind.DATA);
+  }
 
   public InterlisAssociationDescriptor {
     roles = roles == null ? List.of() : List.copyOf(roles);
     attributes = attributes == null ? List.of() : List.copyOf(attributes);
+    modelKind = modelKind == null ? InterlisModelKind.OTHER : modelKind;
+  }
+
+  public boolean isSelectable() {
+    return modelKind.isSelectable();
   }
 
   @Override

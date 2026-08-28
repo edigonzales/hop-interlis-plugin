@@ -121,6 +121,11 @@ wird vor der Modellauflösung aufgelöst.
 **Modell-Repositories** werden über HTTP(S) aufgelöst. Das Plugin lädt `ilimodels.xml` herunter und legt Modelle lokal in einem Cache ab. Bei Netzwerkproblemen erscheint eine klare Fehlermeldung mit Vorschlägen (Offline-Modus, lokales Override).
 ====
 
+Die Suche verwendet zusätzlich die `ilisite.xml`-Verknüpfungen der
+Repositories. Dadurch werden verbundene Parent- und Tochter-Repositories wie
+`models.kgk-cgc.ch` oder `geo.so.ch` automatisch berücksichtigt; sie müssen
+nicht als eigene statische Default-Einträge angegeben werden.
+
 === Klasse auswählen
 
 Nach erfolgreicher Modellprobe wird das Klassen-Dropdown mit allen
@@ -130,6 +135,9 @@ Klasse auswählen_. Es wird keine Klasse automatisch ausgewählt. Die Schema
 Preview wird erst nach einer konkreten Auswahl erzeugt. Assoziationen erscheinen
 im Dropdown mit dem Zusatz `(association)`;
 intern wird weiterhin ihr vollständiger INTERLIS Scoped Name gespeichert.
+Technische Modelle (`TYPE`, `REFSYSTEM`, `SYMBOLOGY`) werden für die
+Klassenauswahl ausgeblendet, bleiben für die Auflösung von Imports aber
+Bestandteil des kompilierten Modells.
 
 Der aktuell implementierte Dialog verwendet dafür eine editierbare Combo-Box.
 Der vollständige modale Modellbrowser mit Baum und Filter ist in der

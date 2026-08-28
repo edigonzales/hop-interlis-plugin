@@ -127,12 +127,17 @@ E2E (echte Hop-2.18.1-Distribution, `scripts/run-e2e.sh`):
 
 ## Known limitations
 
-- HTTP(S)-Model-Repositories sind angebunden und werden über `ilimodels.xml`
-  sowie den lokalen Repository-Cache aufgelöst; lokale Verzeichnisse haben
-  weiterhin Vorrang. Der gemeinsame Default für `modelDirectories` ist
-  `%XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch`. `%XTF_DIR`
-  bleibt ein Platzhalter für das XTF-Elternverzeichnis, keine Einschränkung
-  auf dieses eine Verzeichnis.
+- HTTP(S)-Model-Repositories sind angebunden und werden über `IliManager`,
+  `ilimodels.xml`, `ilisite.xml` und den lokalen Repository-Cache aufgelöst;
+  verknüpfte Parent-/Tochter-Repositories werden automatisch verfolgt, lokale
+  Verzeichnisse haben weiterhin Vorrang. Der gemeinsame Default für
+  `modelDirectories` ist `%XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch`.
+  `%XTF_DIR` bleibt ein Platzhalter für das XTF-Elternverzeichnis, keine
+  Einschränkung auf dieses eine Verzeichnis.
+- CHLV95-V1-Kompositionsgeometrien (`MultiSurface`, `MultiLine`,
+  `MultiDirectedLine`) werden bei passender Strukturform als einzelne Hop-
+  Geometriefelder gelesen und geschrieben; native CHLV95-V2-Multi-Geometrien
+  und `WithoutArcs`-Varianten bleiben im nativen WKB-Pfad.
 - Die Modell-only-Probe befüllt das Klassen-Dropdown bereits bei leerem
   Klassenfeld. Die Schema Preview entsteht erst nach der Klassenauswahl.
 - Der modale Model-Browser-Baum fehlt noch; Klassenauswahl via Combo + Schema-Preview.

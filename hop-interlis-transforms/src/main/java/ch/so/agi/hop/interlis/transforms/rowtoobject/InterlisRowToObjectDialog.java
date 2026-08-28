@@ -189,7 +189,7 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
     syncMetaFromWidgets();
     try {
       InterlisProjectionResult result = controllerProbe();
-      classes = result == null ? List.of() : result.schema().classes();
+      classes = result == null ? List.of() : result.schema().selectableClasses();
       populateClassCombo();
       wStatus.setText(
           result == null

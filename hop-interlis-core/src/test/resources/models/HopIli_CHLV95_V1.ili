@@ -1,0 +1,53 @@
+INTERLIS 2.3;
+
+TYPE MODEL GeometryCHLV95_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-08-28" =
+  DOMAIN
+    Coord2 = COORD -1000.000 .. 1000.000, -1000.000 .. 1000.000;
+    Surface = SURFACE WITH (STRAIGHTS, ARCS) VERTEX Coord2 WITHOUT OVERLAPS > 0.001;
+    Line = POLYLINE WITH (STRAIGHTS, ARCS) VERTEX Coord2;
+    DirectedLine EXTENDS Line = DIRECTED POLYLINE;
+
+    STRUCTURE LineStructure =
+      Line: Line;
+    END LineStructure;
+
+    STRUCTURE DirectedLineStructure =
+      Line: DirectedLine;
+    END DirectedLineStructure;
+
+    STRUCTURE MultiLine =
+      Lines: BAG {1..*} OF LineStructure;
+    END MultiLine;
+
+    STRUCTURE MultiDirectedLine =
+      Lines: BAG {1..*} OF DirectedLineStructure;
+    END MultiDirectedLine;
+
+    STRUCTURE SurfaceStructure =
+      Surface: Surface;
+    END SurfaceStructure;
+
+    STRUCTURE MultiSurface =
+      Surfaces: BAG {1..*} OF SurfaceStructure;
+    END MultiSurface;
+END GeometryCHLV95_V1.
+
+MODEL HopIli_CHLV95_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-08-28" =
+  IMPORTS GeometryCHLV95_V1;
+
+  TOPIC Data =
+    STRUCTURE StructureValue =
+      Label: TEXT*20;
+    END StructureValue;
+
+    CLASS TestObject =
+      MPoly: GeometryCHLV95_V1.MultiSurface;
+      MLine: GeometryCHLV95_V1.MultiLine;
+      MDirectedLine: GeometryCHLV95_V1.MultiDirectedLine;
+      NormalStructure: StructureValue;
+    END TestObject;
+
+  END Data;
+END HopIli_CHLV95_V1.

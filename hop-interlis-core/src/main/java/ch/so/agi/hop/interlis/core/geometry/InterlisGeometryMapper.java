@@ -1,16 +1,25 @@
 package ch.so.agi.hop.interlis.core.geometry;
 
 import ch.interlis.iom.IomObject;
+import ch.interlis.iom_j.Iom_jObject;
 import ch.interlis.iox_j.wkb.Iox2wkb;
 import ch.interlis.iox_j.wkb.Wkb2iox;
+import ch.so.agi.hop.interlis.core.model.InterlisGeometryEncoding;
 import ch.so.agi.hop.interlis.core.model.InterlisGeometryKind;
 import com.atolcd.hop.gis.geometry.curve.CircularString;
 import com.atolcd.hop.gis.geometry.curve.CompoundCurve;
 import com.atolcd.hop.gis.geometry.curve.CurveGeometrySupport;
 import com.atolcd.hop.gis.geometry.curve.CurvePolygon;
+import com.atolcd.hop.gis.geometry.curve.MultiCurve;
+import com.atolcd.hop.gis.geometry.curve.MultiSurface;
 import java.nio.ByteOrder;
+import java.util.ArrayList;
+import java.util.List;
 import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.MultiLineString;
+import org.locationtech.jts.geom.MultiPolygon;
 import org.locationtech.jts.geom.Polygon;
 
 /**
@@ -47,6 +56,16 @@ public final class InterlisGeometryMapper {
    */
   public Geometry toHopGeometry(IomObject geometry, InterlisGeometryKind kind, int dimension)
       throws InterlisGeometryException {
+    return toHopGeometry(geometry, kind, dimension, InterlisGeometryEncoding.NATIVE);
+  }
+
+  /** Converts an IOM geometry using its model-specific representation. */
+  public Geometry toHopGeometry(
+      IomObject geometry,
+      InterlisGeometryKind kind,
+      int dimension,
+      InterlisGeometryEncoding encoding)
+      throws InterlisGeometryException {
     if (geometry == null) {
       return null;
     }
@@ -56,6 +75,9 @@ public final class InterlisGeometryMapper {
     }
 
     try {
+      if (encoding != InterlisGeometryEncoding.NATIVE) {
+        return toHopLegacyMultiGeometry(geometry, kind, dimension, encoding);
+      }
       Iox2wkb converter = new Iox2wkb(dimension, ByteOrder.BIG_ENDIAN, true);
       byte[] wkb =
           switch (kind) {
@@ -85,11 +107,24 @@ public final class InterlisGeometryMapper {
    */
   public IomObject toIomGeometry(Geometry geometry, InterlisGeometryKind kind, int dimension)
       throws InterlisGeometryException {
+    return toIomGeometry(geometry, kind, dimension, InterlisGeometryEncoding.NATIVE);
+  }
+
+  /** Converts a Hop geometry to the model-specific IOM representation. */
+  public IomObject toIomGeometry(
+      Geometry geometry,
+      InterlisGeometryKind kind,
+      int dimension,
+      InterlisGeometryEncoding encoding)
+      throws InterlisGeometryException {
     if (geometry == null) {
       return null;
     }
 
     try {
+      if (encoding != InterlisGeometryEncoding.NATIVE) {
+        return toIomLegacyMultiGeometry(geometry, kind, dimension, encoding);
+      }
       byte[] wkb;
       if (CurveGeometrySupport.isCurveGeometry(geometry)) {
         if (hasZ(geometry)) {
@@ -115,6 +150,128 @@ public final class InterlisGeometryMapper {
       throw new InterlisGeometryException(
           "Failed to convert Hop geometry to INTERLIS " + kind + ": " + e.getMessage(), e);
     }
+  }
+
+  private Geometry toHopLegacyMultiGeometry(
+      IomObject wrapper,
+      InterlisGeometryKind kind,
+      int dimension,
+      InterlisGeometryEncoding encoding)
+      throws InterlisGeometryException {
+    if (kind == InterlisGeometryKind.MULTISURFACE
+        && encoding == InterlisGeometryEncoding.CHLV95_V1_MULTISURFACE) {
+      List<Polygon> polygons = new ArrayList<>();
+      for (int i = 0; i < wrapper.getattrvaluecount("Surfaces"); i++) {
+        IomObject surfaceStructure = wrapper.getattrobj("Surfaces", i);
+        if (surfaceStructure == null) {
+          throw new InterlisGeometryException("CHLV95_V1 MultiSurface contains a null surface");
+        }
+        IomObject surface = surfaceStructure.getattrobj("Surface", 0);
+        Geometry converted = toHopGeometry(surface, InterlisGeometryKind.SURFACE, dimension);
+        if (!(converted instanceof Polygon polygon)) {
+          throw new InterlisGeometryException(
+              "CHLV95_V1 MultiSurface member did not convert to a polygon: "
+                  + (converted == null ? "null" : converted.getGeometryType()));
+        }
+        polygons.add(polygon);
+      }
+      if (polygons.isEmpty()) {
+        throw new InterlisGeometryException("CHLV95_V1 MultiSurface contains no surfaces");
+      }
+      GeometryFactory factory = polygons.get(0).getFactory();
+      MultiSurface result = new MultiSurface(polygons, factory);
+      result.setSRID(polygons.get(0).getSRID());
+      return normalizeStraightOnly(result);
+    }
+
+    if ((kind == InterlisGeometryKind.MULTIPOLYLINE
+            && (encoding == InterlisGeometryEncoding.CHLV95_V1_MULTILINE
+                || encoding == InterlisGeometryEncoding.CHLV95_V1_MULTIDIRECTED_LINE))) {
+      List<LineString> lines = new ArrayList<>();
+      for (int i = 0; i < wrapper.getattrvaluecount("Lines"); i++) {
+        IomObject lineStructure = wrapper.getattrobj("Lines", i);
+        if (lineStructure == null) {
+          throw new InterlisGeometryException("CHLV95_V1 MultiLine contains a null line");
+        }
+        IomObject line = lineStructure.getattrobj("Line", 0);
+        Geometry converted = toHopGeometry(line, InterlisGeometryKind.POLYLINE, dimension);
+        if (!(converted instanceof LineString lineString)) {
+          throw new InterlisGeometryException(
+              "CHLV95_V1 MultiLine member did not convert to a line: "
+                  + (converted == null ? "null" : converted.getGeometryType()));
+        }
+        lines.add(lineString);
+      }
+      if (lines.isEmpty()) {
+        throw new InterlisGeometryException("CHLV95_V1 MultiLine contains no lines");
+      }
+      GeometryFactory factory = lines.get(0).getFactory();
+      MultiCurve result = new MultiCurve(lines, factory);
+      result.setSRID(lines.get(0).getSRID());
+      return result;
+    }
+
+    throw new InterlisGeometryException(
+        "Unsupported legacy geometry encoding " + encoding + " for geometry kind " + kind);
+  }
+
+  private IomObject toIomLegacyMultiGeometry(
+      Geometry geometry,
+      InterlisGeometryKind kind,
+      int dimension,
+      InterlisGeometryEncoding encoding)
+      throws InterlisGeometryException {
+    if (kind == InterlisGeometryKind.MULTISURFACE
+        && encoding == InterlisGeometryEncoding.CHLV95_V1_MULTISURFACE) {
+      Iom_jObject wrapper = new Iom_jObject("GeometryCHLV95_V1.MultiSurface", null);
+      int count = geometry instanceof MultiPolygon ? geometry.getNumGeometries() : 1;
+      for (int i = 0; i < count; i++) {
+        Geometry component = geometry instanceof MultiPolygon ? geometry.getGeometryN(i) : geometry;
+        if (!(component instanceof Polygon)) {
+          throw new InterlisGeometryException(
+              "CHLV95_V1 MultiSurface requires polygon components, got "
+                  + component.getGeometryType());
+        }
+        Iom_jObject surfaceStructure =
+            new Iom_jObject("GeometryCHLV95_V1.SurfaceStructure", null);
+        surfaceStructure.addattrobj(
+            "Surface", toIomGeometry(component, InterlisGeometryKind.SURFACE, dimension));
+        wrapper.addattrobj("Surfaces", surfaceStructure);
+      }
+      return wrapper;
+    }
+
+    if ((kind == InterlisGeometryKind.MULTIPOLYLINE
+            && (encoding == InterlisGeometryEncoding.CHLV95_V1_MULTILINE
+                || encoding == InterlisGeometryEncoding.CHLV95_V1_MULTIDIRECTED_LINE))) {
+      Iom_jObject wrapper =
+          new Iom_jObject(
+              encoding == InterlisGeometryEncoding.CHLV95_V1_MULTIDIRECTED_LINE
+                  ? "GeometryCHLV95_V1.MultiDirectedLine"
+                  : "GeometryCHLV95_V1.MultiLine",
+              null);
+      int count = geometry instanceof MultiLineString ? geometry.getNumGeometries() : 1;
+      String structureTag =
+          encoding == InterlisGeometryEncoding.CHLV95_V1_MULTIDIRECTED_LINE
+              ? "GeometryCHLV95_V1.DirectedLineStructure"
+              : "GeometryCHLV95_V1.LineStructure";
+      for (int i = 0; i < count; i++) {
+        Geometry component = geometry instanceof MultiLineString ? geometry.getGeometryN(i) : geometry;
+        if (!(component instanceof LineString)) {
+          throw new InterlisGeometryException(
+              "CHLV95_V1 MultiLine requires line components, got "
+                  + component.getGeometryType());
+        }
+        Iom_jObject lineStructure = new Iom_jObject(structureTag, null);
+        lineStructure.addattrobj(
+            "Line", toIomGeometry(component, InterlisGeometryKind.POLYLINE, dimension));
+        wrapper.addattrobj("Lines", lineStructure);
+      }
+      return wrapper;
+    }
+
+    throw new InterlisGeometryException(
+        "Unsupported legacy geometry encoding " + encoding + " for geometry kind " + kind);
   }
 
   private boolean hasZ(Geometry geometry) {

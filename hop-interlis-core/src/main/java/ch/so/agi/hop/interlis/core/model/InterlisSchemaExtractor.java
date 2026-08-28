@@ -14,10 +14,12 @@ import ch.interlis.ili2c.metamodel.LineType;
 import ch.interlis.ili2c.metamodel.MultiCoordType;
 import ch.interlis.ili2c.metamodel.MultiPolylineType;
 import ch.interlis.ili2c.metamodel.MultiSurfaceType;
+import ch.interlis.ili2c.metamodel.Model;
 import ch.interlis.ili2c.metamodel.NumericType;
 import ch.interlis.ili2c.metamodel.PolylineType;
 import ch.interlis.ili2c.metamodel.RoleDef;
 import ch.interlis.ili2c.metamodel.SurfaceOrAreaType;
+import ch.interlis.ili2c.metamodel.SurfaceType;
 import ch.interlis.ili2c.metamodel.Table;
 import ch.interlis.ili2c.metamodel.TextType;
 import ch.interlis.ili2c.metamodel.Topic;
@@ -26,9 +28,13 @@ import ch.interlis.ili2c.metamodel.Type;
 import ch.interlis.ili2c.metamodel.TypeAlias;
 import ch.interlis.ili2c.metamodel.Viewable;
 import ch.interlis.ili2c.metamodel.ViewableTransferElement;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Extracts immutable {@link InterlisClassDescriptor}/{@link InterlisStructureDescriptor} views
@@ -41,16 +47,17 @@ public final class InterlisSchemaExtractor {
 
   public InterlisSchemaDescriptor extract(TransferDescription td) {
     List<InterlisClassDescriptor> classes = new ArrayList<>();
-    List<InterlisStructureDescriptor> structures = new ArrayList<>();
+    Map<String, InterlisStructureDescriptor> structures = new LinkedHashMap<>();
     List<InterlisAssociationDescriptor> associations = new ArrayList<>();
 
-    for (Iterator<ch.interlis.ili2c.metamodel.Model> models = td.iterator();
+    for (Iterator<Model> models = td.iterator();
         models.hasNext(); ) {
-      ch.interlis.ili2c.metamodel.Model model = models.next();
+      Model model = models.next();
       // The predefined INTERLIS model (units, domains, TIMESYSTEMS) is not transfer data.
       if (model instanceof ch.interlis.ili2c.metamodel.PredefinedModel) {
         continue;
       }
+      InterlisModelKind modelKind = InterlisModelKind.from(model);
       for (Iterator<Element> elements = model.iterator(); elements.hasNext(); ) {
         Element element = elements.next();
         if (!(element instanceof Topic topic)) {
@@ -61,20 +68,27 @@ public final class InterlisSchemaExtractor {
           // In ili2c concrete classes and structures are both Table instances;
           // identifiable tables are classes, non-identifiable ones are STRUCTUREs.
           if (child instanceof Table table && !table.isIdentifiable()) {
-            structures.add(extractStructure(table));
+            structures.putIfAbsent(table.getScopedName(null), extractStructure(table));
           } else if (child instanceof AssociationDef association) {
-            associations.add(extractAssociation(association, topic));
+            associations.add(extractAssociation(association, topic, modelKind));
           } else if (child instanceof AbstractClassDef viewable
               && !(viewable instanceof AssociationDef)) {
-            classes.add(extractClass(viewable, topic));
+            classes.add(extractClass(viewable, topic, modelKind));
           }
         }
       }
     }
-    return new InterlisSchemaDescriptor(classes, structures, associations);
+    registerReferencedStructures(td, classes, associations, structures);
+    return new InterlisSchemaDescriptor(
+        classes, new ArrayList<>(structures.values()), associations);
   }
 
   public InterlisClassDescriptor extractClass(AbstractClassDef viewable, Topic topic) {
+    return extractClass(viewable, topic, InterlisModelKind.DATA);
+  }
+
+  private InterlisClassDescriptor extractClass(
+      AbstractClassDef viewable, Topic topic, InterlisModelKind modelKind) {
     List<InterlisPropertyDescriptor> declared = extractDeclaredProperties(viewable);
     List<InterlisPropertyDescriptor> effective = new ArrayList<>(declared);
 
@@ -104,7 +118,8 @@ public final class InterlisSchemaExtractor {
         topic.getScopedName(null),
         viewable.isAbstract(),
         declared,
-        effective);
+        effective,
+        modelKind);
   }
 
   public InterlisStructureDescriptor extractStructure(Table table) {
@@ -121,6 +136,11 @@ public final class InterlisSchemaExtractor {
 
   public InterlisAssociationDescriptor extractAssociation(
       AssociationDef association, Topic topic) {
+    return extractAssociation(association, topic, InterlisModelKind.DATA);
+  }
+
+  private InterlisAssociationDescriptor extractAssociation(
+      AssociationDef association, Topic topic, InterlisModelKind modelKind) {
     List<InterlisRoleDescriptor> roles = new ArrayList<>();
     List<InterlisAttributeDescriptor> attributes = new ArrayList<>();
     for (Iterator<ViewableTransferElement> it = association.getAttributesAndRoles2();
@@ -138,7 +158,51 @@ public final class InterlisSchemaExtractor {
         topic.getScopedName(null),
         association.getOid() != null,
         roles,
-        attributes);
+        attributes,
+        modelKind);
+  }
+
+  /**
+   * Registers structures referenced by attributes, including structures declared in a model-level
+   * DOMAIN section. ili2c exposes these structures through TransferDescription#getElement even
+   * though they are not children of a Topic.
+   */
+  private void registerReferencedStructures(
+      TransferDescription td,
+      List<InterlisClassDescriptor> classes,
+      List<InterlisAssociationDescriptor> associations,
+      Map<String, InterlisStructureDescriptor> structures) {
+    Deque<String> pending = new ArrayDeque<>();
+    for (InterlisClassDescriptor descriptor : classes) {
+      addStructureReferences(descriptor.effectiveProperties(), pending);
+    }
+    for (InterlisAssociationDescriptor descriptor : associations) {
+      addStructureReferences(descriptor.attributes(), pending);
+    }
+
+    while (!pending.isEmpty()) {
+      String scopedName = pending.removeFirst();
+      if (scopedName == null || structures.containsKey(scopedName)) {
+        continue;
+      }
+      Element element = td.getElement(scopedName);
+      if (!(element instanceof Table table) || table.isIdentifiable()) {
+        continue;
+      }
+      InterlisStructureDescriptor descriptor = extractStructure(table);
+      structures.put(scopedName, descriptor);
+      addStructureReferences(descriptor.attributes(), pending);
+    }
+  }
+
+  private void addStructureReferences(
+      List<? extends InterlisPropertyDescriptor> properties, Deque<String> pending) {
+    for (InterlisPropertyDescriptor property : properties) {
+      if (property instanceof InterlisAttributeDescriptor attribute
+          && attribute.kind() == InterlisValueKind.STRUCTURE) {
+        pending.addLast(attribute.structureScopedName());
+      }
+    }
   }
 
   private List<InterlisPropertyDescriptor> extractDeclaredProperties(Viewable viewable) {
@@ -169,6 +233,20 @@ public final class InterlisSchemaExtractor {
     InterlisCardinality cardinality = cardinalityOf(type);
     boolean mandatory = domain != null && domain.isMandatoryConsideringAliases();
     String aliasDomainName = aliasDomainName(domain);
+
+    LegacyGeometryMapping legacyGeometry = legacyGeometry(attribute, type, cardinality);
+    if (legacyGeometry != null) {
+      return geometryAttribute(
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          inherited,
+          legacyGeometry.kind(),
+          legacyGeometry.dimension(),
+          legacyGeometry.allowsArcs(),
+          legacyGeometry.encoding());
+    }
 
     if (type instanceof CompositionType composition) {
       Table component = composition.getComponentType();
@@ -217,7 +295,11 @@ public final class InterlisSchemaExtractor {
     if (type instanceof MultiCoordType) {
       return geometryAttribute(
           attribute, scopedName, cardinality, mandatory, inherited,
-          InterlisGeometryKind.MULTICOORD, null, false);
+          InterlisGeometryKind.MULTICOORD,
+          ((MultiCoordType) type).getDimensions() == null
+              ? null
+              : ((MultiCoordType) type).getDimensions().length,
+          false);
     }
     if (type instanceof CoordType coordType) {
       return geometryAttribute(
@@ -310,6 +392,28 @@ public final class InterlisSchemaExtractor {
       InterlisGeometryKind kind,
       Integer dimension,
       boolean allowsArcs) {
+    return geometryAttribute(
+        attribute,
+        scopedName,
+        cardinality,
+        mandatory,
+        inherited,
+        kind,
+        dimension,
+        allowsArcs,
+        InterlisGeometryEncoding.NATIVE);
+  }
+
+  private InterlisAttributeDescriptor geometryAttribute(
+      AttributeDef attribute,
+      String scopedName,
+      InterlisCardinality cardinality,
+      boolean mandatory,
+      boolean inherited,
+      InterlisGeometryKind kind,
+      Integer dimension,
+      boolean allowsArcs,
+      InterlisGeometryEncoding encoding) {
     return attribute(
         attribute,
         scopedName,
@@ -324,7 +428,8 @@ public final class InterlisSchemaExtractor {
         null,
         false,
         -1,
-        -1);
+        -1,
+        encoding);
   }
 
   private InterlisAttributeDescriptor attribute(
@@ -342,6 +447,40 @@ public final class InterlisSchemaExtractor {
       boolean ordered,
       int textMaxLength,
       int decimalPlaces) {
+    return attribute(
+        attribute,
+        scopedName,
+        cardinality,
+        mandatory,
+        kind,
+        typeName,
+        inherited,
+        geometryKind,
+        dimension,
+        allowsArcs,
+        structureScopedName,
+        ordered,
+        textMaxLength,
+        decimalPlaces,
+        InterlisGeometryEncoding.NATIVE);
+  }
+
+  private InterlisAttributeDescriptor attribute(
+      AttributeDef attribute,
+      String scopedName,
+      InterlisCardinality cardinality,
+      boolean mandatory,
+      InterlisValueKind kind,
+      String typeName,
+      boolean inherited,
+      InterlisGeometryKind geometryKind,
+      Integer dimension,
+      boolean allowsArcs,
+      String structureScopedName,
+      boolean ordered,
+      int textMaxLength,
+      int decimalPlaces,
+      InterlisGeometryEncoding encoding) {
     return new InterlisAttributeDescriptor(
         attribute.getName(),
         scopedName,
@@ -356,8 +495,94 @@ public final class InterlisSchemaExtractor {
         structureScopedName,
         ordered,
         textMaxLength,
-        decimalPlaces);
+        decimalPlaces,
+        encoding);
   }
+
+  /**
+   * Detects the CHBASE V1 geometry wrappers that ili2db treats as smart geometry mappings. The
+   * shape is validated instead of matching names alone so user-defined structures are unaffected.
+   */
+  private LegacyGeometryMapping legacyGeometry(
+      AttributeDef attribute, Type type, InterlisCardinality cardinality) {
+    if (!(type instanceof CompositionType composition) || !cardinality.isSingleValued()) {
+      return null;
+    }
+    Table component = composition.getComponentType();
+    if (component == null) {
+      return null;
+    }
+    Table root = (Table) component.getRootExtending();
+    if (root == null) {
+      root = component;
+    }
+    if (root.getContainer() == null
+        || !"GeometryCHLV95_V1".equals(root.getContainer().getScopedName(null))) {
+      return null;
+    }
+
+    String rootName = root.getName();
+    if (!("MultiSurface".equals(rootName)
+        || "MultiLine".equals(rootName)
+        || "MultiDirectedLine".equals(rootName))) {
+      return null;
+    }
+    AttributeDef members = singleAttribute(component);
+    if (members == null
+        || (!"Surfaces".equals(members.getName()) && !"Lines".equals(members.getName()))) {
+      return null;
+    }
+    Type membersType = members.getDomain() == null ? null : Type.findReal(members.getDomain());
+    if (!(membersType instanceof CompositionType membersComposition)) {
+      return null;
+    }
+    AttributeDef leaf = singleAttribute(membersComposition.getComponentType());
+    if (leaf == null) {
+      return null;
+    }
+    Type leafType = leaf.getDomain() == null ? null : Type.findReal(leaf.getDomain());
+    if ("MultiSurface".equals(rootName) && leafType instanceof SurfaceType) {
+      return new LegacyGeometryMapping(
+          InterlisGeometryKind.MULTISURFACE,
+          null,
+          allowsArcs(leafType),
+          InterlisGeometryEncoding.CHLV95_V1_MULTISURFACE);
+    }
+    if (("MultiLine".equals(rootName) || "MultiDirectedLine".equals(rootName))
+        && leafType instanceof PolylineType polyline
+        && polyline.isDirected() == "MultiDirectedLine".equals(rootName)) {
+      return new LegacyGeometryMapping(
+          InterlisGeometryKind.MULTIPOLYLINE,
+          null,
+          allowsArcs(leafType),
+          "MultiDirectedLine".equals(rootName)
+              ? InterlisGeometryEncoding.CHLV95_V1_MULTIDIRECTED_LINE
+              : InterlisGeometryEncoding.CHLV95_V1_MULTILINE);
+    }
+    return null;
+  }
+
+  private AttributeDef singleAttribute(Table table) {
+    if (table == null) {
+      return null;
+    }
+    AttributeDef result = null;
+    int count = 0;
+    for (Iterator<ViewableTransferElement> it = table.getAttributesAndRoles2(); it.hasNext(); ) {
+      ViewableTransferElement element = it.next();
+      count++;
+      if (element.obj instanceof AttributeDef attribute) {
+        result = attribute;
+      }
+    }
+    return count == 1 ? result : null;
+  }
+
+  private record LegacyGeometryMapping(
+      InterlisGeometryKind kind,
+      Integer dimension,
+      boolean allowsArcs,
+      InterlisGeometryEncoding encoding) {}
 
   private InterlisRoleDescriptor extractRole(RoleDef role, boolean inherited) {
     Viewable destination = role.getDestination();

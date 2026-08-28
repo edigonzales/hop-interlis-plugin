@@ -40,6 +40,10 @@ Wiederverwendet in Input, Output, Object-to-Row, Row-to-Object, Validate, Enumer
 - `Data file` optional bei reinen Model-Transforms, Pflicht beim Input/Validate.
 - `Models = %DATA` bedeutet: aus Transfer ableiten.
 - `Model dirs` kann lokale Verzeichnisse und Repository-URLs enthalten.
+- Die beiden Standard-Repositories werden über `ilisite.xml` verknüpfte
+  Parent-/Tochter-Repositories durchsucht; technische Importmodelle wie
+  `TYPE`, `REFSYSTEM` und `SYMBOLOGY` bleiben intern verfügbar, werden aber
+  nicht als fachliche Klassen angeboten.
 - `Reload model` löst explizite Probe aus.
 - Nach erfolgreicher Modellprobe darf das Klassenfeld zunächst leer bleiben. Das
   Dropdown wird mit allen transferierbaren Klassen und Assoziationen befüllt;
