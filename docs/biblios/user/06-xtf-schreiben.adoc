@@ -22,7 +22,7 @@ Der `INTERLIS Output` schreibt _eine Klasse pro Transform_. Wenn Sie mehrere Kla
 |                                                                                 |
 | Model                                                                           |
 | Models         [ DemoBodenbedeckung                                    ]      |
-| Model dirs     [ https://models.interlis.ch/                           ]      |
+| Model dirs     [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ]      |
 | Class          [ DemoBodenbedeckung.Bodenbedeckung.Gebaeude           v]      |
 |                                                                                 |
 | Identity                                                                        |

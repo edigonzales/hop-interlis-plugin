@@ -2,9 +2,9 @@ package ch.so.agi.hop.interlis.transforms.explode;
 
 import ch.so.agi.hop.interlis.core.structures.InterlisStructurePlan;
 import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureProbeResult;
-import java.util.Arrays;
 import java.util.List;
 import org.apache.hop.core.exception.HopTransformException;
 import org.apache.hop.core.row.IRowMeta;
@@ -77,13 +77,7 @@ public final class InterlisStructureExplodeDialogController {
   private static List<String> resolveModelNames(
       InterlisStructureExplodeMeta meta, IVariables variables) {
     String resolved = resolve(variables, meta.getModelNames());
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private static List<String> resolveModelDirectories(
@@ -92,10 +86,7 @@ public final class InterlisStructureExplodeDialogController {
     if (resolved.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   private static String resolve(IVariables variables, String value) {

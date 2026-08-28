@@ -7,9 +7,9 @@ import ch.so.agi.hop.interlis.core.io.InterlisObjectEnvelope;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectOperation;
 import ch.so.agi.hop.interlis.core.io.InterlisWriteException;
 import ch.so.agi.hop.interlis.core.io.XtfTransferWriter;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.pipeline.Pipeline;
@@ -227,13 +227,7 @@ public class InterlisTransferOutput
 
   private List<String> resolveModelNames() {
     String resolved = resolve(meta.getModelNames());
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories() {
@@ -241,10 +235,7 @@ public class InterlisTransferOutput
     if (resolved.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   @Override

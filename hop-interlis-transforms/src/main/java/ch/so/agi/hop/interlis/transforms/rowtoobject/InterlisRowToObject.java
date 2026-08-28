@@ -8,10 +8,11 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.mapping.RowToIomMapper;
 import ch.so.agi.hop.interlis.core.mapping.RowWriteOptions;
 import ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import ch.so.agi.hop.interlis.transforms.mapping.InterlisRowBindings;
-import java.util.Arrays;
-import java.util.List;import org.apache.hop.core.exception.HopException;
+import java.util.List;
+import org.apache.hop.core.exception.HopException;
 import org.apache.hop.pipeline.Pipeline;
 import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.pipeline.transform.BaseTransform;
@@ -137,13 +138,7 @@ public class InterlisRowToObject
 
   private List<String> resolveModelNames() {
     String resolved = resolve(meta.getModelNames());
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories() {
@@ -151,9 +146,6 @@ public class InterlisRowToObject
     if (resolved.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 }

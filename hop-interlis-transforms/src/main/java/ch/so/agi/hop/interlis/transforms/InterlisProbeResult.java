@@ -8,10 +8,11 @@ import java.util.List;
 /**
  * Result of a design-time model/schema probe.
  *
- * @param configured whether the configuration was complete enough to attempt a probe
+ * @param configured whether the model configuration was complete enough to load; a model-only
+ * probe is configured even when no class has been selected yet
  * @param message status or error message for the preview area
- * @param projection the projection result; {@code null} if probing failed
- * @param classes all transferable classes of the resolved models; empty if probing failed
+ * @param projection the projection result; {@code null} for a model-only probe or if probing failed
+ * @param classes all transferable classes of the resolved models; empty if the model could not be loaded
  * @param associations all transferable associations of the resolved models
  */
 public record InterlisProbeResult(

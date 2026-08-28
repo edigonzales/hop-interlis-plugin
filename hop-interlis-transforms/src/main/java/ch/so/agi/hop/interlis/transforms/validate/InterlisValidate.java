@@ -21,10 +21,10 @@ import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
 import ch.so.agi.hop.interlis.transforms.InterlisParallelCopies;
 import ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
@@ -246,15 +246,7 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
 
   private List<String> resolveModelNames() {
     String resolved = resolve(meta.getModelNames());
-    if (resolved.isBlank()
-        || ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA.equals(
-            resolved.trim())) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories() {
@@ -262,10 +254,7 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
     if (resolved.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   /** Collects validation findings and doubles as the no-op logger expected by the factory. */

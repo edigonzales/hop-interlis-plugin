@@ -1,6 +1,7 @@
 package ch.so.agi.hop.interlis.transforms.transferinput;
 
 import ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import java.util.List;
 import org.apache.hop.core.CheckResult;
 import org.apache.hop.core.ICheckResult;
@@ -44,7 +45,7 @@ public class InterlisTransferInputMeta
   public void setDefault() {
     fileName = "";
     modelNames = ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA;
-    modelDirectories = "%XTF_DIR";
+    modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
     mode = TransferInputMode.OBJECTS.name();
   }
 

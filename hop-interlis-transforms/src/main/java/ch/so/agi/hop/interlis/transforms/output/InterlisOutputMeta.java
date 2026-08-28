@@ -4,10 +4,10 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hop.core.CheckResult;
@@ -55,7 +55,7 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
   public void setDefault() {
     fileName = "";
     modelNames = "";
-    modelDirectories = "";
+    modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
     className = "";
     objectIdField = "_ili_tid";
     basketIdField = "_ili_bid";
@@ -167,15 +167,7 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
 
   private List<String> resolveModelNames(IVariables variables) {
     String resolved = resolve(variables, modelNames);
-    if (resolved.isBlank()
-        || ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA.equals(
-            resolved.trim())) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories(IVariables variables) {
@@ -183,10 +175,7 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
     if (resolved.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   private static String resolve(IVariables variables, String value) {

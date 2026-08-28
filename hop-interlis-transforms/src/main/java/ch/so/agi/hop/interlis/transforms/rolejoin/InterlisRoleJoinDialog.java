@@ -1,6 +1,7 @@
 package ch.so.agi.hop.interlis.transforms.rolejoin;
 
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
+import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport;
 import java.util.List;
 import org.apache.hop.core.util.Utils;
@@ -17,6 +18,7 @@ import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Text;
@@ -99,16 +101,13 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     wModelNames = addTextRow("Models", wLookupInputTransform, margin);
     wModelDirectories = addTextRow("Model dirs", wModelNames, 0);
 
-    Button wReload = new Button(shell, SWT.PUSH);
-    wReload.setText("Reload");
-    PropsUi.setLook(wReload);
-    FormData fdReload = new FormData();
-    fdReload.right = new FormAttachment(100, 0);
-    fdReload.top = new FormAttachment(wModelDirectories, margin);
-    wReload.setLayoutData(fdReload);
+    Composite classRow = InterlisDialogUiSupport.createRow(shell, wModelDirectories, margin);
+    Button wReload = new Button(classRow, SWT.PUSH);
+    wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    InterlisDialogUiSupport.buildRowControlWithButton(
+        classRow, "Main class", wClassName, wReload, "Reload", props.getMiddlePct(), margin);
 
-    wClassName = addComboRow("Main class", wModelDirectories, margin);
-    wRoleName = addComboRow("Role", wClassName, margin);
+    wRoleName = addComboRow("Role", classRow, margin);
     wMainReferenceField = addTextRow("Main ref field", wRoleName, margin);
     wLookupTidField = addTextRow("Lookup TID field", wMainReferenceField, 0);
     wPrefix = addTextRow("Output prefix", wLookupTidField, 0);

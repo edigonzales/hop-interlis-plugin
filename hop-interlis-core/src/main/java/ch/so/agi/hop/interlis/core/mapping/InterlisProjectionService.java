@@ -39,15 +39,14 @@ public final class InterlisProjectionService {
   }
 
   /**
-   * Resolves the models (explicit or detected from the transfer file) and builds the projection
-   * for the given class.
+   * Resolves the models (explicit or detected from the transfer file), compiles them and extracts
+   * the transfer-relevant schema. This method intentionally does not require a selected class so
+   * design-time consumers can populate a class selector before a projection exists.
    *
-   * @throws InterlisModelException if models or class cannot be resolved
-   * @throws InterlisMappingException if the projection cannot be built
+   * @throws InterlisModelException if models cannot be detected, resolved or compiled
    */
-  public InterlisProjectionResult project(
-      InterlisModelRequest request, String className, ProjectionOptions options)
-      throws InterlisModelException, InterlisMappingException {
+  public InterlisModelContext loadModel(InterlisModelRequest request)
+      throws InterlisModelException {
     List<String> modelNames = new ArrayList<>(request.modelNames());
     if (modelNames.isEmpty() && request.dataFile() != null) {
       modelNames.addAll(modelService.detectModelNames(request.dataFile()));
@@ -65,6 +64,26 @@ public final class InterlisProjectionService {
             ModelCompileOptions.defaults());
     InterlisSchemaDescriptor schema =
         new InterlisSchemaExtractor().extract(model.transferDescription());
+    return new InterlisModelContext(model, schema, model.compiledModelNames());
+  }
+
+  /**
+   * Resolves the models and builds the projection for the given class.
+   *
+   * @throws InterlisModelException if models or class cannot be resolved
+   * @throws InterlisMappingException if the projection cannot be built
+   */
+  public InterlisProjectionResult project(
+      InterlisModelRequest request, String className, ProjectionOptions options)
+      throws InterlisModelException, InterlisMappingException {
+    return project(loadModel(request), className, options);
+  }
+
+  /** Builds a class projection from an already resolved model context. */
+  public InterlisProjectionResult project(
+      InterlisModelContext context, String className, ProjectionOptions options)
+      throws InterlisModelException, InterlisMappingException {
+    InterlisSchemaDescriptor schema = context.schema();
 
     if (className == null || className.isBlank()) {
       throw new InterlisModelException("No INTERLIS class selected");
@@ -78,7 +97,7 @@ public final class InterlisProjectionService {
                         "Class "
                             + className
                             + " was not found in models "
-                            + modelNames
+                            + context.modelNames()
                             + "; available classes: "
                             + schema.classes().stream()
                                 .map(InterlisClassDescriptor::scopedName)
@@ -91,7 +110,7 @@ public final class InterlisProjectionService {
                                 .toList()));
 
     InterlisRowMappingPlan plan = schemaBuilder.build(schema, classDescriptor, options);
-    return new InterlisProjectionResult(model, schema, plan, modelNames);
+    return new InterlisProjectionResult(context.model(), schema, plan, context.modelNames());
   }
 
   private List<String> resolveModelDirectories(InterlisModelRequest request) {

@@ -20,14 +20,13 @@ Wenn Sie den gesamten Transfer (mehrere Klassen) als Event-Stream lesen möchten
 | Source                                                                          |
 | Data file       [ ${PROJECT_HOME}/data/buildings.xtf                   ] ...   |
 | Models          [ %DATA                                                v]      |
-| Model dirs      [ %XTF_DIR;https://models.interlis.ch/                 ] ...   |
+| Model dirs      [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ] ...   |
 | Meta config     [                                                      ] ...   |
 |                                                                                 |
 | [ Reload ]  Status: OK - model loaded                                         |
 |                                                                                 |
 | Class                                                                           |
 | [ Model.Topic.Building                                                v ]      |
-| [ Browse model... ]                                                             |
 |                                                                                 |
 | Output fields                                                                   |
 | +--------------------------------------------------------------------------+   |
@@ -73,11 +72,17 @@ Sie können den Modellnamen direkt angeben (ohne `.ili`-Endung):
 Models: DMAVTYM_20151130LV95
 ----
 
-Mehrere Modelle trennen Sie mit Semikolon:
+Mehrere Modelle trennen Sie mit Semikolon. Kommas werden aus Gründen der
+Rückwärtskompatibilität ebenfalls akzeptiert:
 
 [source,text]
 ----
 Models: ModellA;ModellB;ModellC
+----
+
+[source,text]
+----
+Models: ModellA,ModellB
 ----
 
 ==== Modellverzeichnisse
@@ -86,7 +91,7 @@ Das Plugin sucht Modelle in den angegebenen Verzeichnissen. Sie können mehrere 
 
 [source,text]
 ----
-Model dirs: %XTF_DIR;/home/user/ilimodels;https://models.interlis.ch/
+Model dirs: %XTF_DIR;/home/user/ilimodels;https://models.interlis.ch;https://models.geo.admin.ch
 ----
 
 Spezielle Platzhalter:
@@ -99,11 +104,17 @@ Spezielle Platzhalter:
 | Verzeichnis der XTF-Datei (nützlich, wenn Modell und Daten im gleichen Ordner liegen)
 
 | `%DATA`
-| Aus der Transferdatei ableiten
+| Modellnamen aus dem Header der XTF-Datei ableiten
 
 | `HTTP(S)-URL`
 | INTERLIS-Modellrepository (wird automatisch heruntergeladen und gecacht)
 |===
+
+Der Standardwert ist `%XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch`.
+`%XTF_DIR` ist dabei nur eine praktische lokale Quelle, keine Einschränkung.
+Sie können beliebige lokale Modellverzeichnisse und mehrere HTTP(S)-Repositories
+angeben. Ein Eintrag wie `${MODEL_DIR}` ist eine normale Hop-Variable und
+wird vor der Modellauflösung aufgelöst.
 
 [IMPORTANT]
 ====
@@ -112,10 +123,17 @@ Spezielle Platzhalter:
 
 === Klasse auswählen
 
-Nach dem Laden des Modells wählen Sie die zu lesende Klasse aus:
+Nach erfolgreicher Modellprobe wird das Klassen-Dropdown mit allen
+transferierbaren Klassen und Assoziationen befüllt. Das Klassenfeld darf bis
+dahin leer bleiben; der Status meldet dann sinngemäss: _Modell geladen – bitte
+Klasse auswählen_. Es wird keine Klasse automatisch ausgewählt. Die Schema
+Preview wird erst nach einer konkreten Auswahl erzeugt. Assoziationen erscheinen
+im Dropdown mit dem Zusatz `(association)`;
+intern wird weiterhin ihr vollständiger INTERLIS Scoped Name gespeichert.
 
-1. **Dropdown**: Die wichtigsten Klassen erscheinen im Dropdown.
-2. **Browse model**: Öffnet den Modellbrowser mit Baumansicht (Modell → Topic → Klasse).
+Der aktuell implementierte Dialog verwendet dafür eine editierbare Combo-Box.
+Der vollständige modale Modellbrowser mit Baum und Filter ist in der
+Spezifikation vorgesehen, aber noch ein separates GUI-Arbeitspaket.
 
 [source,text]
 ----
@@ -124,27 +142,20 @@ Nach dem Laden des Modells wählen Sie die zu lesende Klasse aus:
 +------------------------------------------------------+
 | Filter [ building________________________ ]           |
 |                                                      |
-| v DemoBodenbedeckung                                  |
-|   v Bodenbedeckung                                    |
-|     > Gebaeude                               [Select] |
-|     > Weg                                            |
-|     > Gewaesser                                      |
+| Model.Topic.Building                                  |
+| Model.Topic.Road                                      |
+| Model.Topic.Water                                     |
 |                                                      |
-| Selected: DemoBodenbedeckung.Bodenbedeckung.Gebaeude  |
+| Selected: Model.Topic.Building                         |
 | Properties: 4 fields, 1 geometry                       |
 +------------------------------------------------------+
 ----
 
-[TIP]
+[NOTE]
 ====
-Der Modellbrowser zeigt Icons für verschiedene Elementtypen:
-
-- `A` = Attribut
-- `E` = Enumeration
-- `G` = Geometrie
-- `S` = Struktur
-- `L` = LIST/BAG
-- `R` = Rolle
+Die aktuelle Klassenauswahl ist eine editierbare Combo-Box. Die Icons und die
+Baumansicht des vollständigen Modellbrowsers gehören zu einem späteren
+GUI-Arbeitspaket.
 ====
 
 === Feld-Mapping

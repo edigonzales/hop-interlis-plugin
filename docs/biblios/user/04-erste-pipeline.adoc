@@ -81,7 +81,7 @@ Im Dialog finden Sie oben den Bereich _Source_:
 | Source                                                              |
 | Data file       [ ${PROJECT_HOME}/demo-transfer.xtf            ] ...|
 | Models          [ %DATA                                        v]   |
-| Model dirs      [ %XTF_DIR                                     ] ...|
+| Model dirs      [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ] ...|
 |                                                                     |
 | [ Reload ]  Status: (noch nicht geladen)                            |
 +====================================================================+
@@ -89,7 +89,10 @@ Im Dialog finden Sie oben den Bereich _Source_:
 
 - **Data file**: Wählen Sie Ihre `demo-transfer.xtf` aus.
 - **Models**: Lassen Sie `%DATA` eingestellt. Das Plugin erkennt das Modell automatisch aus der XTF-Datei.
-- **Model dirs**: Lassen Sie `%XTF_DIR` eingestellt. Das Plugin sucht `.ili`-Dateien im gleichen Verzeichnis wie die XTF-Datei.
+- **Model dirs**: Übernehmen Sie den Standardwert
+  `%XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch`. Das Plugin
+  sucht zuerst im gleichen Verzeichnis wie die XTF-Datei und kann Modelle
+  zusätzlich aus den beiden öffentlichen Repositories beziehen.
 
 Klicken Sie auf **[ Reload ]**, um das Modell zu laden.
 
@@ -97,7 +100,7 @@ Klicken Sie auf **[ Reload ]**, um das Modell zu laden.
 ====
 Das Feld `%DATA` bedeutet: „Ermittle das Modell aus der Transferdatei“. Das funktioniert, weil jede XTF-Datei im Header angibt, welches INTERLIS-Modell sie verwendet.
 
-Das Feld `%XTF_DIR` bedeutet: „Suche Modell-Dateien im gleichen Verzeichnis wie die XTF-Datei". Da `demo-modell.ili` im selben Ordner liegt, wird es gefunden.
+Das Feld `%XTF_DIR` bedeutet: „Suche Modell-Dateien im gleichen Verzeichnis wie die XTF-Datei". Da `demo-modell.ili` im selben Ordner liegt, wird es gefunden. Die beiden Repository-URLs sind zusätzliche Fallback-Quellen.
 ====
 
 Wenn alles funktioniert, erscheint die Statuszeile:

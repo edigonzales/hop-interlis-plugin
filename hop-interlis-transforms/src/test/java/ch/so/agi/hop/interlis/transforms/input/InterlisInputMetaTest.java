@@ -50,6 +50,19 @@ class InterlisInputMetaTest {
   }
 
   @Test
+  void try_load_model_does_not_require_class_name() throws Exception {
+    InterlisInputMeta meta = configuredMeta();
+    meta.setClassName("");
+
+    var context = meta.tryLoadModel(new Variables());
+
+    assertThat(context).isPresent();
+    assertThat(context.orElseThrow().schema().classes())
+        .extracting(c -> c.scopedName())
+        .contains("HopIli_Geometry_V1.Data.TestObject");
+  }
+
+  @Test
   void get_fields_with_unresolved_variables_stays_silent() throws Exception {
     InterlisInputMeta meta = new InterlisInputMeta();
     meta.setFileName("${UNRESOLVED_VARIABLE}/data.xtf");

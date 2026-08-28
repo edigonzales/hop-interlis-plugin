@@ -106,11 +106,15 @@ public record InterlisModelRequest(
 
 ```java
 public record InterlisModelContext(
-    TransferDescription transferDescription,
+    CompiledInterlisModel model,
     InterlisSchemaDescriptor schema,
-    InterlisModelRequest request,
-    String cacheKey) {}
+    List<String> modelNames) {}
 ```
+
+`model` enthält das kompilierte, nach der Modellprobe unveränderliche
+`TransferDescription`-Ergebnis. `schema` ist die einmalig daraus extrahierte
+UI- und Mapping-Sicht. `modelNames` enthält die tatsächlich kompilierten
+Modellnamen und nicht bloss den zuletzt eingegebenen Text im Dialog.
 
 ## 3.3 `InterlisModelService`
 
@@ -141,6 +145,52 @@ public final class InterlisModelService {
 5. `TransferDescription` erzeugen.
 6. `InterlisSchemaDescriptor` erzeugen.
 7. Resultat cachen.
+
+Für alle Transform-Metadaten mit einem `modelDirectories`-Feld gilt als
+Default die semikolongetrennte Liste
+`%XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch`. Der Default
+wird zentral in `InterlisModelSourceSupport` definiert. Gespeicherte eigene
+Werte bleiben unverändert. `%XTF_DIR` bleibt ein spezieller Platzhalter für
+das Elternverzeichnis der XTF-Datei; lokale Verzeichnisse, Repository-URLs und
+`${MODEL_DIR}` als normale Hop-Variable bleiben zusätzlich möglich.
+
+### Modell-only-Probe und Klassenprojektion
+
+Die Modellauflösung und die Projektion einer konkreten Klasse sind zwei getrennte
+Design-Time-Schritte. Der Core stellt dafür einen unveränderlichen Kontext bereit:
+
+```java
+public record InterlisModelContext(
+    CompiledInterlisModel model,
+    InterlisSchemaDescriptor schema,
+    List<String> modelNames) {}
+```
+
+`InterlisProjectionService.loadModel(InterlisModelRequest)` löst zuerst `%DATA`
+aus dem XTF-Header auf, ersetzt `%XTF_DIR` durch das Elternverzeichnis der
+Transferdatei, kompiliert die lokalen Modelle bzw. Repository-Modelle und
+extrahiert den `InterlisSchemaDescriptor`. `modelNames` enthält dabei die von
+der Kompilierung tatsächlich verwendeten Namen. Dieser Schritt verlangt noch
+keinen Klassennamen und liefert daher alle transferierbaren Klassen und
+Assoziationen für die GUI.
+
+Erst wenn eine konkrete Klasse oder Assoziation ausgewählt wurde, erzeugt
+`InterlisProjectionService.project(InterlisModelContext, className, options)`
+den `InterlisRowMappingPlan`. Dadurch verwenden Klassen-Dropdown, Schema-
+Preview, `getFields(...)` und die Runtime dieselbe Modell- und Mappinglogik,
+ohne das Modell beim Ausfüllen der Klasse erneut zu kompilieren.
+
+Für `INTERLIS Input` gilt im Dialog folgende Reihenfolge:
+
+1. Datei, Modellnamen und Modellverzeichnisse werden aufgelöst.
+2. Die Modell-only-Probe lädt das Modell und befüllt das Klassen-Dropdown;
+   ein leeres Klassenfeld ist in diesem Zustand gültig.
+3. Nach der Auswahl einer Klasse wird erst die konkrete Hop-Schema-Projektion
+   erzeugt und als Preview angezeigt.
+
+Fehler bei der Design-Time-Probe werden als Statusmeldung zurückgegeben. Sie
+verhindern nicht, dass der Dialog geöffnet bleibt; zur Laufzeit werden dieselben
+Fehler als harte Konfigurationsfehler gemeldet.
 
 ### Modellrepositorys (Phase 8)
 
@@ -1634,4 +1684,3 @@ Bei Schema-Änderungen braucht es Migration in Meta-Klassen oder tolerant lesbar
 - Keine Feldsuche per Name pro Row, wenn sie vorab gebunden werden kann.
 - Kein zweites gebündeltes `jts-core`.
 - Keine SWT-Abhängigkeit in zentralen Mappern.
-

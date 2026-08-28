@@ -1,5 +1,6 @@
 package ch.so.agi.hop.interlis.transforms.transferoutput;
 
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import java.util.List;
 import org.apache.hop.core.CheckResult;
 import org.apache.hop.core.ICheckResult;
@@ -46,7 +47,7 @@ public class InterlisTransferOutputMeta
   public void setDefault() {
     fileName = "";
     modelNames = "";
-    modelDirectories = "";
+    modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
     overwrite = false;
     eventMode = false;
   }

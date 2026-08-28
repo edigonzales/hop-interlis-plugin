@@ -6,7 +6,7 @@ import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
-import java.util.Arrays;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import java.util.List;
 import org.apache.hop.core.CheckResult;
 import org.apache.hop.core.ICheckResult;
@@ -56,7 +56,7 @@ public class InterlisEnumerationsMeta
   @Override
   public void setDefault() {
     modelNames = "";
-    modelDirectories = "";
+    modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
   }
 
   @Override
@@ -122,13 +122,7 @@ public class InterlisEnumerationsMeta
 
   private List<String> resolveModelNames(IVariables variables) {
     String resolved = resolve(variables, modelNames);
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories(IVariables variables) {
@@ -136,10 +130,7 @@ public class InterlisEnumerationsMeta
     if (resolved.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   private static String resolve(IVariables variables, String value) {

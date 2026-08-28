@@ -1,5 +1,6 @@
 package ch.so.agi.hop.interlis.transforms.transferinput;
 
+import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
 import org.apache.hop.core.util.Utils;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.pipeline.PipelineMeta;
@@ -13,6 +14,7 @@ import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
@@ -72,30 +74,11 @@ public class InterlisTransferInputDialog extends BaseTransformDialog {
     wTransformName.setLayoutData(fdTransformName);
 
     // File
-    Label wlFile = new Label(shell, SWT.RIGHT);
-    wlFile.setText("Data file");
-    PropsUi.setLook(wlFile);
-    FormData fdlFile = new FormData();
-    fdlFile.left = new FormAttachment(0, 0);
-    fdlFile.right = new FormAttachment(props.getMiddlePct(), -margin);
-    fdlFile.top = new FormAttachment(wTransformName, margin);
-    wlFile.setLayoutData(fdlFile);
-
-    Button wbFile = new Button(shell, SWT.PUSH | SWT.CENTER);
-    wbFile.setText("Browse");
-    PropsUi.setLook(wbFile);
-    FormData fdbFile = new FormData();
-    fdbFile.right = new FormAttachment(100, 0);
-    fdbFile.top = new FormAttachment(wTransformName, margin);
-    wbFile.setLayoutData(fdbFile);
-
-    wFileName = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    PropsUi.setLook(wFileName);
-    FormData fdFile = new FormData();
-    fdFile.left = new FormAttachment(props.getMiddlePct(), 0);
-    fdFile.right = new FormAttachment(wbFile, -margin);
-    fdFile.top = new FormAttachment(wTransformName, margin);
-    wFileName.setLayoutData(fdFile);
+    Composite fileRow = InterlisDialogUiSupport.createRow(shell, wTransformName, margin);
+    Button wbFile = new Button(fileRow, SWT.PUSH | SWT.CENTER);
+    wFileName = new TextVar(variables, fileRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    InterlisDialogUiSupport.buildRowControlWithButton(
+        fileRow, "Data file", wFileName, wbFile, "Browse", props.getMiddlePct(), margin);
 
     // Models
     Label wlModels = new Label(shell, SWT.RIGHT);
@@ -104,7 +87,7 @@ public class InterlisTransferInputDialog extends BaseTransformDialog {
     FormData fdlModels = new FormData();
     fdlModels.left = new FormAttachment(0, 0);
     fdlModels.right = new FormAttachment(props.getMiddlePct(), -margin);
-    fdlModels.top = new FormAttachment(wFileName, margin);
+    fdlModels.top = new FormAttachment(fileRow, margin);
     wlModels.setLayoutData(fdlModels);
 
     wModelNames = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -112,7 +95,7 @@ public class InterlisTransferInputDialog extends BaseTransformDialog {
     FormData fdModels = new FormData();
     fdModels.left = new FormAttachment(props.getMiddlePct(), 0);
     fdModels.right = new FormAttachment(100, 0);
-    fdModels.top = new FormAttachment(wFileName, margin);
+    fdModels.top = new FormAttachment(fileRow, margin);
     wModelNames.setLayoutData(fdModels);
 
     Label wlDirs = new Label(shell, SWT.RIGHT);

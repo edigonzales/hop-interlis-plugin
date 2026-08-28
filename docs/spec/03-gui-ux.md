@@ -28,7 +28,7 @@ Wiederverwendet in Input, Output, Object-to-Row, Row-to-Object, Validate, Enumer
 | Data file      [ ${PROJECT_HOME}/data/input.xtf                         ] [...]|
 |                                                                              |
 | Models         [ %DATA                                                   v ]  |
-| Model dirs     [ %XTF_DIR;https://models.interlis.ch/                    ] ...|
+| Model dirs     [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ] ...|
 | Meta config    [                                                         ] ...|
 |                                                                              |
 | [ Reload model ]       Status: OK - 3 models, 7 topics, 42 classes            |
@@ -41,6 +41,9 @@ Wiederverwendet in Input, Output, Object-to-Row, Row-to-Object, Validate, Enumer
 - `Models = %DATA` bedeutet: aus Transfer ableiten.
 - `Model dirs` kann lokale Verzeichnisse und Repository-URLs enthalten.
 - `Reload model` löst explizite Probe aus.
+- Nach erfolgreicher Modellprobe darf das Klassenfeld zunächst leer bleiben. Das
+  Dropdown wird mit allen transferierbaren Klassen und Assoziationen befüllt;
+  erst eine konkrete Auswahl erzeugt die Schema Preview.
 - Auto-Probe erfolgt debounced nach Änderungen; nicht bei jedem Tastendruck sofort Netzverkehr starten.
 - Statuszeile:
   - OK grün/normal.
@@ -116,7 +119,7 @@ Bei Match eines Child-Elements bleiben Ancestors sichtbar.
 | Source                                                                         |
 | Data file       [ ${PROJECT_HOME}/data/buildings.xtf                       ]... |
 | Models          [ %DATA                                                    v]   |
-| Model dirs      [ %XTF_DIR;https://models.interlis.ch/                     ]... |
+| Model dirs      [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ]... |
 |                                                                                |
 | [ Reload ]  Status: OK - model DMAVTYM_... loaded                              |
 |                                                                                |
@@ -289,7 +292,7 @@ Warnings darunter:
 |                                                                                |
 | Model                                                                          |
 | Models         [ DMAVTYM_...                                               ]    |
-| Model dirs     [ https://models.interlis.ch/                               ]    |
+| Model dirs     [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ]    |
 | Class          [ ...Gebaeude                                              v]    |
 |                                                                                |
 | Identity                                                                       |
@@ -338,7 +341,7 @@ Advanced-Transform; bewusst kompakter.
 +================================================================================+
 | Data file      [ ${PROJECT_HOME}/data/full.xtf                             ]... |
 | Models         [ %DATA                                                    v]    |
-| Model dirs     [ %XTF_DIR;https://models.interlis.ch/                     ]     |
+| Model dirs     [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ]     |
 |                                                                                |
 | Mode           (*) Objects only   ( ) Full event stream                         |
 |                                                                                |
@@ -511,7 +514,7 @@ pipeline processing and may be omitted on write.
 +================================================================================+
 | File            [ ${PROJECT_HOME}/data/input.xtf                           ]... |
 | Models          [ %DATA                                                   v]    |
-| Model dirs      [ %XTF_DIR;https://models.interlis.ch/                    ]     |
+| Model dirs      [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ]     |
 |                                                                                |
 | Validator config [                                                        ]... |
 | Meta config      [                                                        ]... |
@@ -712,4 +715,3 @@ Look & feel soll an das bestehende GeoTools-Plugin anschliessen:
 - gemeinsamer `Geospatial`-Kategorieeintrag
 
 Langfristig können INTERLIS-Transforms in einer Unterkategorie erscheinen, falls Hop-Kategorien dies sinnvoll unterstützen; für den Start bleibt `Geospatial` konsistent.
-

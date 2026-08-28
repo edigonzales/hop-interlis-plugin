@@ -1,6 +1,7 @@
 package ch.so.agi.hop.interlis.transforms.output;
 
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
+import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
 import java.util.List;
 import org.apache.hop.core.util.Utils;
@@ -16,6 +17,7 @@ import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
@@ -95,33 +97,18 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     wTransformName.setLayoutData(fdTransformName);
 
     // Output file
-    Label wlFile = new Label(shell, SWT.RIGHT);
-    wlFile.setText("XTF file");
-    PropsUi.setLook(wlFile);
-    wlFile.setLayoutData(labelData(wTransformName, margin));
-
-    Button wbFile = new Button(shell, SWT.PUSH | SWT.CENTER);
-    wbFile.setText("Browse");
-    PropsUi.setLook(wbFile);
-    FormData fdbFile = new FormData();
-    fdbFile.right = new FormAttachment(100, 0);
-    fdbFile.top = new FormAttachment(wTransformName, margin);
-    wbFile.setLayoutData(fdbFile);
-
-    wFileName = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    PropsUi.setLook(wFileName);
-    FormData fdFile = new FormData();
-    fdFile.left = new FormAttachment(props.getMiddlePct(), 0);
-    fdFile.right = new FormAttachment(wbFile, -margin);
-    fdFile.top = new FormAttachment(wTransformName, margin);
-    wFileName.setLayoutData(fdFile);
+    Composite fileRow = InterlisDialogUiSupport.createRow(shell, wTransformName, margin);
+    Button wbFile = new Button(fileRow, SWT.PUSH | SWT.CENTER);
+    wFileName = new TextVar(variables, fileRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    InterlisDialogUiSupport.buildRowControlWithButton(
+        fileRow, "XTF file", wFileName, wbFile, "Browse", props.getMiddlePct(), margin);
 
     wOverwrite = new Button(shell, SWT.CHECK);
     wOverwrite.setText("Overwrite existing file");
     PropsUi.setLook(wOverwrite);
     FormData fdOverwrite = new FormData();
     fdOverwrite.left = new FormAttachment(props.getMiddlePct(), 0);
-    fdOverwrite.top = new FormAttachment(wFileName, margin);
+    fdOverwrite.top = new FormAttachment(fileRow, margin);
     wOverwrite.setLayoutData(fdOverwrite);
 
     // Models
@@ -152,41 +139,25 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     fdDirs.top = new FormAttachment(wModelNames, margin);
     wModelDirectories.setLayoutData(fdDirs);
 
-    Button wReload = new Button(shell, SWT.PUSH);
-    wReload.setText("Reload model");
-    PropsUi.setLook(wReload);
-    FormData fdReload = new FormData();
-    fdReload.right = new FormAttachment(100, 0);
-    fdReload.top = new FormAttachment(wModelDirectories, margin);
-    wReload.setLayoutData(fdReload);
-
-    // Class
-    Label wlClass = new Label(shell, SWT.RIGHT);
-    wlClass.setText("Class");
-    PropsUi.setLook(wlClass);
-    FormData fdlClass = labelData(wModelDirectories, margin);
-    wlClass.setLayoutData(fdlClass);
-
-    wClassName = new ComboVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    PropsUi.setLook(wClassName);
-    FormData fdClass = new FormData();
-    fdClass.left = new FormAttachment(props.getMiddlePct(), 0);
-    fdClass.right = new FormAttachment(wReload, -margin);
-    fdClass.top = new FormAttachment(wModelDirectories, margin);
-    wClassName.setLayoutData(fdClass);
+    // Class and model reload
+    Composite classRow = InterlisDialogUiSupport.createRow(shell, wModelDirectories, margin);
+    Button wReload = new Button(classRow, SWT.PUSH);
+    wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    InterlisDialogUiSupport.buildRowControlWithButton(
+        classRow, "Class", wClassName, wReload, "Reload model", props.getMiddlePct(), margin);
 
     // Identity and basket
     Label wlTid = new Label(shell, SWT.RIGHT);
     wlTid.setText("Object ID field");
     PropsUi.setLook(wlTid);
-    wlTid.setLayoutData(labelData(wClassName, margin));
+    wlTid.setLayoutData(labelData(classRow, margin));
 
     wObjectIdField = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     PropsUi.setLook(wObjectIdField);
     FormData fdTid = new FormData();
     fdTid.left = new FormAttachment(props.getMiddlePct(), 0);
     fdTid.right = new FormAttachment(100, 0);
-    fdTid.top = new FormAttachment(wClassName, margin);
+    fdTid.top = new FormAttachment(classRow, margin);
     wObjectIdField.setLayoutData(fdTid);
 
     Label wlBidField = new Label(shell, SWT.RIGHT);

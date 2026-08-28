@@ -3,6 +3,8 @@ package ch.so.agi.hop.interlis.core.model;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
+import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import com.sun.net.httpserver.HttpServer;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
@@ -80,6 +82,20 @@ class InterlisModelRepositoryTest {
     assertThat(model.compiledModelNames()).contains("HopIli_RepoMain_V1");
     assertThat(model.transferDescription().getElement("HopIli_RepoBase_V1.BaseTopic.Base"))
         .isNotNull();
+  }
+
+  @Test
+  void model_only_projection_probe_lists_classes_from_local_repository_fixture() throws Exception {
+    var context =
+        new InterlisProjectionService()
+            .loadModel(
+                new InterlisModelRequest(
+                    null, List.of("HopIli_RepoMain_V1"), List.of(repositoryUri)));
+
+    assertThat(context.modelNames()).contains("HopIli_RepoMain_V1");
+    assertThat(context.schema().classes())
+        .extracting(InterlisClassDescriptor::scopedName)
+        .contains("HopIli_RepoMain_V1.MainTopic.Main");
   }
 
   @Test

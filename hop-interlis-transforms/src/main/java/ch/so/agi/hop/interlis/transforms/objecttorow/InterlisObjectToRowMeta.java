@@ -7,8 +7,8 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.core.model.InterlisModelException;
 import ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hop.core.CheckResult;
@@ -57,7 +57,7 @@ public class InterlisObjectToRowMeta
   @Override
   public void setDefault() {
     modelNames = "";
-    modelDirectories = "";
+    modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
     className = "";
     objectFieldName = DEFAULT_OBJECT_FIELD;
     includeTid = true;
@@ -202,13 +202,7 @@ public class InterlisObjectToRowMeta
 
   private List<String> resolveModelNames(IVariables variables) {
     String resolved = resolve(variables, modelNames);
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories(IVariables variables) {
@@ -216,10 +210,7 @@ public class InterlisObjectToRowMeta
     if (resolved.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   private static String resolve(IVariables variables, String value) {

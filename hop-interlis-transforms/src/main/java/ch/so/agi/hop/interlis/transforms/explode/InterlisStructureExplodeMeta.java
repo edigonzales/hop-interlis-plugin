@@ -8,8 +8,8 @@ import ch.so.agi.hop.interlis.core.structures.InterlisStructurePlan;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionResult;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionService;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
@@ -73,7 +73,7 @@ public class InterlisStructureExplodeMeta
   @Override
   public void setDefault() {
     modelNames = "";
-    modelDirectories = "";
+    modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
     className = "";
     sourceObjectField = DEFAULT_SOURCE_OBJECT_FIELD;
     parentTidField = DEFAULT_PARENT_TID_FIELD;
@@ -244,13 +244,7 @@ public class InterlisStructureExplodeMeta
 
   private List<String> resolveModelNames(IVariables variables) {
     String resolved = resolve(variables, modelNames);
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories(IVariables variables) {
@@ -258,10 +252,7 @@ public class InterlisStructureExplodeMeta
     if (resolved.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   private static String resolve(IVariables variables, String value) {

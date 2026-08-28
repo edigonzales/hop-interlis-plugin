@@ -1,8 +1,11 @@
 package ch.so.agi.hop.interlis.transforms.input;
 
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
+import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.hop.core.util.Utils;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.pipeline.PipelineMeta;
@@ -16,6 +19,7 @@ import org.eclipse.swt.layout.FormAttachment;
 import org.eclipse.swt.layout.FormData;
 import org.eclipse.swt.layout.FormLayout;
 import org.eclipse.swt.widgets.Button;
+import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
@@ -30,6 +34,8 @@ import org.eclipse.swt.widgets.Text;
  * the dialog unusable.
  */
 public class InterlisInputDialog extends BaseTransformDialog {
+
+  private static final String ASSOCIATION_DISPLAY_SUFFIX = " (association)";
 
   private final InterlisInputMeta input;
   private final InterlisInputDialogController controller = new InterlisInputDialogController();
@@ -52,6 +58,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
   private List<InterlisClassDescriptor> classes = List.of();
   private List<ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor> associations =
       List.of();
+  private final Map<String, String> classChoiceToScopedName = new LinkedHashMap<>();
   private boolean suppressRefresh;
 
   public InterlisInputDialog(
@@ -95,40 +102,24 @@ public class InterlisInputDialog extends BaseTransformDialog {
     wTransformName.setLayoutData(fdTransformName);
 
     // Transfer file
-    Label wlFile = new Label(shell, SWT.RIGHT);
-    wlFile.setText("Data file");
-    PropsUi.setLook(wlFile);
-    FormData fdlFile = labelData(wTransformName, margin);
-    wlFile.setLayoutData(fdlFile);
-
-    Button wbFile = new Button(shell, SWT.PUSH | SWT.CENTER);
-    wbFile.setText("Browse");
-    PropsUi.setLook(wbFile);
-    FormData fdbFile = new FormData();
-    fdbFile.right = new FormAttachment(100, 0);
-    fdbFile.top = new FormAttachment(wTransformName, margin);
-    wbFile.setLayoutData(fdbFile);
-
-    wFileName = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    PropsUi.setLook(wFileName);
-    FormData fdFile = new FormData();
-    fdFile.left = new FormAttachment(props.getMiddlePct(), 0);
-    fdFile.right = new FormAttachment(wbFile, -margin);
-    fdFile.top = new FormAttachment(wTransformName, margin);
-    wFileName.setLayoutData(fdFile);
+    Composite fileRow = InterlisDialogUiSupport.createRow(shell, wTransformName, margin);
+    Button wbFile = new Button(fileRow, SWT.PUSH | SWT.CENTER);
+    wFileName = new TextVar(variables, fileRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    InterlisDialogUiSupport.buildRowControlWithButton(
+        fileRow, "Data file", wFileName, wbFile, "Browse", props.getMiddlePct(), margin);
 
     // Models
     Label wlModels = new Label(shell, SWT.RIGHT);
     wlModels.setText("Models");
     PropsUi.setLook(wlModels);
-    wlModels.setLayoutData(labelData(wFileName, margin));
+    wlModels.setLayoutData(labelData(fileRow, margin));
 
     wModelNames = new TextVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     PropsUi.setLook(wModelNames);
     FormData fdModels = new FormData();
     fdModels.left = new FormAttachment(props.getMiddlePct(), 0);
     fdModels.right = new FormAttachment(100, 0);
-    fdModels.top = new FormAttachment(wFileName, margin);
+    fdModels.top = new FormAttachment(fileRow, margin);
     wModelNames.setLayoutData(fdModels);
 
     // Model directories
@@ -145,38 +136,21 @@ public class InterlisInputDialog extends BaseTransformDialog {
     fdDirs.top = new FormAttachment(wModelNames, margin);
     wModelDirectories.setLayoutData(fdDirs);
 
-    // Reload
-    Button wReload = new Button(shell, SWT.PUSH);
-    wReload.setText("Reload model");
-    PropsUi.setLook(wReload);
-    FormData fdReload = new FormData();
-    fdReload.right = new FormAttachment(100, 0);
-    fdReload.top = new FormAttachment(wModelDirectories, margin);
-    wReload.setLayoutData(fdReload);
-
-    // Class
-    Label wlClass = new Label(shell, SWT.RIGHT);
-    wlClass.setText("Class");
-    PropsUi.setLook(wlClass);
-    FormData fdlClass = labelData(wModelDirectories, margin);
-    wlClass.setLayoutData(fdlClass);
-
-    wClassName = new ComboVar(variables, shell, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
-    PropsUi.setLook(wClassName);
-    FormData fdClass = new FormData();
-    fdClass.left = new FormAttachment(props.getMiddlePct(), 0);
-    fdClass.right = new FormAttachment(wReload, -margin);
-    fdClass.top = new FormAttachment(wModelDirectories, margin);
-    wClassName.setLayoutData(fdClass);
+    // Class and model reload
+    Composite classRow = InterlisDialogUiSupport.createRow(shell, wModelDirectories, margin);
+    Button wReload = new Button(classRow, SWT.PUSH);
+    wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
+    InterlisDialogUiSupport.buildRowControlWithButton(
+        classRow, "Class", wClassName, wReload, "Reload model", props.getMiddlePct(), margin);
 
     // Options: reserved fields + default SRID
     Label wlTid = new Label(shell, SWT.RIGHT);
     wlTid.setText("Reserved fields");
     PropsUi.setLook(wlTid);
-    FormData fdlTid = labelData(wClassName, margin);
+    FormData fdlTid = labelData(classRow, margin);
     wlTid.setLayoutData(fdlTid);
 
-    wIncludeTid = checkbox("_ili_tid", wClassName, 0);
+    wIncludeTid = checkbox("_ili_tid", classRow, 0);
     wIncludeBid = checkbox("_ili_bid", wIncludeTid, 0);
     wIncludeClassName = checkbox("_ili_class", wIncludeBid, 0);
     wIncludeTopicName = checkbox("_ili_topic", wIncludeClassName, 0);
@@ -354,36 +328,53 @@ public class InterlisInputDialog extends BaseTransformDialog {
     InterlisProbeResult result = controller.probe(input, variables);
     classes = result.classes();
     associations = result.associations();
-    if (result.successful()) {
-      populateClassCombo();
-      refreshPreview();
-    } else {
-      populateClassCombo();
-      wStatus.setText(result.message());
-      wPreview.setText("");
-    }
+    populateClassCombo();
+    // The combo may have cleared a stale class after a model change. Keep the metadata in sync
+    // without probing the model a second time.
+    syncMetaFromWidgets();
+    renderProbeResult(result);
   }
 
   private void populateClassCombo() {
     suppressRefresh = true;
     try {
       String current = wClassName.getText();
+      String currentScopedName =
+          classChoiceToScopedName.getOrDefault(current, selectedClassName());
       wClassName.removeAll();
+      classChoiceToScopedName.clear();
       for (InterlisClassDescriptor descriptor : classes) {
         if (!descriptor.isAbstract()) {
-          wClassName.add(descriptor.scopedName());
+          addClassChoice(descriptor.scopedName(), descriptor.scopedName());
         }
       }
       for (ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor association :
           associations) {
-        wClassName.add(association.scopedName() + " (association)");
+        addClassChoice(
+            association.scopedName() + ASSOCIATION_DISPLAY_SUFFIX, association.scopedName());
       }
-      if (classes.stream().anyMatch(c -> !c.isAbstract() && c.scopedName().equals(current))) {
-        wClassName.setText(current);
-      }
+      String displayName = displayNameForScopedName(currentScopedName);
+      wClassName.setText(displayName == null ? "" : displayName);
     } finally {
       suppressRefresh = false;
     }
+  }
+
+  private void addClassChoice(String displayName, String scopedName) {
+    wClassName.add(displayName);
+    classChoiceToScopedName.put(displayName, scopedName);
+  }
+
+  private String displayNameForScopedName(String scopedName) {
+    if (scopedName == null || scopedName.isBlank()) {
+      return null;
+    }
+    for (Map.Entry<String, String> entry : classChoiceToScopedName.entrySet()) {
+      if (entry.getValue().equals(scopedName)) {
+        return entry.getKey();
+      }
+    }
+    return null;
   }
 
   private void refreshPreview() {
@@ -391,13 +382,29 @@ public class InterlisInputDialog extends BaseTransformDialog {
     InterlisProbeResult result = controller.probe(input, variables);
     classes = result.classes();
     associations = result.associations();
-    if (result.successful()) {
-      wStatus.setText(result.message());
-      wPreview.setText(controller.formatSchemaPreview(result.projection().plan()));
-    } else {
-      wStatus.setText(result.message());
+    renderProbeResult(result);
+  }
+
+  private void renderProbeResult(InterlisProbeResult result) {
+    wStatus.setText(result.message());
+    if (result.projection() == null) {
       wPreview.setText("");
+    } else {
+      wPreview.setText(controller.formatSchemaPreview(result.projection().plan()));
     }
+  }
+
+  private String selectedClassName() {
+    String displayName = wClassName.getText();
+    String scopedName = classChoiceToScopedName.get(displayName);
+    if (scopedName != null) {
+      return scopedName;
+    }
+    // Migrate association labels persisted by older dialog versions.
+    if (displayName.endsWith(ASSOCIATION_DISPLAY_SUFFIX)) {
+      return displayName.substring(0, displayName.length() - ASSOCIATION_DISPLAY_SUFFIX.length());
+    }
+    return displayName;
   }
 
   /** Copies the current widget values into the meta so probing uses the latest configuration. */
@@ -406,7 +413,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
       input.setFileName(wFileName.getText());
       input.setModelNames(wModelNames.getText());
       input.setModelDirectories(wModelDirectories.getText());
-      input.setClassName(wClassName.getText());
+      input.setClassName(selectedClassName());
       input.setIncludeTid(wIncludeTid.getSelection());
       input.setIncludeBid(wIncludeBid.getSelection());
       input.setIncludeClassName(wIncludeClassName.getSelection());

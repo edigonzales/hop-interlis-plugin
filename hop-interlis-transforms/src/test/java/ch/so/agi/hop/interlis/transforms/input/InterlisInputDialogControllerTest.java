@@ -29,6 +29,12 @@ class InterlisInputDialogControllerTest {
     return meta;
   }
 
+  private InterlisInputMeta validMetaWithoutClass() {
+    InterlisInputMeta meta = validMeta();
+    meta.setClassName("");
+    return meta;
+  }
+
   @Test
   void valid_configuration_yields_projection_and_classes() {
     InterlisProbeResult result = controller.probe(validMeta(), new Variables());
@@ -37,6 +43,60 @@ class InterlisInputDialogControllerTest {
     assertThat(result.classes())
         .extracting(c -> c.scopedName())
         .contains("HopIli_Geometry_V1.Data.TestObject");
+  }
+
+  @Test
+  void model_only_probe_loads_model_and_lists_classes_without_selection() {
+    InterlisProbeResult result = controller.probe(validMetaWithoutClass(), new Variables());
+
+    assertThat(result.configured()).isTrue();
+    assertThat(result.successful()).isFalse();
+    assertThat(result.projection()).isNull();
+    assertThat(result.classes())
+        .extracting(c -> c.scopedName())
+        .contains("HopIli_Geometry_V1.Data.TestObject");
+    assertThat(result.message()).contains("Select an INTERLIS class");
+  }
+
+  @Test
+  void selecting_class_after_model_only_probe_builds_projection_and_preview() {
+    InterlisInputMeta meta = validMetaWithoutClass();
+
+    InterlisProbeResult modelOnly = controller.probe(meta, new Variables());
+    assertThat(modelOnly.classes()).isNotEmpty();
+
+    meta.setClassName("HopIli_Geometry_V1.Data.TestObject");
+    InterlisProbeResult projected = controller.probe(meta, new Variables());
+
+    assertThat(projected.successful()).isTrue();
+    assertThat(controller.formatSchemaPreview(projected.projection().plan()))
+        .contains("Projected Hop schema", "Center", "Geometry");
+  }
+
+  @Test
+  void unresolved_class_variable_still_leaves_model_classes_visible() {
+    InterlisInputMeta meta = validMeta();
+    meta.setClassName("${CLASS}");
+
+    InterlisProbeResult result = controller.probe(meta, new Variables());
+
+    assertThat(result.configured()).isTrue();
+    assertThat(result.successful()).isFalse();
+    assertThat(result.classes())
+        .extracting(c -> c.scopedName())
+        .contains("HopIli_Geometry_V1.Data.TestObject");
+  }
+
+  @Test
+  void unknown_model_yields_empty_classes_and_actionable_message() {
+    InterlisInputMeta meta = validMetaWithoutClass();
+    meta.setModelNames("HopIli_NoSuchModel_V1");
+
+    InterlisProbeResult result = controller.probe(meta, new Variables());
+
+    assertThat(result.configured()).isFalse();
+    assertThat(result.classes()).isEmpty();
+    assertThat(result.message()).contains("HopIli_NoSuchModel_V1");
   }
 
   @Test
@@ -70,6 +130,7 @@ class InterlisInputDialogControllerTest {
 
     assertThat(result.successful()).isFalse();
     assertThat(result.message()).contains("DoesNotExist");
+    assertThat(result.classes()).isNotEmpty();
   }
 
   @Test

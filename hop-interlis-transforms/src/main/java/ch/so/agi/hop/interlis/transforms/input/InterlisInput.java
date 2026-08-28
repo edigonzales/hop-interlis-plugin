@@ -9,12 +9,12 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisAssociationLinkLookup;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor;
+import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisParallelCopies;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
-import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -276,24 +276,12 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
 
   private List<String> resolveModelNames() {
     String resolved = resolve(meta.getModelNames());
-    if (resolved.isBlank() || InterlisInputMeta.MODELS_FROM_DATA.equals(resolved.trim())) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories() {
     String resolved = resolve(meta.getModelDirectories());
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   private void closeReader() {

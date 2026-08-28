@@ -5,8 +5,8 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureExploder;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionService;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.row.IRowMeta;
@@ -232,13 +232,7 @@ public class InterlisStructureExplode
 
   private List<String> resolveModelNames() {
     String resolved = res(meta.getModelNames());
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories() {
@@ -246,10 +240,7 @@ public class InterlisStructureExplode
     if (resolved.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   /** Resolves a meta field, treating {@code null} as unset. */

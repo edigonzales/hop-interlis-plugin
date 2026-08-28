@@ -7,7 +7,7 @@ import ch.so.agi.hop.interlis.core.model.InterlisModelException;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionResult;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionService;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
-import java.util.Arrays;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hop.core.CheckResult;
@@ -71,7 +71,7 @@ public class InterlisStructureCollectMeta
     childParentKeyField = DEFAULT_CHILD_PARENT_KEY_FIELD;
     childIndexField = DEFAULT_CHILD_INDEX_FIELD;
     modelNames = "";
-    modelDirectories = "";
+    modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
     className = "";
     structureAttributePath = "";
     sourceObjectField = DEFAULT_SOURCE_OBJECT_FIELD;
@@ -176,13 +176,7 @@ public class InterlisStructureCollectMeta
 
   private List<String> resolveModelNames(IVariables variables) {
     String resolved = resolve(variables, modelNames);
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories(IVariables variables) {
@@ -190,10 +184,7 @@ public class InterlisStructureCollectMeta
     if (resolved.isBlank()) {
       return List.of();
     }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   private static String resolve(IVariables variables, String value) {

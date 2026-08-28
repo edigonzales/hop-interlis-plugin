@@ -1,17 +1,18 @@
 package ch.so.agi.hop.interlis.transforms.input;
 
 import ch.so.agi.hop.interlis.core.mapping.InterlisFieldPlan;
+import ch.so.agi.hop.interlis.core.mapping.InterlisModelContext;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowMappingPlan;
 import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.core.model.InterlisModelException;
-import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hop.core.CheckResult;
@@ -42,7 +43,7 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, InterlisInputData> {
 
   /** Placeholder used by the GUI for "detect models from the transfer file". */
-  public static final String MODELS_FROM_DATA = "%DATA";
+  public static final String MODELS_FROM_DATA = InterlisModelSourceSupport.MODELS_FROM_DATA;
 
   @HopMetadataProperty private String fileName;
   @HopMetadataProperty private String modelNames;
@@ -68,7 +69,7 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
   public void setDefault() {
     fileName = "";
     modelNames = MODELS_FROM_DATA;
-    modelDirectories = "%XTF_DIR";
+    modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
     className = "";
     includeTid = true;
     includeBid = true;
@@ -127,6 +128,28 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
   public Optional<InterlisProjectionResult> tryProject(IVariables variables)
       throws ch.so.agi.hop.interlis.core.model.InterlisModelException,
           ch.so.agi.hop.interlis.core.mapping.InterlisMappingException {
+    String resolvedClass = resolvedClassName(variables);
+    if (resolvedClass.isBlank() || resolvedClass.contains("${")) {
+      return Optional.empty();
+    }
+    Optional<InterlisModelContext> context = tryLoadModel(variables);
+    if (context.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        new InterlisProjectionService()
+            .project(context.get(), resolvedClass, projectionOptions(variables)));
+  }
+
+  /**
+   * Tries to resolve and compile the configured model without requiring a selected class.
+   *
+   * <p>This is the design-time path used to populate the class selector. It returns empty only
+   * when the file, model directories or one of their Hop variables is not resolved yet; model and
+   * repository failures are propagated so the dialog can show their actionable diagnostics.
+   */
+  public Optional<InterlisModelContext> tryLoadModel(IVariables variables)
+      throws ch.so.agi.hop.interlis.core.model.InterlisModelException {
     String resolvedFile = resolve(variables, fileName);
     if (resolvedFile.isBlank() || resolvedFile.contains("${")) {
       return Optional.empty();
@@ -135,15 +158,15 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
     if (resolvedDirs.stream().anyMatch(d -> d.contains("${"))) {
       return Optional.empty();
     }
-    if (resolve(variables, className).isBlank()) {
-      return Optional.empty();
-    }
     InterlisModelRequest request =
         new InterlisModelRequest(
             Path.of(resolvedFile), resolveModelNames(variables), resolvedDirs);
-    return Optional.of(
-        new InterlisProjectionService()
-            .project(request, resolve(variables, className), projectionOptions(variables)));
+    return Optional.of(new InterlisProjectionService().loadModel(request));
+  }
+
+  /** Returns the class name after Hop-variable resolution for the dialog controller. */
+  String resolvedClassName(IVariables variables) {
+    return resolve(variables, className);
   }
 
   @Override
@@ -233,24 +256,12 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
 
   private List<String> resolveModelNames(IVariables variables) {
     String resolved = resolve(variables, modelNames);
-    if (resolved.isBlank() || MODELS_FROM_DATA.equals(resolved.trim())) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(","))
-        .map(String::trim)
-        .filter(n -> !n.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelNames(resolved);
   }
 
   private List<String> resolveModelDirectories(IVariables variables) {
     String resolved = resolve(variables, modelDirectories);
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return Arrays.stream(resolved.split(";"))
-        .map(String::trim)
-        .filter(d -> !d.isEmpty())
-        .toList();
+    return InterlisModelSourceSupport.parseModelDirectories(resolved);
   }
 
   private static String resolve(IVariables variables, String value) {

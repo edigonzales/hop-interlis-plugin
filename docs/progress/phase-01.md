@@ -47,7 +47,8 @@ Status: **abgeschlossen** (Stand 2026-08-26)
 
 - `INTERLIS_INPUT` (`InterlisInputMeta/Data/InterlisInput`, `classLoaderGroup="sogeo-geometry"`,
   Kategorie Geospatial, SVG-Icon):
-  - Meta: `fileName`, `modelNames` (`%DATA`), `modelDirectories` (`%XTF_DIR`), `className`,
+  - Meta: `fileName`, `modelNames` (`%DATA`), `modelDirectories`
+    (`%XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch`), `className`,
     `includeTid/includeBid/includeClassName/includeTopicName`, `defaultSrid`;
   - `getFields()`: liefert das typisierte `IRowMeta` aus demselben Plan wie die Runtime;
     Design-Time-Proben bleiben bei unresolved Variablen, fehlenden Dateien oder
@@ -126,8 +127,14 @@ E2E (echte Hop-2.18.1-Distribution, `scripts/run-e2e.sh`):
 
 ## Known limitations
 
-- Model-Repositories (HTTP) sind noch nicht angebunden; `%XTF_DIR` und lokale
-  Verzeichnisse funktionieren. (`%ILI_DIR`/Repository-URLs: Phase 8/Repository-Ausbau.)
+- HTTP(S)-Model-Repositories sind angebunden und werden über `ilimodels.xml`
+  sowie den lokalen Repository-Cache aufgelöst; lokale Verzeichnisse haben
+  weiterhin Vorrang. Der gemeinsame Default für `modelDirectories` ist
+  `%XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch`. `%XTF_DIR`
+  bleibt ein Platzhalter für das XTF-Elternverzeichnis, keine Einschränkung
+  auf dieses eine Verzeichnis.
+- Die Modell-only-Probe befüllt das Klassen-Dropdown bereits bei leerem
+  Klassenfeld. Die Schema Preview entsteht erst nach der Klassenauswahl.
 - Der modale Model-Browser-Baum fehlt noch; Klassenauswahl via Combo + Schema-Preview.
 - `DATE`/`DATETIME` werden ohne Zeitzonen-Offset interpretiert (Dokumentation im Codec);
   `XMLTime` wird als String geführt.
