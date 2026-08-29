@@ -31,7 +31,7 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
   private TextVar wModelDirectories;
   private ComboVar wClassName;
   private TextVar wBasketIdField;
-  private Label wStatus;
+  private InterlisDialogUiSupport.StatusArea wStatus;
 
   private List<InterlisClassDescriptor> classes = List.of();
   private boolean suppressRefresh;
@@ -78,21 +78,14 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
 
     wModelNames = addTextRow("Models", wTransformName, 0);
     wModelDirectories = addTextRow("Model dirs", wModelNames, 0);
-    Composite classRow = InterlisDialogUiSupport.createRow(shell, wModelDirectories, margin);
+    wStatus = InterlisDialogUiSupport.createStatusArea(shell, wModelDirectories, props.getMiddlePct(), margin);
+    Composite classRow = InterlisDialogUiSupport.createRow(shell, wStatus.control(), margin);
     Button wReload = new Button(classRow, SWT.PUSH);
     wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     InterlisDialogUiSupport.buildRowControlWithButton(
         classRow, "Class", wClassName, wReload, "Reload", props.getMiddlePct(), margin);
 
     wBasketIdField = addTextRow("Basket ID field", classRow, margin);
-
-    wStatus = new Label(shell, SWT.LEFT | SWT.WRAP);
-    PropsUi.setLook(wStatus);
-    FormData fdStatus = new FormData();
-    fdStatus.left = new FormAttachment(0, 0);
-    fdStatus.right = new FormAttachment(100, 0);
-    fdStatus.top = new FormAttachment(wBasketIdField, margin);
-    wStatus.setLayoutData(fdStatus);
 
     // OK / Cancel
     wOk = new Button(shell, SWT.PUSH);
@@ -191,12 +184,18 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
       InterlisProjectionResult result = controllerProbe();
       classes = result == null ? List.of() : result.schema().selectableClasses();
       populateClassCombo();
-      wStatus.setText(
-          result == null
-              ? "Model probe unavailable: configuration incomplete or models unresolved."
-              : "Model loaded; envelope rows will carry class " + input.getClassName());
+      if (result == null) {
+        wStatus.set(
+            InterlisDialogUiSupport.StatusSeverity.INFO,
+            "Model probe unavailable: configuration incomplete or models unresolved.");
+      } else {
+        wStatus.set(
+            InterlisDialogUiSupport.StatusSeverity.SUCCESS,
+            "Model loaded; envelope rows will carry class " + input.getClassName());
+      }
     } catch (Exception e) {
-      wStatus.setText(
+      wStatus.set(
+          InterlisDialogUiSupport.StatusSeverity.ERROR,
           ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport.rootCauseMessage(e));
     }
   }

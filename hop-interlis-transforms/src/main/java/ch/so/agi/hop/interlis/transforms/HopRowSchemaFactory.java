@@ -8,6 +8,7 @@ import com.atolcd.hop.core.row.value.ValueMetaGeometry;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.Date;
+import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.exception.HopTransformException;
 import org.apache.hop.core.row.IValueMeta;
 import org.apache.hop.core.row.RowMeta;
@@ -27,6 +28,9 @@ import org.apache.hop.core.row.value.ValueMetaTimestamp;
  */
 public final class HopRowSchemaFactory {
 
+  private static final String GEOMETRY_PLUGIN_FAILURE_MESSAGE =
+      "Geometry Type Plugin fehlt, ist inkompatibel oder Hop muss neu gestartet werden.";
+
   public org.apache.hop.core.row.IRowMeta createRowMeta(InterlisRowMappingPlan plan)
       throws HopTransformException {
     RowMeta rowMeta = new RowMeta();
@@ -37,6 +41,18 @@ public final class HopRowSchemaFactory {
   }
 
   public IValueMeta createValueMeta(InterlisFieldPlan field) throws HopTransformException {
+    // ValueMetaGeometry lives in the shared sogeo-geometry classloader group. Ensure that group
+    // has been merged before the JVM resolves the direct geometry class reference below. This is
+    // especially important for design-time dialog previews, which run before getFields().
+    try {
+      InterlisRuntimeSupport.initialize();
+    } catch (HopException e) {
+      throw new HopTransformException(
+          GEOMETRY_PLUGIN_FAILURE_MESSAGE
+              + " Install das passende hop-geometry-type-plugin und starte Apache Hop neu.",
+          e);
+    }
+
     return switch (field.source()) {
       case OBJECT_ID, BASKET_ID, CLASS_NAME, TOPIC_NAME, OPERATION, ROLE_REFERENCE ->
           new ValueMetaString(field.hopFieldName());

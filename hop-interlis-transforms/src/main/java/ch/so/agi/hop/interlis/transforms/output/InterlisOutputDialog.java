@@ -24,7 +24,6 @@ import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
 import org.eclipse.swt.widgets.Table;
-import org.eclipse.swt.widgets.TableColumn;
 import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 
@@ -52,7 +51,7 @@ public class InterlisOutputDialog extends BaseTransformDialog {
   private TextVar wOperationField;
   private TextVar wSourceObjectField;
   private Button wOverwrite;
-  private Label wStatus;
+  private InterlisDialogUiSupport.StatusArea wStatus;
   private Table wMapping;
 
   private List<InterlisClassDescriptor> classes = List.of();
@@ -144,8 +143,9 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     fdDirs.top = new FormAttachment(wModelNames, margin);
     wModelDirectories.setLayoutData(fdDirs);
 
-    // Class and model reload
-    Composite classRow = InterlisDialogUiSupport.createRow(shell, wModelDirectories, margin);
+    // Model status and class reload
+    wStatus = InterlisDialogUiSupport.createStatusArea(shell, wModelDirectories, props.getMiddlePct(), margin);
+    Composite classRow = InterlisDialogUiSupport.createRow(shell, wStatus.control(), margin);
     Button wReload = new Button(classRow, SWT.PUSH);
     wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     InterlisDialogUiSupport.buildRowControlWithButton(
@@ -224,30 +224,16 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     fdSourceObject.top = new FormAttachment(wOperationField, margin);
     wSourceObjectField.setLayoutData(fdSourceObject);
 
-    // Status
-    wStatus = new Label(shell, SWT.LEFT | SWT.WRAP);
-    PropsUi.setLook(wStatus);
-    FormData fdStatus = new FormData();
-    fdStatus.left = new FormAttachment(0, 0);
-    fdStatus.right = new FormAttachment(100, 0);
-    fdStatus.top = new FormAttachment(wSourceObjectField, margin);
-    wStatus.setLayoutData(fdStatus);
-
     // Mapping grid
-    wMapping = new Table(shell, SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL);
-    wMapping.setHeaderVisible(true);
-    wMapping.setLinesVisible(true);
-    PropsUi.setLook(wMapping);
-    String[] columns = {"INTERLIS property", "Hop field", "Type", "Status"};
-    for (String column : columns) {
-      TableColumn tableColumn = new TableColumn(wMapping, SWT.LEFT);
-      tableColumn.setText(column);
-      tableColumn.setWidth(180);
-    }
+    wMapping =
+        InterlisDialogUiSupport.createTable(
+            shell,
+            new String[] {"INTERLIS property", "Hop field", "Type", "Status"},
+            new int[] {240, 240, 150, 180});
     FormData fdMapping = new FormData();
     fdMapping.left = new FormAttachment(0, 0);
     fdMapping.right = new FormAttachment(100, 0);
-    fdMapping.top = new FormAttachment(wStatus, margin);
+    fdMapping.top = new FormAttachment(wSourceObjectField, margin);
     fdMapping.bottom = new FormAttachment(100, -margin * 8);
     wMapping.setLayoutData(fdMapping);
 
@@ -353,11 +339,13 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     classes = result.classes();
     associations = result.associations();
     populateClassCombo();
+    wStatus.set(
+        InterlisDialogUiSupport.statusSeverity(
+            result.successful(), result.configured(), result.message()),
+        result.message());
     if (result.successful()) {
-      wStatus.setText(result.message());
       populateMapping(controller.mapping(result.projection().plan()));
     } else {
-      wStatus.setText(result.message());
       wMapping.removeAll();
     }
   }

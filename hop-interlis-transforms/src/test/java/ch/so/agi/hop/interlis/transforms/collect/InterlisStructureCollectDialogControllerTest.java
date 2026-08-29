@@ -56,6 +56,19 @@ class InterlisStructureCollectDialogControllerTest {
     InterlisStructureCollectMeta meta = configuredMeta();
     InterlisStructureProbeResult result = controller.probe(meta, new Variables());
 
+    var structured =
+        controller.createSchemaPreview(
+            result.projection().plan(),
+            "INTERLIS Input",
+            "INTERLIS Structure Explode",
+            "_ili_tid",
+            "_ili_parent_tid");
+
+    assertThat(structured.rows())
+        .extracting(row -> row.fieldName())
+        .contains("Parent input", "Child input", "Structure", "Street");
+    assertThat(structured.errorMessage()).isNull();
+
     String preview =
         controller.formatCollectPreview(
             result.projection().plan(), "INTERLIS Input", "INTERLIS Structure Explode",

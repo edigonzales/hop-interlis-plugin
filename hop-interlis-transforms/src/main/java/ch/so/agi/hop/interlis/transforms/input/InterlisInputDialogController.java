@@ -1,12 +1,13 @@
 package ch.so.agi.hop.interlis.transforms.input;
 
-import ch.so.agi.hop.interlis.core.mapping.InterlisFieldPlan;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelContext;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowMappingPlan;
 import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
 import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
+import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
+import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreviewSupport;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hop.core.exception.HopTransformException;
@@ -21,7 +22,20 @@ import org.apache.hop.core.variables.IVariables;
  */
 public final class InterlisInputDialogController {
 
-  private final HopRowSchemaFactory schemaFactory = new HopRowSchemaFactory();
+  @FunctionalInterface
+  interface RowMetaCreator {
+    IRowMeta create(InterlisRowMappingPlan plan) throws HopTransformException;
+  }
+
+  private final RowMetaCreator rowMetaCreator;
+
+  public InterlisInputDialogController() {
+    this(new HopRowSchemaFactory()::createRowMeta);
+  }
+
+  InterlisInputDialogController(RowMetaCreator rowMetaCreator) {
+    this.rowMetaCreator = rowMetaCreator;
+  }
 
   /**
    * Probes the current configuration. Failures are returned as a friendly message; the dialog
@@ -105,35 +119,26 @@ public final class InterlisInputDialogController {
     StringBuilder preview = new StringBuilder();
     preview.append("Projected Hop schema\n");
     preview.append("--------------------\n");
-    try {
-      IRowMeta rowMeta = schemaFactory.createRowMeta(plan);
-      for (int i = 0; i < rowMeta.size(); i++) {
-        org.apache.hop.core.row.IValueMeta valueMeta = rowMeta.getValueMeta(i);
-        InterlisFieldPlan field = plan.fields().get(i);
-        String source =
-            switch (field.source()) {
-              case OBJECT_ID -> "@TID";
-              case BASKET_ID -> "@BID";
-              case CLASS_NAME -> "@CLASS";
-              case TOPIC_NAME -> "@TOPIC";
-              case OPERATION -> "@OPERATION";
-              case ROLE_REFERENCE -> "-> " + field.roleDescriptor().targetClassScopedName();
-              default -> field.attributeDescriptor() == null
-                  ? ""
-                  : field.attributeDescriptor().typeName();
-            };
-        preview.append(String.format("%-26s %-14s %s%n", valueMeta.getName(), valueMeta.getTypeDesc(), source));
-      }
-    } catch (HopTransformException e) {
-      preview.append("Schema preview failed: ").append(e.getMessage()).append('\n');
+    InterlisSchemaPreview schemaPreview = createSchemaPreview(plan);
+    for (var row : schemaPreview.rows()) {
+      preview.append(
+          String.format("%-26s %-14s %s%n", row.fieldName(), row.hopType(), row.source()));
     }
-    if (plan.hasWarnings()) {
+    if (schemaPreview.hasError()) {
+      preview.append(schemaPreview.errorMessage()).append('\n');
+    }
+    if (!schemaPreview.warnings().isEmpty()) {
       preview.append('\n');
-      for (String warning : plan.warnings()) {
+      for (String warning : schemaPreview.warnings()) {
         preview.append("! ").append(warning).append('\n');
       }
     }
     return preview.toString();
+  }
+
+  /** Builds the structured preview consumed by the SWT table. */
+  public InterlisSchemaPreview createSchemaPreview(InterlisRowMappingPlan plan) {
+    return InterlisSchemaPreviewSupport.create(plan, rowMetaCreator::create);
   }
 
   private static String rootCauseMessage(Throwable throwable) {

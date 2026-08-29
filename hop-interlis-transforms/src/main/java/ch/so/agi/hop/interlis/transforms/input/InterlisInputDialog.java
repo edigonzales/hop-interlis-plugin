@@ -3,6 +3,7 @@ package ch.so.agi.hop.interlis.transforms.input;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
+import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,7 @@ import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.FileDialog;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.Text;
 
 /**
@@ -52,8 +54,9 @@ public class InterlisInputDialog extends BaseTransformDialog {
   private TextVar wDefaultSrid;
   private Button wKeepSourceObject;
   private TextVar wSourceObjectField;
-  private Label wStatus;
-  private Text wPreview;
+  private InterlisDialogUiSupport.StatusArea wStatus;
+  private Label wPreviewDiagnostics;
+  private Table wPreview;
 
   private List<InterlisClassDescriptor> classes = List.of();
   private List<ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor> associations =
@@ -136,8 +139,9 @@ public class InterlisInputDialog extends BaseTransformDialog {
     fdDirs.top = new FormAttachment(wModelNames, margin);
     wModelDirectories.setLayoutData(fdDirs);
 
-    // Class and model reload
-    Composite classRow = InterlisDialogUiSupport.createRow(shell, wModelDirectories, margin);
+    // Model status and class reload
+    wStatus = InterlisDialogUiSupport.createStatusArea(shell, wModelDirectories, props.getMiddlePct(), margin);
+    Composite classRow = InterlisDialogUiSupport.createRow(shell, wStatus.control(), margin);
     Button wReload = new Button(classRow, SWT.PUSH);
     wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     InterlisDialogUiSupport.buildRowControlWithButton(
@@ -187,22 +191,20 @@ public class InterlisInputDialog extends BaseTransformDialog {
     fdSourceObject.top = new FormAttachment(wKeepSourceObject, margin);
     wSourceObjectField.setLayoutData(fdSourceObject);
 
-    // Status
-    wStatus = new Label(shell, SWT.LEFT | SWT.WRAP);
-    PropsUi.setLook(wStatus);
-    FormData fdStatus = new FormData();
-    fdStatus.left = new FormAttachment(0, 0);
-    fdStatus.right = new FormAttachment(100, 0);
-    fdStatus.top = new FormAttachment(wSourceObjectField, margin);
-    wStatus.setLayoutData(fdStatus);
+    // Schema preview diagnostics and table
+    wPreviewDiagnostics = new Label(shell, SWT.LEFT | SWT.WRAP);
+    PropsUi.setLook(wPreviewDiagnostics);
+    FormData fdPreviewDiagnostics = new FormData();
+    fdPreviewDiagnostics.left = new FormAttachment(0, 0);
+    fdPreviewDiagnostics.right = new FormAttachment(100, 0);
+    fdPreviewDiagnostics.top = new FormAttachment(wSourceObjectField, margin);
+    wPreviewDiagnostics.setLayoutData(fdPreviewDiagnostics);
 
-    // Schema preview
-    wPreview = new Text(shell, SWT.MULTI | SWT.READ_ONLY | SWT.V_SCROLL | SWT.H_SCROLL | SWT.BORDER);
-    PropsUi.setLook(wPreview);
+    wPreview = InterlisDialogUiSupport.createPreviewTable(shell);
     FormData fdPreview = new FormData();
     fdPreview.left = new FormAttachment(0, 0);
     fdPreview.right = new FormAttachment(100, 0);
-    fdPreview.top = new FormAttachment(wStatus, margin);
+    fdPreview.top = new FormAttachment(wPreviewDiagnostics, margin);
     fdPreview.bottom = new FormAttachment(100, -margin * 8);
     wPreview.setLayoutData(fdPreview);
 
@@ -386,12 +388,22 @@ public class InterlisInputDialog extends BaseTransformDialog {
   }
 
   private void renderProbeResult(InterlisProbeResult result) {
-    wStatus.setText(result.message());
+    InterlisDialogUiSupport.StatusSeverity modelSeverity =
+        InterlisDialogUiSupport.statusSeverity(
+            result.successful(), result.configured(), result.message());
     if (result.projection() == null) {
-      wPreview.setText("");
+      wStatus.set(modelSeverity, result.message());
+      InterlisDialogUiSupport.populatePreviewTable(wPreview, List.of());
+      InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, "");
     } else {
-      wPreview.setText(controller.formatSchemaPreview(result.projection().plan()));
+      InterlisSchemaPreview preview =
+          controller.createSchemaPreview(result.projection().plan());
+      wStatus.set(
+          InterlisDialogUiSupport.statusSeverity(modelSeverity, preview), result.message());
+      InterlisDialogUiSupport.populatePreviewTable(wPreview, preview.rows());
+      InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, preview);
     }
+    shell.layout(true, true);
   }
 
   private String selectedClassName() {

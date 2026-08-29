@@ -1266,7 +1266,14 @@ Prüfen:
 $HOP_HOME/plugins/misc/hop-geometry-type
 ```
 
-und Hop neu starten.
+Das `hop-geometry-type-plugin` wird weiterhin separat installiert und nicht in das
+INTERLIS-Plugin-ZIP kopiert. Die INTERLIS-Schemafabrik initialisiert beim Erzeugen von
+Hop-Row-Metadaten die gemeinsame `sogeo-geometry`-Classloader-Gruppe. Damit funktionieren auch
+Design-Time-Schema-Previews mit `GeometryCHLV95_V1.MultiSurface` und anderen Geometriefeldern.
+
+Wenn das Plugin fehlt, inkompatibel ist oder die Classloader-Gruppe trotz Installation nicht
+geladen werden kann, bleibt der Dialog geöffnet und zeigt den Fehler im Schema-Preview an.
+Nach Installation oder Aktualisierung beider Plugins muss Hop vollständig neu gestartet werden.
 
 ## `ClassCastException` zwischen zwei Geometry-Klassen
 

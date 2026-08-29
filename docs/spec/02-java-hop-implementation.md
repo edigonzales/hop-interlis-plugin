@@ -192,6 +192,41 @@ Fehler bei der Design-Time-Probe werden als Statusmeldung zurückgegeben. Sie
 verhindern nicht, dass der Dialog geöffnet bleibt; zur Laufzeit werden dieselben
 Fehler als harte Konfigurationsfehler gemeldet.
 
+### Strukturierte Schema-Preview
+
+Die GUI erhält die Preview nicht als vorformatierten Text, sondern als
+UI-neutrales Ergebnis der zentralen Schemafabrik:
+
+```java
+public record InterlisPreviewRow(
+    String fieldName,
+    String hopType,
+    String source) {}
+
+public record InterlisSchemaPreview(
+    List<InterlisPreviewRow> rows,
+    List<String> warnings,
+    String errorMessage) {}
+```
+
+`InterlisSchemaPreviewSupport` erzeugt die Zeilen aus dem
+`InterlisRowMappingPlan` und dem `HopRowSchemaFactory`. Die SWT-Dialoge rendern
+die Zeilen in einer nativen Tabelle mit den Spalten `Field`, `Hop type` und
+`Source`. Warnungen und Fehler bleiben ausserhalb der Tabelle, damit sie nicht
+als Felder erscheinen. Dasselbe Muster wird für Input, Object-to-Row,
+Structure Explode/Collect und Role Join verwendet; der bereits tabellarische
+Output-Dialog behält sein Mapping-Grid.
+
+Die modellbasierten Dialoge verwenden zusätzlich den gemeinsamen
+`InterlisDialogUiSupport.StatusArea`. Dieser eigene, nicht-modale Bereich liegt
+als normale Formularzeile zwischen `Model dirs` und `Class`. Er besteht aus dem
+linken Label `Model status` und einer rechteckigen Statusfläche in der gleichen
+Feldspalte wie die übrigen Eingaben. Die Statusfläche hat kein Zusatzsymbol und
+keine separate Überschrift, zeigt aber weiterhin Modellprobe sowie
+Design-Time-Diagnosen mit den Zuständen `INFO`, `SUCCESS`, `WARNING` und
+`ERROR`. Die Statusmeldung bleibt auch bei einer fehlgeschlagenen Probe
+sichtbar, während die Feldtabelle leer bleibt.
+
 ### Modellrepositorys (Phase 8)
 
 Model directories dürfen zusätzlich zu lokalen Verzeichnissen
@@ -1520,6 +1555,12 @@ public String formatClass(InterlisClassDescriptor descriptor, ProjectionOptions 
 public String formatStructure(...);
 public String formatAssociation(...);
 ```
+
+In der SWT-Implementierung liefert die Preview-Erzeugung zusätzlich das
+strukturierte `InterlisSchemaPreview` aus Abschnitt „Strukturierte
+Schema-Preview“. Die bisherigen Textformatierer bleiben nur für
+Abwärtskompatibilität und Tests verfügbar; Dialoge verwenden für die Anzeige
+die Tabelle und einen separaten Diagnosebereich.
 
 ## 25.3 `InterlisModelTreeBuilder`
 

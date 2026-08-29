@@ -1,0 +1,10 @@
+INTERLIS 2.4;
+
+MODEL HopIli_Formats_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-08-29" =
+  TOPIC Data =
+    CLASS FormattedValue =
+      DateValue: INTERLIS.XMLDate;
+    END FormattedValue;
+  END Data;
+END HopIli_Formats_V1.

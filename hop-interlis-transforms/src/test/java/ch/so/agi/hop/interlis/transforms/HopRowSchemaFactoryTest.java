@@ -28,6 +28,23 @@ class HopRowSchemaFactoryTest {
   private final HopRowSchemaFactory factory = new HopRowSchemaFactory();
 
   @Test
+  void initializes_shared_geometry_classloader_before_creating_value_meta() throws Exception {
+    IRowMeta rowMeta =
+        factory.createRowMeta(
+            new InterlisProjectionService()
+                .project(
+                    new InterlisModelRequest(
+                        TestData.path("/data/HopIli_Geometry_V1_valid.xtf"),
+                        List.of("HopIli_Geometry_V1"),
+                        List.of(TestData.path("/models").toString())),
+                    "HopIli_Geometry_V1.Data.TestObject",
+                    ProjectionOptions.defaults())
+                .plan());
+
+    assertThat(rowMeta.getValueMeta(3)).isInstanceOf(ValueMetaGeometry.class);
+  }
+
+  @Test
   void creates_stable_row_meta_for_geometry_class() throws Exception {
     IRowMeta rowMeta =
         factory.createRowMeta(

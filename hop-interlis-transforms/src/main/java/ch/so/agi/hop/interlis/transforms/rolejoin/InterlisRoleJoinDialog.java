@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.rolejoin;
 
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport;
 import java.util.List;
 import org.apache.hop.core.util.Utils;
@@ -21,6 +22,7 @@ import org.eclipse.swt.widgets.Button;
 import org.eclipse.swt.widgets.Composite;
 import org.eclipse.swt.widgets.Label;
 import org.eclipse.swt.widgets.Shell;
+import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.Text;
 
 /**
@@ -49,8 +51,10 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
   private TextVar wMaxLookupRows;
   private Button wFailOnMissingMandatoryReference;
   private Button wFailOnDuplicateTid;
-  private Label wStatus;
-  private Text wPreview;
+  private InterlisDialogUiSupport.StatusArea wStatus;
+  private Label wSummary;
+  private Label wPreviewDiagnostics;
+  private Table wPreview;
 
   private List<InterlisClassDescriptor> classes = List.of();
   private boolean suppressRefresh;
@@ -101,7 +105,8 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     wModelNames = addTextRow("Models", wLookupInputTransform, margin);
     wModelDirectories = addTextRow("Model dirs", wModelNames, 0);
 
-    Composite classRow = InterlisDialogUiSupport.createRow(shell, wModelDirectories, margin);
+    wStatus = InterlisDialogUiSupport.createStatusArea(shell, wModelDirectories, props.getMiddlePct(), margin);
+    Composite classRow = InterlisDialogUiSupport.createRow(shell, wStatus.control(), margin);
     Button wReload = new Button(classRow, SWT.PUSH);
     wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
     InterlisDialogUiSupport.buildRowControlWithButton(
@@ -130,21 +135,28 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     fdDuplicate.top = new FormAttachment(wFailOnMissingMandatoryReference, margin);
     wFailOnDuplicateTid.setLayoutData(fdDuplicate);
 
-    // Status + preview
-    wStatus = new Label(shell, SWT.LEFT | SWT.WRAP);
-    PropsUi.setLook(wStatus);
-    FormData fdStatus = new FormData();
-    fdStatus.left = new FormAttachment(0, 0);
-    fdStatus.right = new FormAttachment(100, 0);
-    fdStatus.top = new FormAttachment(wFailOnDuplicateTid, margin);
-    wStatus.setLayoutData(fdStatus);
+    // Mapping summary, diagnostics and table
+    wSummary = new Label(shell, SWT.LEFT | SWT.WRAP);
+    PropsUi.setLook(wSummary);
+    FormData fdSummary = new FormData();
+    fdSummary.left = new FormAttachment(0, 0);
+    fdSummary.right = new FormAttachment(100, 0);
+    fdSummary.top = new FormAttachment(wFailOnDuplicateTid, margin);
+    wSummary.setLayoutData(fdSummary);
 
-    wPreview = new Text(shell, SWT.MULTI | SWT.LEFT | SWT.BORDER | SWT.H_SCROLL | SWT.V_SCROLL);
-    PropsUi.setLook(wPreview, PropsUi.WIDGET_STYLE_FIXED);
+    wPreviewDiagnostics = new Label(shell, SWT.LEFT | SWT.WRAP);
+    PropsUi.setLook(wPreviewDiagnostics);
+    FormData fdPreviewDiagnostics = new FormData();
+    fdPreviewDiagnostics.left = new FormAttachment(0, 0);
+    fdPreviewDiagnostics.right = new FormAttachment(100, 0);
+    fdPreviewDiagnostics.top = new FormAttachment(wSummary, margin);
+    wPreviewDiagnostics.setLayoutData(fdPreviewDiagnostics);
+
+    wPreview = InterlisDialogUiSupport.createPreviewTable(shell);
     FormData fdPreview = new FormData();
     fdPreview.left = new FormAttachment(0, 0);
     fdPreview.right = new FormAttachment(100, 0);
-    fdPreview.top = new FormAttachment(wStatus, margin);
+    fdPreview.top = new FormAttachment(wPreviewDiagnostics, margin);
     fdPreview.bottom = new FormAttachment(wOk, -2 * margin);
     wPreview.setLayoutData(fdPreview);
 
@@ -281,13 +293,26 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
       classes = result.schema().selectableClasses();
       populateClassCombo();
       populateRoleCombo(result);
-      wStatus.setText(
+      wSummary.setText(
+          "The lookup stream is loaded into memory once (max "
+              + input.getMaxLookupRows()
+              + " rows). Fields from the selected role target are added with the configured prefix.");
+      InterlisSchemaPreview preview = controller.createSchemaPreview(input, result);
+      wStatus.set(
+          InterlisDialogUiSupport.statusSeverity(
+              InterlisDialogUiSupport.StatusSeverity.SUCCESS, preview),
           "Model loaded; role " + result.role().name() + " -> " + result.target().scopedName());
-      wPreview.setText(controller.formatPreview(input, result));
+      InterlisDialogUiSupport.populatePreviewTable(wPreview, preview.rows());
+      InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, preview);
     } catch (Exception e) {
-      wStatus.setText(InterlisStructureDialogSupport.rootCauseMessage(e));
-      wPreview.setText("");
+      wStatus.set(
+          InterlisDialogUiSupport.StatusSeverity.ERROR,
+          InterlisStructureDialogSupport.rootCauseMessage(e));
+      wSummary.setText("");
+      InterlisDialogUiSupport.populatePreviewTable(wPreview, List.of());
+      InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, "");
     }
+    shell.layout(true, true);
   }
 
   private void populateClassCombo() {

@@ -23,10 +23,11 @@ Wenn Sie den gesamten Transfer (mehrere Klassen) als Event-Stream lesen möchten
 | Model dirs      [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ] ...   |
 | Meta config     [                                                      ] ...   |
 |                                                                                 |
-| [ Reload ]  Status: OK - model loaded                                         |
+| Model status [ Model loaded: 1 model, 1 class                              ]   |
 |                                                                                 |
 | Class                                                                           |
 | [ Model.Topic.Building                                                v ]      |
+| [ Reload ]                                                                      |
 |                                                                                 |
 | Output fields                                                                   |
 | +--------------------------------------------------------------------------+   |
@@ -166,34 +167,44 @@ Baumansicht des vollständigen Modellbrowsers gehören zu einem späteren
 GUI-Arbeitspaket.
 ====
 
-=== Feld-Mapping
+=== Projected Hop schema
 
-Die Tabelle _Output fields_ zeigt das geplante Hop-Schema:
+Nach der Auswahl einer Klasse zeigt der Dialog das geplante Hop-Schema in einer
+read-only Tabelle _Projected Hop schema_. Die Spalten sind:
 
 [cols="1,2,1"]
 |===
 | Spalte | Bedeutung | Editierbar?
 
-| Use
-| Feld wird ausgegeben
-| Ja
-
-| INTERLIS property
-| Name der INTERLIS-Eigenschaft
+| Field
+| Name des erzeugten Hop-Felds
 | Nein
 
-| Hop field
-| Name des Hop-Felds
-| Ja
+| Hop type
+| Tatsächlicher Hop-Datentyp, z.B. `String`, `Integer`, `Date` oder `Geometry`
+| Nein
 
-| Type
-| Hop-Datentyp
-| Nur bei Advanced-Optionen
+| Source
+| INTERLIS-Attribut, technische Quelle oder Rollen-/Strukturpfad
+| Nein
 |===
 
-**Hop field ändern**: Sie können die Ausgabenamen der Felder anpassen. Dies ist nützlich, wenn Sie bestehende Konventionen einhalten möchten.
+Die Tabelle besitzt horizontales und vertikales Scrolling. Lange Scoped Names
+werden nicht abgeschnitten, sondern können horizontal gelesen werden.
 
-**Use deaktivieren**: Felder, die Sie nicht benötigen, können Sie deaktivieren. Sie erscheinen dann nicht im Output-Stream.
+Warnungen erscheinen in einem separaten Hinweisbereich unterhalb der
+Konfiguration und nicht als Tabellenzeilen. Beispielsweise wird dort erklärt,
+wenn eine mehrwertige Struktur nicht Teil des skalaren Row-Schemas ist und mit
+`INTERLIS Structure Explode` weiterverarbeitet werden muss.
+
+Der Modellstatus steht als normale Formularzeile in einem eigenen, nicht-modalen
+Bereich zwischen `Model dirs` und `Class`. Das Label ist wie die übrigen
+Formularlabels ausgerichtet; die rechteckige Statusfläche liegt bündig in der
+Feldspalte. Es gibt kein Zusatzsymbol und keine separate Überschrift. Die Farbe unterscheidet
+Information, Erfolg, Warnung und Fehler; lange Meldungen werden umgebrochen.
+Der Dialog bleibt auch bei einer fehlgeschlagenen Preview geöffnet.
+
+Die Werte in der Spalte `Source` werden in der kanonischen INTERLIS-/`ili2c`-Darstellung angezeigt. Dazu gehört beispielsweise `FORMAT Year"-"Month"-"Day`; die Anführungszeichen werden von der Anzeige nicht entfernt.
 
 === Felder neu einlesen (Get fields)
 

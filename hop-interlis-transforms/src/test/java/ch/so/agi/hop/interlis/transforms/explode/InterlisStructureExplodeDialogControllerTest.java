@@ -66,6 +66,13 @@ class InterlisStructureExplodeDialogControllerTest {
     InterlisStructureExplodeMeta meta = configuredMeta();
     InterlisStructureProbeResult result = controller.probe(meta, new Variables());
 
+    var structured = controller.createSchemaPreview(result.projection().plan());
+
+    assertThat(structured.rows())
+        .extracting(row -> row.fieldName())
+        .contains("_ili_parent_tid", "_ili_index", "Street", "PostCode_Town");
+    assertThat(structured.errorMessage()).isNull();
+
     String preview = controller.formatSchemaPreview(result.projection().plan());
 
     assertThat(preview)

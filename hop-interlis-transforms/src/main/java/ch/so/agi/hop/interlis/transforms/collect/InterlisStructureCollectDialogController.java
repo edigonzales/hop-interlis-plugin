@@ -2,8 +2,12 @@ package ch.so.agi.hop.interlis.transforms.collect;
 
 import ch.so.agi.hop.interlis.core.structures.InterlisStructurePlan;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisPreviewRow;
+import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
+import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreviewSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureProbeResult;
+import java.util.ArrayList;
 import java.util.List;
 import org.apache.hop.core.variables.IVariables;
 
@@ -27,24 +31,69 @@ public final class InterlisStructureCollectDialogController {
   }
 
   /** Formats a description of the collected structure for the preview area. */
-  public String formatCollectPreview(InterlisStructurePlan plan, String parentTransform,
-      String childTransform, String parentKeyField, String childParentKeyField) {
+  public String formatCollectPreview(
+      InterlisStructurePlan plan,
+      String parentTransform,
+      String childTransform,
+      String parentKeyField,
+      String childParentKeyField) {
     return String.join(
         "\n",
         "Collect preview",
         "--------------",
-        "Parent stream  " + (parentTransform == null ? "" : parentTransform)
-            + "  (key " + parentKeyField + ")",
-        "Child stream   " + (childTransform == null ? "" : childTransform)
-            + "  (parent key " + childParentKeyField + ")",
-        "Structure      " + plan.attributeName() + " : "
-            + (plan.ordered() ? "LIST OF " : "BAG OF ") + plan.structure().scopedName(),
-        "Child fields   " + plan.childFields().stream()
-            .map(f -> f.hopFieldName()).toList(),
-        "Output         parent rows with updated " + InterlisStructureCollectMeta.DEFAULT_SOURCE_OBJECT_FIELD,
+        "Parent stream  "
+            + (parentTransform == null ? "" : parentTransform)
+            + "  (key "
+            + parentKeyField
+            + ")",
+        "Child stream   "
+            + (childTransform == null ? "" : childTransform)
+            + "  (parent key "
+            + childParentKeyField
+            + ")",
+        "Structure      "
+            + plan.attributeName()
+            + " : "
+            + (plan.ordered() ? "LIST OF " : "BAG OF ")
+            + plan.structure().scopedName(),
+        "Child fields   " + plan.childFields().stream().map(f -> f.hopFieldName()).toList(),
+        "Output         parent rows with updated "
+            + InterlisStructureCollectMeta.DEFAULT_SOURCE_OBJECT_FIELD,
         "",
         "Both input streams must be sorted: the parent stream by parent key ascending and the",
         "child stream by (parent key, index) ascending.");
+  }
+
+  /** Builds the structured mapping preview shown below the collect configuration. */
+  public InterlisSchemaPreview createSchemaPreview(
+      InterlisStructurePlan plan,
+      String parentTransform,
+      String childTransform,
+      String parentKeyField,
+      String childParentKeyField) {
+    List<InterlisPreviewRow> prefixRows =
+        new ArrayList<>(
+            List.of(
+                new InterlisPreviewRow(
+                    "Parent input",
+                    "",
+                    (parentTransform == null ? "" : parentTransform)
+                        + " (key " + safe(parentKeyField) + ")"),
+                new InterlisPreviewRow(
+                    "Child input",
+                    "",
+                    (childTransform == null ? "" : childTransform)
+                        + " (parent key " + safe(childParentKeyField) + ")"),
+                new InterlisPreviewRow(
+                    "Structure",
+                    plan.ordered() ? "LIST" : "BAG",
+                    plan.structure().scopedName())));
+    return InterlisSchemaPreviewSupport.createFieldPreview(
+        prefixRows, plan.childFields(), plan.warnings());
+  }
+
+  private static String safe(String value) {
+    return value == null ? "" : value;
   }
 
   private static List<String> resolveModelNames(

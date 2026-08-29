@@ -137,6 +137,15 @@ class InterlisInputDialogControllerTest {
   void schema_preview_lists_fields_with_types_and_sources() {
     InterlisProbeResult result = controller.probe(validMeta(), new Variables());
 
+    var structured = controller.createSchemaPreview(result.projection().plan());
+
+    assertThat(structured.rows())
+        .extracting(row -> row.fieldName())
+        .contains("_ili_tid", "_ili_bid", "Name", "Center");
+    assertThat(structured.rows())
+        .anyMatch(row -> row.fieldName().equals("Center") && row.hopType().equals("Geometry"));
+    assertThat(structured.errorMessage()).isNull();
+
     String preview = controller.formatSchemaPreview(result.projection().plan());
 
     assertThat(preview).contains("Projected Hop schema");
@@ -156,9 +165,31 @@ class InterlisInputDialogControllerTest {
     meta.setClassName("HopIli_Mapping_V1.Data.MultiStruct");
 
     InterlisProbeResult result = controller.probe(meta, new Variables());
+    var structured = controller.createSchemaPreview(result.projection().plan());
+
+    assertThat(structured.warnings()).anyMatch(warning -> warning.contains("Qualities"));
+    assertThat(structured.rows()).extracting(row -> row.fieldName()).contains("Name");
+
     String preview = controller.formatSchemaPreview(result.projection().plan());
 
     assertThat(preview).contains("Qualities");
     assertThat(preview).contains("Structure Explode");
+  }
+
+  @Test
+  void schema_preview_reports_geometry_classloader_linkage_failures() {
+    InterlisProbeResult result = controller.probe(validMeta(), new Variables());
+    InterlisInputDialogController failingController =
+        new InterlisInputDialogController(
+            plan -> {
+              throw new NoClassDefFoundError(
+                  "com/atolcd/hop/core/row/value/ValueMetaGeometry");
+            });
+
+    String preview = failingController.formatSchemaPreview(result.projection().plan());
+
+    assertThat(preview)
+        .contains(
+            "Geometry Type Plugin fehlt, ist inkompatibel oder Hop muss neu gestartet werden.");
   }
 }

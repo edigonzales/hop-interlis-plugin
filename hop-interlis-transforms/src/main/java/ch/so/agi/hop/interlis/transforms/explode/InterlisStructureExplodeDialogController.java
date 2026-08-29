@@ -1,13 +1,13 @@
 package ch.so.agi.hop.interlis.transforms.explode;
 
 import ch.so.agi.hop.interlis.core.structures.InterlisStructurePlan;
-import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisPreviewRow;
+import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
+import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreviewSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureProbeResult;
 import java.util.List;
-import org.apache.hop.core.exception.HopTransformException;
-import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.core.variables.IVariables;
 
 /**
@@ -17,8 +17,6 @@ import org.apache.hop.core.variables.IVariables;
  * so it can be unit-tested without a display.
  */
 public final class InterlisStructureExplodeDialogController {
-
-  private final HopRowSchemaFactory schemaFactory = new HopRowSchemaFactory();
 
   /** Probes the current configuration. Failures are returned as a friendly message. */
   public InterlisStructureProbeResult probe(
@@ -36,42 +34,26 @@ public final class InterlisStructureExplodeDialogController {
     StringBuilder preview = new StringBuilder();
     preview.append("Child row schema\n");
     preview.append("----------------\n");
-    preview
-        .append(String.format("%-26s %-14s %s%n",
-            plan.parentClass().scopedName(), "", "parent class"))
-        .append(String.format("%-26s %-14s %s%n",
-            plan.attributeName(),
-            plan.ordered() ? "LIST" : "BAG",
-            plan.structure().scopedName()))
-        .append('\n');
-    preview
-        .append(String.format("%-26s %-14s %s%n", "_ili_parent_tid", "String", "parent TID"))
-        .append(String.format("%-26s %-14s %s%n", "_ili_parent_bid", "String", "parent BID"))
-        .append(String.format("%-26s %-14s %s%n",
-            "_ili_index", "Integer", plan.ordered() ? "LIST order (semantic)" : "technical index"));
-    try {
-      for (var field : plan.childFields()) {
-        IRowMeta rowMeta = new org.apache.hop.core.row.RowMeta();
-        var valueMeta = schemaFactory.createValueMeta(field);
-        preview.append(
-            String.format(
-                "%-26s %-14s %s%n",
-                valueMeta.getName(),
-                valueMeta.getTypeDesc(),
-                field.attributeDescriptor() == null
-                    ? ""
-                    : field.attributeDescriptor().typeName()));
-      }
-    } catch (HopTransformException e) {
-      preview.append("Schema preview failed: ").append(e.getMessage()).append('\n');
+    InterlisSchemaPreview schemaPreview = createSchemaPreview(plan);
+    for (InterlisPreviewRow row : schemaPreview.rows()) {
+      preview.append(
+          String.format("%-26s %-14s %s%n", row.fieldName(), row.hopType(), row.source()));
     }
-    if (!plan.warnings().isEmpty()) {
+    if (schemaPreview.hasError()) {
+      preview.append(schemaPreview.errorMessage()).append('\n');
+    }
+    if (!schemaPreview.warnings().isEmpty()) {
       preview.append('\n');
-      for (String warning : plan.warnings()) {
+      for (String warning : schemaPreview.warnings()) {
         preview.append("Warning: ").append(warning).append('\n');
       }
     }
     return preview.toString();
+  }
+
+  /** Builds the structured preview consumed by the SWT table. */
+  public InterlisSchemaPreview createSchemaPreview(InterlisStructurePlan plan) {
+    return InterlisSchemaPreviewSupport.createStructurePreview(plan);
   }
 
   private static List<String> resolveModelNames(

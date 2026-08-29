@@ -31,7 +31,9 @@ Wiederverwendet in Input, Output, Object-to-Row, Row-to-Object, Validate, Enumer
 | Model dirs     [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ] ...|
 | Meta config    [                                                         ] ...|
 |                                                                              |
-| [ Reload model ]       Status: OK - 3 models, 7 topics, 42 classes            |
+| Model status   | Model loaded: 3 models, 7 topics, 42 classes                       |
+| Class          [ Model.Topic.Building                                  v ]     |
+|                [ Reload model ]                                               |
 +------------------------------------------------------------------------------+
 ```
 
@@ -49,15 +51,18 @@ Wiederverwendet in Input, Output, Object-to-Row, Row-to-Object, Validate, Enumer
   Dropdown wird mit allen transferierbaren Klassen und Assoziationen befüllt;
   erst eine konkrete Auswahl erzeugt die Schema Preview.
 - Auto-Probe erfolgt debounced nach Änderungen; nicht bei jedem Tastendruck sofort Netzverkehr starten.
-- Statuszeile:
-  - OK grün/normal.
-  - Warning bei unresolved Variablen.
-  - Error mit kurzer Root-Cause, Dialog bleibt nutzbar.
+- Eigener, nicht-modaler Modellstatusbereich zwischen `Model dirs` und `Class`:
+  - `INFO` für unvollständige Konfiguration oder ein geladenes Modell ohne
+    Klassenauswahl.
+  - `SUCCESS` für eine erfolgreiche Modellprobe.
+  - `WARNING` für zusätzliche Probe-/Schemawarnungen.
+  - `ERROR` mit kurzer Root-Cause; der Dialog bleibt nutzbar.
+  Der Status ist umbrechend und passt seine Höhe beim Resize an.
 
 Beispiel Fehler:
 
 ```text
-Status: Model preview unavailable
+Model status: ERROR - model preview unavailable
         Repository https://... could not be reached.
         Runtime will retry with resolved variables/settings.
 ```
@@ -125,10 +130,9 @@ Bei Match eines Child-Elements bleiben Ancestors sichtbar.
 | Models          [ %DATA                                                    v]   |
 | Model dirs      [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ]... |
 |                                                                                |
-| [ Reload ]  Status: OK - model DMAVTYM_... loaded                              |
-|                                                                                |
-| Class                                                                          |
-| [ DMAVTYM_....Bodenbedeckung.Gebaeude                                  v ]     |
+| Model status [ Model loaded: 1 model, 1 class                              ]    |
+| Class          [ DMAVTYM_....Bodenbedeckung.Gebaeude                    v ]     |
+|                [ Reload ]                                                       |
 | [ Browse model... ]                                                            |
 |                                                                                |
 | Output fields                                                                  |
@@ -259,20 +263,22 @@ Für `INTERLIS Input` werden standardmässig nur transferierbare Klassen/Assozia
 
 # 6. Schema Preview
 
-Read-only Text-/Table-Bereich:
+Read-only SWT-Table-Bereich:
 
 ```text
-Projected Hop schema
---------------------
-_ili_tid                 String
-_ili_bid                 String
-Art                      String         enum BuildingType
-Name                     String(80)
-Geometry                 Geometry       SURFACE, arcs allowed
-Axis                     Geometry       POLYLINE, arcs allowed
-Address_Street           String(80)     Address.Street
-Address_Number           String(10)     Address.Number
-Municipality_ref         String         -> Model.Topic.Municipality {1}
++----------------------+----------------+--------------------------------------+
+| Field                | Hop type       | Source                               |
++----------------------+----------------+--------------------------------------+
+| _ili_tid             | String         | @TID                                 |
+| _ili_bid             | String         | @BID                                 |
+| Art                  | String         | enum BuildingType                    |
+| Name                 | String         | TEXT*80                              |
+| Geometry             | Geometry       | SURFACE, arcs allowed                |
+| Axis                 | Geometry       | POLYLINE, arcs allowed               |
+| Address_Street       | String         | Address.Street                       |
+| Address_Number       | String         | Address.Number                       |
+| Municipality_ref     | String         | -> Model.Topic.Municipality {1}     |
++----------------------+----------------+--------------------------------------+
 ```
 
 Warnings darunter:
@@ -281,6 +287,16 @@ Warnings darunter:
 ! Qualities is LIST {0..*}; it is not part of the scalar row schema.
   Keep source object is enabled so it can be exploded downstream.
 ```
+
+Die Tabelle ist eine native SWT-`Table` im Stil der bestehenden Hop-Dialoge.
+Sie besitzt feste Spaltenüberschriften sowie horizontales und vertikales
+Scrolling. Der Modellstatus wird als normale Formularzeile zwischen Modellquelle
+und Klassenauswahl angezeigt. Links steht das Label `Model status`; rechts liegt
+eine rechteckige, umbruchfähige Statusfläche innerhalb derselben Feldspalte wie
+die übrigen Eingaben. Sie verwendet kein Zusatzsymbol und keine separate
+Überschrift.
+Statusmeldungen und Warnungen werden getrennt von den Feldzeilen angezeigt; eine
+fehlgeschlagene Probe lässt den Dialog geöffnet und leert nur die Tabelle.
 
 # 7. INTERLIS Output Dialog
 

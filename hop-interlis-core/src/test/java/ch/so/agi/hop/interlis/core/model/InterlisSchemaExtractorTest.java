@@ -16,6 +16,7 @@ class InterlisSchemaExtractorTest {
   private static InterlisSchemaDescriptor spike;
   private static InterlisSchemaDescriptor chlv95V1;
   private static InterlisSchemaDescriptor chlv95V2;
+  private static InterlisSchemaDescriptor formats;
 
   @BeforeAll
   static void extract() throws Exception {
@@ -60,6 +61,14 @@ class InterlisSchemaExtractorTest {
                     new ModelSource(
                         List.of(model("HopIli_CHLV95_V2.ili")), List.of(), List.of()),
                     new ModelCompileOptions("2.4"))
+                .transferDescription());
+    formats =
+        extractor.extract(
+            service
+                .compile(
+                    new ModelSource(
+                        List.of(model("HopIli_Formats_V1.ili")), List.of(), List.of()),
+                    ModelCompileOptions.defaults())
                 .transferDescription());
   }
 
@@ -215,6 +224,14 @@ class InterlisSchemaExtractorTest {
         .containsOnly(InterlisGeometryEncoding.NATIVE);
     assertThat(attributeOf(object, "Points").coordDimension()).isEqualTo(2);
     assertThat(attributeOf(object, "Points3D").coordDimension()).isEqualTo(3);
+  }
+
+  @Test
+  void preserves_ili2c_format_quotes_in_the_attribute_type_description() {
+    InterlisClassDescriptor formatted = classOf(formats, "FormattedValue");
+
+    assertThat(attributeOf(formatted, "DateValue").typeName())
+        .isEqualTo("FORMAT Year\"-\"Month\"-\"Day");
   }
 
   @Test
