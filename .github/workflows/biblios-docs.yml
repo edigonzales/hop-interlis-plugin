@@ -1,0 +1,98 @@
+name: Build & deploy docs (thoth-biblios)
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/biblios/**'
+      - '.github/workflows/biblios-docs.yml'
+  pull_request:
+    paths:
+      - 'docs/biblios/**'
+      - '.github/workflows/biblios-docs.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # All branches so that biblios can check out the configured
+          # 'main' branch from the workspace clone (exact-commit build).
+          fetch-depth: 0
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Resolve latest thoth-biblios snapshot
+        id: snapshot
+        env:
+          SNAPSHOT_BASE: https://jars.interlis.guru/snapshots/guru/interlis/thoth-biblios/0.0.1-SNAPSHOT
+        run: |
+          set -euo pipefail
+          VERSION=$(curl -fsSL "$SNAPSHOT_BASE/maven-metadata.xml" | python3 -c '
+          import sys, xml.etree.ElementTree as ET
+          root = ET.fromstring(sys.stdin.read())
+          for sv in root.findall("versioning/snapshotVersions/snapshotVersion"):
+              if sv.findtext("classifier") == "all":
+                  print(sv.findtext("value")); break
+          ')
+          if [[ -z "$VERSION" ]]; then
+            echo "No snapshot version with classifier 'all' found" >&2
+            exit 1
+          fi
+          JAR="thoth-biblios-${VERSION}-all.jar"
+          echo "Using ${JAR}"
+          curl -fsSL -o "${JAR}" "$SNAPSHOT_BASE/${JAR}"
+          echo "jar=${JAR}" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare biblios config (render exact checkout)
+        run: |
+          sed "s|url: https://github.com/edigonzales/hop-interlis-plugin.git|url: file://${GITHUB_WORKSPACE}|" \
+            docs/biblios/biblios.yml > docs/biblios/biblios.ci.yml
+
+      - name: Build documentation site
+        run: java -jar "${{ steps.snapshot.outputs.jar }}" build --config docs/biblios/biblios.ci.yml
+
+      - name: Verify generated site
+        run: test -f docs/biblios/build/docs-site/index.html
+
+      - name: Prepare Pages artifact
+        if: github.event_name != 'pull_request'
+        run: touch docs/biblios/build/docs-site/.nojekyll
+
+      - name: Configure Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/biblios/build/docs-site
+
+  deploy:
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: true
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

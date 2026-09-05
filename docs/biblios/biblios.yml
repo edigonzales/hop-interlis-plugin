@@ -1,6 +1,6 @@
 site:
   title: "hop-interlis-plugin: Benutzerhandbuch"
-  url: https://github.com/edigonzales/hop-interlis-plugin
+  url: https://edigonzales.github.io/hop-interlis-plugin/
   default_language: de
 
 output:
@@ -25,7 +25,7 @@ content:
     - id: benutzerhandbuch
       display_name: Benutzerhandbuch
       card_label: Benutzer
-      url: file:///Users/stefan/sources/hop-interlis-plugin
+      url: https://github.com/edigonzales/hop-interlis-plugin.git
       branches:
         - name: main
           display_version: Aktuell

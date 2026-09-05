@@ -9,19 +9,30 @@ Die Dokumentation wird mit https://github.com/edigonzales/thoth[thoth-biblios] g
 === Konfiguration
 
 Die `biblios.yml` befindet sich im übergeordneten Verzeichnis (`../biblios.yml`).
+Als Quelle dient der Branch `main` dieses Repositories.
 
 === Lokales Bauen
 
+Der aktuellste thoth-biblios-Snapshot liegt als Fat-JAR auf
+https://jars.interlis.guru[jars.interlis.guru] (derselbe Mechanismus wie in der
+CI-Pipeline). Java 17 oder neuer wird vorausgesetzt.
+
 [source,bash]
 ----
-# thoth-biblios JAR bauen (im thoth-Repository)
-cd /path/to/thoth
-./gradlew :thoth-biblios:build
+# aktuellsten Snapshot herunterladen (Classifier "all")
+BASE=https://jars.interlis.guru/snapshots/guru/interlis/thoth-biblios/0.0.1-SNAPSHOT
+VERSION=$(curl -fsSL "$BASE/maven-metadata.xml" | python3 -c '
+import sys, xml.etree.ElementTree as ET
+root = ET.fromstring(sys.stdin.read())
+for sv in root.findall("versioning/snapshotVersions/snapshotVersion"):
+    if sv.findtext("classifier") == "all":
+        print(sv.findtext("value")); break
+')
+curl -fsSL -o "thoth-biblios-${VERSION}-all.jar" "$BASE/thoth-biblios-${VERSION}-all.jar"
 
 # Dokumentation bauen
 cd /path/to/hop-interlis-plugin/docs/biblios
-java -jar /path/to/thoth/thoth-biblios/build/libs/thoth-biblios-<version>-all.jar build \
-  --config biblios.yml
+java -jar /path/to/thoth-biblios-*-all.jar build --config biblios.yml
 
 # Ergebnis öffnen
 open build/docs-site/index.html
@@ -29,14 +40,29 @@ open build/docs-site/index.html
 
 === Entwicklungsserver
 
+Für die Bearbeitungsvorschau mit unveröffentlichten Änderungen wird eine lokale
+Config mit `file://`-URL auf das lokale Repository benötigt:
+
 [source,bash]
 ----
 cd /path/to/hop-interlis-plugin/docs/biblios
-java -jar /path/to/thoth/thoth-biblios/build/libs/thoth-biblios-<version>-all.jar serve \
-  --config biblios.yml \
+
+# lokale Config mit Datei-URL auf das eigene Checkout erzeugen (nicht committen)
+sed "s|url: https://github.com/edigonzales/hop-interlis-plugin.git|url: file://$(cd ../.. && pwd)|" \
+  biblios.yml > biblios.local.yml
+
+java -jar /path/to/thoth-biblios-*-all.jar serve \
+  --config biblios.local.yml \
   --port 8080 \
   --use-local-working-tree
 ----
+
+=== CI und GitHub Pages
+
+Der GitHub-Actions-Workflow `.github/workflows/biblios-docs.yml` baut die
+Dokumentation bei Änderungen unter `docs/biblios/` automatisch mit dem
+aktuellsten thoth-biblios-Snapshot und publiziert sie auf GitHub Pages. Bei
+Pull Requests wird lediglich geprüft, ob der Build durchläuft.
 
 == Struktur
 

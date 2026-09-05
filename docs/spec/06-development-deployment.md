@@ -834,6 +834,13 @@ jobs:
 
 Für Windows kann `py`/`python` je nach Runner beachtet werden; bevorzugt standardisierte Setup-Actions verwenden.
 
+Zusätzlich existiert der Workflow `.github/workflows/biblios-docs.yml`: Er baut bei
+Änderungen unter `docs/biblios/` die Benutzerdokumentation mit dem aktuellsten
+thoth-biblios-Snapshot von `jars.interlis.guru` und publiziert sie auf GitHub
+Pages (`https://edigonzales.github.io/hop-interlis-plugin/`). Pull Requests
+lösen nur einen Build-Check ohne Deploy aus. Voraussetzung: In den
+Repository-Settings muss Pages mit Quelle „GitHub Actions" aktiviert sein.
+
 ---
 
 # 28. CI – E2E mit realem Hop
