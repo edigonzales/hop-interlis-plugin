@@ -2,34 +2,24 @@ package ch.so.agi.hop.interlis.transforms;
 
 import org.apache.hop.core.exception.HopException;
 
-/**
- * Threading policy of the INTERLIS transforms.
- *
- * <p>Transforms with per-row stateless processing (Structure Explode/Collect, Role Join, Object
- * to Row, Row to Object) support parallel copies. Transforms with transfer side effects or
- * duplicate emission semantics (file readers, file writers, validation, enumerations) must run as
- * a single copy: reading the same file from several copies duplicates rows, writing the same file
- * from several copies corrupts the output. These transforms fail fast with an actionable message
- * when configured with parallel copies.
- */
+/** Guards transforms whose file or multi-stream state cannot be distributed across copies. */
 public final class InterlisParallelCopies {
 
   private InterlisParallelCopies() {}
 
-  /**
-   * Fails when the transform runs as copy {@code n} of more than one copy.
-   *
-   * @param copyNr the copy number of the running transform instance
-   * @param transformName the transform name for the error message
-   */
-  public static void rejectParallelCopies(int copyNr, String transformName)
+  /** Check configured copies, including copy zero, before any output or file side effects. */
+  public static void requireSingleCopy(
+      org.apache.hop.pipeline.transform.TransformMeta transform,
+      org.apache.hop.core.variables.IVariables variables,
+      String reason)
       throws HopException {
-    if (copyNr > 0) {
+    if (transform.getCopies(variables) > 1 || transform.isPartitioned()) {
       throw new HopException(
           "INTERLIS transform <"
-              + transformName
-              + "> does not support parallel copies: running it with more than one copy would "
-              + "duplicate rows or corrupt the target file. Set \"Number of copies\" back to 1.");
+              + transform.getName()
+              + "> does not support parallel copies because "
+              + reason
+              + ". Set \"Number of copies\" to 1 and disable partitioning.");
     }
   }
 }

@@ -41,7 +41,7 @@ class InterlisInputAssociationPipelineTest {
 
   private List<RowMetaAndData> runInput(String className) throws Exception {
     InterlisInputMeta meta = new InterlisInputMeta();
-    meta.setFileName(TestData.path("/data/HopIli_Associations_V1_valid.xtf").toString());
+    meta.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
     meta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setClassName(className);
@@ -116,7 +116,7 @@ class InterlisInputAssociationPipelineTest {
     Path outputFile = tempDir.resolve("associations-roundtrip.xtf");
 
     InterlisInputMeta input = new InterlisInputMeta();
-    input.setFileName(TestData.path("/data/HopIli_Associations_V1_valid.xtf").toString());
+    input.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
     input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
     input.setModelDirectories(TestData.path("/models").toString());
     input.setClassName("HopIli_Associations_V1.Data.Person");

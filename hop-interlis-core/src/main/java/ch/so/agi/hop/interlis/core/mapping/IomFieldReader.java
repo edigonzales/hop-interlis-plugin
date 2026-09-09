@@ -91,7 +91,7 @@ public final class IomFieldReader {
       throw new InterlisMappingException(
           "Geometry attribute " + descriptor.name() + " has no geometry kind");
     }
-    int dimension = descriptor.coordDimension() == null ? 2 : descriptor.coordDimension();
+    int dimension = IomFieldWriter.requiredDimension(descriptor);
     try {
       Geometry geometry =
           geometryMapper.toHopGeometry(

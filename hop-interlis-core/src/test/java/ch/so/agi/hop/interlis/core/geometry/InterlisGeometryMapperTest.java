@@ -10,8 +10,8 @@ import com.atolcd.hop.gis.geometry.curve.CircularString;
 import com.atolcd.hop.gis.geometry.curve.CompoundCurve;
 import com.atolcd.hop.gis.geometry.curve.MultiCurve;
 import com.atolcd.hop.gis.geometry.curve.MultiSurface;
-import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
@@ -91,6 +91,31 @@ class InterlisGeometryMapperTest {
     assertThat(arcComponent.getControlPoints()).hasSize(3);
     assertThat(arcComponent.getControlPoints()[1].getX()).isEqualTo(7.5);
     assertThat(arcComponent.getControlPoints()[1].getY()).isEqualTo(2.5);
+  }
+
+  @Test
+  void three_dimensional_arcs_fail_explicitly_in_both_directions() throws Exception {
+    IomObject start = coord(0, 0);
+    start.setattrvalue("C3", "3");
+    IomObject end = arc(10, 0, 5, 5);
+    end.setattrvalue("C3", "3");
+    var line = polyline(start, end);
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> mapper.toHopGeometry(line, InterlisGeometryKind.POLYLINE, 3))
+        .hasMessageContaining("3D curve")
+        .hasMessageContaining("not linearized");
+    var curve =
+        new CircularString(
+            new Coordinate[] {
+              new Coordinate(0, 0, 3), new Coordinate(5, 5, 3), new Coordinate(10, 0, 3)
+            },
+            new GeometryFactory());
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> mapper.toIomGeometry(curve, InterlisGeometryKind.POLYLINE, 3))
+        .hasMessageContaining("3D curve");
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () -> mapper.toHopGeometry(line, InterlisGeometryKind.POLYLINE, 0))
+        .hasMessageContaining("coordinate dimension");
   }
 
   @Test

@@ -84,6 +84,11 @@ public final class InterlisStructureCollector {
             structureProperties,
             plan.structure().scopedName());
       }
+      fieldWriter.finish(
+          childObject,
+          plan.childFields(),
+          options.rowWriteOptions(),
+          plan.structure().scopedName());
       owner.addattrobj(attributeName, childObject);
     }
     return copy;

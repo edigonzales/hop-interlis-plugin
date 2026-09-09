@@ -14,8 +14,8 @@ import ch.so.agi.hop.interlis.core.model.InterlisRoleDescriptor;
  * @param propertyPath path inside the IOM object tree
  * @param attributeDescriptor leaf attribute descriptor (null for technical fields and role refs)
  * @param roleDescriptor role descriptor (only for role/association fields)
- * @param associationDescriptor association descriptor (only for flattened association
- *     attributes)
+ * @param associationDescriptor association descriptor (only for flattened association attributes)
+ * @param structurePath precomputed outer-to-inner descriptors of flattened single structures
  */
 public record InterlisFieldPlan(
     int outputIndex,
@@ -24,7 +24,32 @@ public record InterlisFieldPlan(
     InterlisPropertyPath propertyPath,
     InterlisAttributeDescriptor attributeDescriptor,
     InterlisRoleDescriptor roleDescriptor,
-    InterlisAssociationDescriptor associationDescriptor) {
+    InterlisAssociationDescriptor associationDescriptor,
+    java.util.List<InterlisAttributeDescriptor> structurePath) {
+
+  public InterlisFieldPlan {
+    structurePath =
+        structurePath == null ? java.util.List.of() : java.util.List.copyOf(structurePath);
+  }
+
+  public InterlisFieldPlan(
+      int outputIndex,
+      String hopFieldName,
+      InterlisFieldSource source,
+      InterlisPropertyPath propertyPath,
+      InterlisAttributeDescriptor attributeDescriptor,
+      InterlisRoleDescriptor roleDescriptor,
+      InterlisAssociationDescriptor associationDescriptor) {
+    this(
+        outputIndex,
+        hopFieldName,
+        source,
+        propertyPath,
+        attributeDescriptor,
+        roleDescriptor,
+        associationDescriptor,
+        java.util.List.of());
+  }
 
   /** {@code true} if the field carries a geometry value. */
   public boolean isGeometry() {

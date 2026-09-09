@@ -344,7 +344,7 @@ public class InterlisOutputDialog extends BaseTransformDialog {
             result.successful(), result.configured(), result.message()),
         result.message());
     if (result.successful()) {
-      populateMapping(controller.mapping(result.projection().plan()));
+      populateMapping(controller.mapping(result.projection().plan(), input, variables));
     } else {
       wMapping.removeAll();
     }

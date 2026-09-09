@@ -47,7 +47,7 @@ class GenericEnvelopePipelineTest {
 
   private InterlisTransferInputMeta transferInput(TransferInputMode mode) {
     InterlisTransferInputMeta meta = new InterlisTransferInputMeta();
-    meta.setFileName(TestData.path("/data/HopIli_Associations_V1_valid.xtf").toString());
+    meta.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
     meta.setModelNames(ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setMode(mode.name());
@@ -96,7 +96,10 @@ class GenericEnvelopePipelineTest {
 
     PipelineMeta pipelineMeta = new PipelineMeta();
     TransformMeta source =
-        new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", transferInput(TransferInputMode.EVENTS));
+        new TransformMeta(
+            "INTERLIS_TRANSFER_INPUT",
+            "INTERLIS Transfer Input",
+            transferInput(TransferInputMode.EVENTS));
     TransformMeta middle = new TransformMeta("INTERLIS Object to Row", objectToRow);
     TransformMeta sink = new TransformMeta("Rows to result", new RowsToResultMeta());
     pipelineMeta.addTransform(source);
@@ -126,7 +129,10 @@ class GenericEnvelopePipelineTest {
 
     PipelineMeta pipelineMeta = new PipelineMeta();
     TransformMeta source =
-        new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", transferInput(TransferInputMode.EVENTS));
+        new TransformMeta(
+            "INTERLIS_TRANSFER_INPUT",
+            "INTERLIS Transfer Input",
+            transferInput(TransferInputMode.EVENTS));
     InterlisObjectToRowMeta objectToRow = new InterlisObjectToRowMeta();
     objectToRow.setDefault();
     objectToRow.setModelNames("HopIli_Associations_V1");
@@ -178,7 +184,10 @@ class GenericEnvelopePipelineTest {
 
     PipelineMeta pipelineMeta = new PipelineMeta();
     TransformMeta source =
-        new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", transferInput(TransferInputMode.EVENTS));
+        new TransformMeta(
+            "INTERLIS_TRANSFER_INPUT",
+            "INTERLIS Transfer Input",
+            transferInput(TransferInputMode.EVENTS));
     TransformMeta sink = new TransformMeta("INTERLIS Transfer Output", output);
     pipelineMeta.addTransform(source);
     pipelineMeta.addTransform(sink);
@@ -219,7 +228,8 @@ class GenericEnvelopePipelineTest {
     output.setEventMode(true);
 
     PipelineMeta pipelineMeta = new PipelineMeta();
-    TransformMeta source = new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", input);
+    TransformMeta source =
+        new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", input);
     TransformMeta sink = new TransformMeta("INTERLIS Transfer Output", output);
     pipelineMeta.addTransform(source);
     pipelineMeta.addTransform(sink);
@@ -252,7 +262,10 @@ class GenericEnvelopePipelineTest {
     // EVENTS stream into object mode: the START_TRANSFER event must be rejected.
     PipelineMeta pipelineMeta = new PipelineMeta();
     TransformMeta source =
-        new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", transferInput(TransferInputMode.EVENTS));
+        new TransformMeta(
+            "INTERLIS_TRANSFER_INPUT",
+            "INTERLIS Transfer Input",
+            transferInput(TransferInputMode.EVENTS));
     TransformMeta sink = new TransformMeta("INTERLIS Transfer Output", output);
     pipelineMeta.addTransform(source);
     pipelineMeta.addTransform(sink);

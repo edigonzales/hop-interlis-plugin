@@ -1722,3 +1722,25 @@ Das ist klein genug für einen frühen Stand, zeigt aber bereits die eigentliche
   https://github.com/edigonzales/hop-geometry-type-plugin
 - bestehendes GeoTools Plugin:
   https://github.com/edigonzales/hop-geotools-plugin
+
+
+## P1-Regressionen und Paketabnahme (2026-09-09)
+
+Deterministische Regressionen prüfen Overlay/Null-Löschung, Pflichtfelder nach
+vollständigem Aufbau, Referenzbestandteile, DELETE, XYZ-Roundtrips, konfigurierte
+Identitäten, Append-Metadaten/-Werte und sichere bzw. abgelehnte Parallelität.
+Validierungstests decken fehlende Ziele, gültige Vorwärtsreferenzen, UNIQUE,
+Zweitdurchlauf genau einmal, explizite Zielprüfungs-Konfiguration, Fehlerlimits,
+negative Limits und einen langsamen Verbraucher mit Queuegrösse 2 ab.
+
+`HopIli_Associations_V1_valid.xtf` enthält vollständig gültige eingebettete Links
+und alle Pflichtverknüpfungen. Die bisherige unvollständige Variante mit
+absichtlich eigenständigen Linkobjekten bleibt als `HopIli_Associations_V1_mapping.xtf`
+für Mapping-Regressionsfälle erhalten; sie ist kein Vollvalidierungsnachweis.
+
+Paketpipelines 21–24 prüfen geändertes Quellobjekt, konfigurierten TID, konstanten
+Basket, alle XYZ-Koordinaten, Append und vollständige Diagnoseausgabe bei erwartetem
+Exit-Code 1 (unbegrenzt sowie Limit 2). Der E2E-Runner erzeugt isolierte Hop-Metadaten,
+prüft jeden Exit-Code explizit und führt auch die bisherigen Pipelines aus.
+`HOP_GEOTOOLS_ZIP` kann ein kompatibles vorgebautes GeoTools-Paket für den optionalen
+GeoPackage-Test liefern. Ohne diese Option erfolgt der Build mit Tests.

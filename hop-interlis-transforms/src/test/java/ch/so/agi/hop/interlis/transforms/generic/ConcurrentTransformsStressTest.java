@@ -59,9 +59,9 @@ class ConcurrentTransformsStressTest {
     PipelineMeta pipelineMeta = new PipelineMeta();
     pipelineMeta.setName("concurrent-transforms-stress");
 
-    add(pipelineMeta, input("INTERLIS Input A", "/data/HopIli_Associations_V1_valid.xtf"));
+    add(pipelineMeta, input("INTERLIS Input A", "/data/HopIli_Associations_V1_mapping.xtf"));
     add(pipelineMeta, input("INTERLIS Input B", "/data/HopIli_Associations_V1_basketmeta.xtf"));
-    add(pipelineMeta, validate("INTERLIS Validate A", "/data/HopIli_Associations_V1_valid.xtf"));
+    add(pipelineMeta, validate("INTERLIS Validate A", "/data/HopIli_Associations_V1_mapping.xtf"));
     add(pipelineMeta, validate("INTERLIS Validate B", "/data/HopIli_Enums_V1_invalid.xtf"));
 
     PipelineRunConfiguration runConfiguration = new PipelineRunConfiguration();

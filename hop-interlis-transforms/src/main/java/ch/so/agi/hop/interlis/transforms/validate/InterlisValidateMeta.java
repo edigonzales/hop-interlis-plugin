@@ -99,15 +99,27 @@ public class InterlisValidateMeta
       IRowMeta info,
       IVariables variables,
       IHopMetadataProvider metadataProvider) {
+    if (maxErrors < 0) {
+      remarks.add(
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR,
+              "maxErrors must be zero (unlimited) or positive",
+              transformMeta));
+      return;
+    }
     if (fileName == null || fileName.isBlank()) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS transfer file is required", transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS transfer file is required", transformMeta));
       return;
     }
     String resolved = variables.resolve(fileName);
     if (!resolved.contains("${") && !java.nio.file.Files.exists(java.nio.file.Path.of(resolved))) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS transfer file does not exist: " + resolved, transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR,
+              "INTERLIS transfer file does not exist: " + resolved,
+              transformMeta));
       return;
     }
     remarks.add(

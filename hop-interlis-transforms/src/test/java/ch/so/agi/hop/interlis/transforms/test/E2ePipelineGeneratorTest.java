@@ -68,25 +68,31 @@ class E2ePipelineGeneratorTest {
         structuresRoundtripCheckPipeline("08-structures-roundtrip-check",
             outputFile(outputDir, "structures-roundtrip.xtf"),
             outputFile(outputDir, "interlis-structures-roundtrip")));
-    write(outputDir.resolve("09-associations-roundtrip.hpl"),
-        associationsRoundtripPipeline("09-associations-roundtrip",
-            inputFile(inputDir, "HopIli_Associations_V1_valid.xtf"),
+    write(
+        outputDir.resolve("09-associations-roundtrip.hpl"),
+        associationsRoundtripPipeline(
+            "09-associations-roundtrip",
+            inputFile(inputDir, "HopIli_Associations_V1_mapping.xtf"),
             outputFile(outputDir, "associations-roundtrip.xtf")));
     write(outputDir.resolve("10-associations-roundtrip-check.hpl"),
         associationsRoundtripCheckPipeline("10-associations-roundtrip-check",
             outputFile(outputDir, "associations-roundtrip.xtf"),
             outputFile(outputDir, "interlis-associations-roundtrip")));
-    write(outputDir.resolve("11-association-rows-roundtrip.hpl"),
-        associationRowsRoundtripPipeline("11-association-rows-roundtrip",
-            inputFile(inputDir, "HopIli_Associations_V1_valid.xtf"),
+    write(
+        outputDir.resolve("11-association-rows-roundtrip.hpl"),
+        associationRowsRoundtripPipeline(
+            "11-association-rows-roundtrip",
+            inputFile(inputDir, "HopIli_Associations_V1_mapping.xtf"),
             outputFile(outputDir, "association-rows-roundtrip.xtf")));
     write(outputDir.resolve("12-association-rows-roundtrip-check.hpl"),
         associationRowsRoundtripCheckPipeline("12-association-rows-roundtrip-check",
             outputFile(outputDir, "association-rows-roundtrip.xtf"),
             outputFile(outputDir, "interlis-association-rows-roundtrip")));
-    write(outputDir.resolve("13-generic-transfer-roundtrip.hpl"),
-        genericTransferRoundtripPipeline("13-generic-transfer-roundtrip",
-            inputFile(inputDir, "HopIli_Associations_V1_valid.xtf"),
+    write(
+        outputDir.resolve("13-generic-transfer-roundtrip.hpl"),
+        genericTransferRoundtripPipeline(
+            "13-generic-transfer-roundtrip",
+            inputFile(inputDir, "HopIli_Associations_V1_mapping.xtf"),
             outputFile(outputDir, "generic-transfer-roundtrip.xtf")));
     write(outputDir.resolve("14-generic-transfer-check.hpl"),
         genericTransferCheckPipeline("14-generic-transfer-check",
@@ -115,6 +121,178 @@ class E2ePipelineGeneratorTest {
         deleteCheckPipeline("20-delete-check",
             outputFile(outputDir, "delete-roundtrip.xtf"),
             outputFile(outputDir, "interlis-delete-roundtrip")));
+  }
+
+  @Test
+  void generateP1PipelinesAndFixtures() throws Exception {
+    Path out = outputDirectory();
+    Files.createDirectories(out);
+    String dirs = PARAMETERIZED ? "${E2E_INPUT_DIR}" : TestDataDirectory();
+    Path fixtures = PARAMETERIZED ? out.getParent().resolve("fixtures") : out;
+    Files.createDirectories(fixtures);
+    var projection =
+        new ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService()
+            .project(
+                new ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest(
+                    null,
+                    List.of("HopIli_P1_V1"),
+                    List.of(ch.so.agi.hop.interlis.transforms.TestData.path("/models").toString())),
+                "HopIli_P1_V1.Data.Item",
+                ch.so.agi.hop.interlis.core.mapping.ProjectionOptions.defaults());
+    var gf = new org.locationtech.jts.geom.GeometryFactory();
+    var wkt = new org.locationtech.jts.io.WKTReader(gf);
+    var geometries =
+        java.util.Map.of(
+            "Location",
+            "POINT Z (1 2 3)",
+            "Axis",
+            "LINESTRING Z (1 2 3, 4 5 6)",
+            "Face",
+            "POLYGON Z ((1 1 3, 4 1 3, 4 4 3, 1 1 3))",
+            "Axes",
+            "MULTILINESTRING Z ((1 2 3, 4 5 6))",
+            "Faces",
+            "MULTIPOLYGON Z (((1 1 3, 4 1 3, 4 4 3, 1 1 3)))");
+    for (boolean invalid : new boolean[] {false, true}) {
+      Path file = fixtures.resolve(invalid ? "p1-missing-target.xtf" : "p1-3d.xtf");
+      try (var writer =
+          ch.so.agi.hop.interlis.core.io.XtfTransferWriter.open(
+              file, projection.model().transferDescription(), projection.modelNames())) {
+        writer.startTransfer("P1 regression");
+        writer.startBasket("HopIli_P1_V1.Data", "b1");
+        for (int n = 0; n < (invalid ? 10 : 1); n++) {
+          Object[] values = new Object[projection.plan().fieldCount()];
+          for (var field : projection.plan().fields()) {
+            values[field.outputIndex()] =
+                switch (field.hopFieldName()) {
+                  case "_ili_tid" -> "i" + n;
+                  case "_ili_bid" -> "b1";
+                  case "Name" -> "before" + n;
+                  case "Details_Code" -> invalid ? null : "new-id";
+                  case "Details_Note" -> invalid ? null : "updated";
+                  case "Target_ref" -> invalid ? "absent" + n : null;
+                  default ->
+                      !invalid && geometries.containsKey(field.hopFieldName())
+                          ? wkt.read(geometries.get(field.hopFieldName()))
+                          : null;
+                };
+          }
+          var object =
+              new ch.so.agi.hop.interlis.core.mapping.RowToIomMapper()
+                  .map(
+                      values,
+                      projection.plan(),
+                      ch.so.agi.hop.interlis.core.mapping.RowWriteOptions.defaults());
+          if (!invalid) {
+            var child = new ch.interlis.iom_j.Iom_jObject("HopIli_P1_V1.Data.Detail", null);
+            child.setattrvalue("Code", "keep-child");
+            object.addattrobj("Children", child);
+          }
+          writer.writeObject(object);
+        }
+        writer.endBasket();
+        writer.endTransfer();
+      }
+    }
+    String fixture =
+        PARAMETERIZED ? "${E2E_INPUT_DIR}/p1-3d.xtf" : fixtures.resolve("p1-3d.xtf").toString();
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setDefault();
+    input.setFileName(fixture);
+    input.setModelNames("HopIli_P1_V1");
+    input.setModelDirectories(dirs);
+    input.setClassName("HopIli_P1_V1.Data.Item");
+    input.setKeepSourceObject(true);
+    input.setSourceObjectFieldName("_ili_object");
+    var fields =
+        new java.util.ArrayList<org.apache.hop.pipeline.transforms.selectvalues.SelectField>();
+    for (var field : projection.plan().fields())
+      fields.add(
+          selectField(
+              field.hopFieldName().equals("Name") ? "Details_Note" : field.hopFieldName(),
+              field.hopFieldName()));
+    fields.add(selectField("Details_Code", "custom_tid"));
+    fields.add(selectField("_ili_object", "_ili_object"));
+    var edit = new org.apache.hop.pipeline.transforms.selectvalues.SelectValuesMeta();
+    var options = new org.apache.hop.pipeline.transforms.selectvalues.SelectOptions();
+    options.setSelectFields(fields);
+    edit.setSelectOption(options);
+    InterlisOutputMeta output = new InterlisOutputMeta();
+    output.setDefault();
+    output.setFileName(outputFile(out, "p1-roundtrip.xtf"));
+    output.setModelNames("HopIli_P1_V1");
+    output.setModelDirectories(dirs);
+    output.setClassName("HopIli_P1_V1.Data.Item");
+    output.setSourceObjectField("_ili_object");
+    output.setObjectIdField("custom_tid");
+    output.setBasketIdField("");
+    output.setBasketId("constant");
+    output.setOverwrite(true);
+    write(out.resolve("21-p1-overlay-3d.hpl"), chain("21-p1-overlay-3d", input, edit, output));
+
+    var transfer = new ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta();
+    transfer.setDefault();
+    transfer.setFileName(fixture);
+    transfer.setModelNames("%DATA");
+    transfer.setModelDirectories(dirs);
+    var project = new ch.so.agi.hop.interlis.transforms.objecttorow.InterlisObjectToRowMeta();
+    project.setDefault();
+    project.setModelNames("HopIli_P1_V1");
+    project.setModelDirectories(dirs);
+    project.setClassName("HopIli_P1_V1.Data.Item");
+    project.setAppendEnvelopeFields(true);
+    var select = new org.apache.hop.pipeline.transforms.selectvalues.SelectValuesMeta();
+    var selectOptions = new org.apache.hop.pipeline.transforms.selectvalues.SelectOptions();
+    selectOptions.setSelectFields(
+        List.of(
+            selectField("_ili_event_type", "_ili_event_type"),
+            selectField("_ili_tid", "_ili_tid"),
+            selectField("_ili_bid", "_ili_bid"),
+            selectField("Name", "Name")));
+    select.setSelectOption(selectOptions);
+    write(
+        out.resolve("22-p1-append.hpl"),
+        chain("22-p1-append", transfer, project, select, csvOutput(outputFile(out, "p1-append"))));
+    for (int limit : new int[] {0, 2}) {
+      var validate = new ch.so.agi.hop.interlis.transforms.validate.InterlisValidateMeta();
+      validate.setDefault();
+      validate.setFileName(
+          PARAMETERIZED
+              ? "${E2E_INPUT_DIR}/p1-missing-target.xtf"
+              : fixtures.resolve("p1-missing-target.xtf").toString());
+      validate.setModelNames("%DATA");
+      validate.setModelDirectories(dirs);
+      validate.setFailOnErrors(true);
+      validate.setIncludeWarnings(false);
+      validate.setMaxErrors(limit);
+      String name = limit == 0 ? "23-p1-validation-failure" : "24-p1-validation-limit";
+      write(out.resolve(name + ".hpl"), chain(name, validate, csvOutput(outputFile(out, name))));
+    }
+  }
+
+  private static org.apache.hop.pipeline.transforms.selectvalues.SelectField selectField(
+      String name, String rename) {
+    var field = new org.apache.hop.pipeline.transforms.selectvalues.SelectField();
+    field.setName(name);
+    field.setRename(rename);
+    field.setLength(-2);
+    field.setPrecision(-2);
+    return field;
+  }
+
+  private static PipelineMeta chain(String name, ITransformMeta... steps) {
+    var pipeline = new PipelineMeta();
+    pipeline.setName(name);
+    TransformMeta previous = null;
+    int i = 0;
+    for (var step : steps) {
+      var transform = new TransformMeta("step" + i, step);
+      transform.setLocation(100 + 200 * i++, 100);
+      pipeline.addTransform(transform);
+      if (previous != null) pipeline.addPipelineHop(new PipelineHopMeta(previous, transform));
+      previous = transform;
+    }
+    return pipeline;
   }
 
   @Test
@@ -158,7 +336,11 @@ class E2ePipelineGeneratorTest {
       return Path.of(configured).toAbsolutePath();
     }
     // Default: test resources data directory of this module.
-    Path data = Path.of(E2ePipelineGeneratorTest.class.getResource("/data/HopIli_Geometry_V1_valid.xtf").toURI());
+    Path data =
+        Path.of(
+            E2ePipelineGeneratorTest.class
+                .getResource("/data/HopIli_Geometry_V1_valid.xtf")
+                .toURI());
     return data.getParent().toAbsolutePath();
   }
 
@@ -400,7 +582,8 @@ class E2ePipelineGeneratorTest {
     TransformMeta explodeTransform =
         new TransformMeta("INTERLIS_STRUCTURE_EXPLODE", "INTERLIS Structure Explode", explode);
     explodeTransform.setLocation(300, 100);
-    TransformMeta stringify = new TransformMeta("Select values", stringifyGeometry(List.of("Location")));
+    TransformMeta stringify =
+        new TransformMeta("Select values", stringifyGeometry(List.of("Location")));
     stringify.setLocation(500, 100);
     TransformMeta sink = new TransformMeta("Text file output", csvOutput(outputFile));
     sink.setLocation(700, 100);

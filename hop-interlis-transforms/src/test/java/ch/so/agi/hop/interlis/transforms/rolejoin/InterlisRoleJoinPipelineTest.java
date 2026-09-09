@@ -29,7 +29,7 @@ class InterlisRoleJoinPipelineTest {
 
   private InterlisInputMeta personInput() {
     InterlisInputMeta input = new InterlisInputMeta();
-    input.setFileName(TestData.path("/data/HopIli_Associations_V1_valid.xtf").toString());
+    input.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
     input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
     input.setModelDirectories(TestData.path("/models").toString());
     input.setClassName("HopIli_Associations_V1.Data.Person");
@@ -68,7 +68,8 @@ class InterlisRoleJoinPipelineTest {
 
     if (withLookupInput) {
       InterlisInputMeta addressInput = new InterlisInputMeta();
-      addressInput.setFileName(TestData.path("/data/HopIli_Associations_V1_valid.xtf").toString());
+      addressInput.setFileName(
+          TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
       addressInput.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
       addressInput.setModelDirectories(TestData.path("/models").toString());
       addressInput.setClassName("HopIli_Associations_V1.Data.Address");

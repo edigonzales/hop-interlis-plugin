@@ -35,10 +35,10 @@ siehe `phase-07.md`).
     `INTERLIS Enumerations`) lehnen parallele Kopien mit klarer
     Fehlermeldung ab („Set Number of copies back to 1") – mehrere Kopien
     würden Rows duplizieren bzw. dieselbe Zieldatei korrumpieren.
-  - Row-stateless Transforms (`INTERLIS Structure Explode`,
-    `INTERLIS Structure Collect`, `INTERLIS Role Join`,
-    `INTERLIS Object to Row`, `INTERLIS Row to Object`) unterstützen
-    parallele Kopien (per Test verifiziert).
+  - Korrigiert im P1-Paket: `Structure Explode` und `Row to Object` unterstützen
+    parallele Kopien. `Object to Row` unterstützt sie nur ohne Assoziationspufferung.
+    `Structure Collect` und `Role Join` benötigen wegen ihrer getrennten
+    Eingangsströme eine Kopie (siehe `p1-corrections.md`).
 - Thread-sichere geteilte Dienste: `InterlisModelServiceImpl`
   (statischer Cache + Compile-Lock), Mapper/Pläne sind pro Transform
   unveränderlich nach Init; Reader/Writer sind pro Instanz und werden nie

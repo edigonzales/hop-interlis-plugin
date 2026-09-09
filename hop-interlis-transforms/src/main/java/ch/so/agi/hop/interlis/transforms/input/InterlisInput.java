@@ -16,9 +16,7 @@ import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Set;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.pipeline.Pipeline;
 import org.apache.hop.pipeline.PipelineMeta;
@@ -195,7 +193,8 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
   }
 
   private void doInitialize() throws HopException {
-    InterlisParallelCopies.rejectParallelCopies(getCopy(), getTransformName());
+    InterlisParallelCopies.requireSingleCopy(
+        getTransformMeta(), this, "file processing or enumeration emission requires one copy");
     InterlisRuntimeSupport.initialize();
 
     String resolvedFile = resolve(meta.getFileName());

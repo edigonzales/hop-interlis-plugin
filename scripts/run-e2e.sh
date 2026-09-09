@@ -14,6 +14,7 @@ set -euo pipefail
 # Environment:
 #   HOP_GEOTOOLS_REPO  checkout of hop-geotools-plugin (default: ../hop-geotools-plugin);
 #                      when absent the GeoPackage pipeline is skipped.
+#   HOP_GEOTOOLS_ZIP   prebuilt compatible GeoTools plugin ZIP (avoids rebuilding that repository).
 
 if [[ $# -ne 1 ]]; then
   echo "Usage: $0 <HOP_HOME>"
@@ -51,7 +52,7 @@ if [[ -z "$GEOMETRY_ZIP" || ! -f "$GEOMETRY_ZIP" ]]; then
   exit 1
 fi
 if [[ -z "$INTERLIS_ZIP" || ! -f "$INTERLIS_ZIP" ]]; then
-  echo "INTERLIS plugin ZIP not found; run 'mvn clean verify' first." >&2
+  echo "INTERLIS plugin ZIP not found; run './mvnw -B -ntp clean verify' first." >&2
   exit 1
 fi
 
@@ -65,6 +66,18 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Use deterministic engine settings without touching the user's Hop projects/configuration.
+export HOP_CONFIG_FOLDER="$WORK_DIR/config"
+export HOP_AUDIT_FOLDER="$WORK_DIR/audit"
+mkdir -p "$HOP_CONFIG_FOLDER/metadata/pipeline-run-configuration"
+cat > "$HOP_CONFIG_FOLDER/metadata/pipeline-run-configuration/local.json" <<'JSON'
+{
+  "name": "local",
+  "engineRunConfiguration": {"Local": {"rowset_size": "2", "safe_mode": true}},
+  "configurationVariables": []
+}
+JSON
+
 echo "==> Installing plugins into $HOP_HOME"
 rm -rf "$HOP_HOME/plugins/misc/hop-geometry-type"
 unzip -q -o "$GEOMETRY_ZIP" -d "$HOP_HOME"
@@ -72,21 +85,27 @@ rm -rf "$HOP_HOME/plugins/transforms/interlis"
 unzip -q -o "$INTERLIS_ZIP" -d "$HOP_HOME"
 
 GEOTOOLS_REPO="${HOP_GEOTOOLS_REPO:-$PROJECT_DIR/../hop-geotools-plugin}"
-if [[ -f "$GEOTOOLS_REPO/pom.xml" ]]; then
+if [[ -n "${HOP_GEOTOOLS_ZIP:-}" ]]; then
+  GEOTOOLS_ZIP="$HOP_GEOTOOLS_ZIP"
+elif [[ -f "$GEOTOOLS_REPO/pom.xml" ]]; then
   echo "==> Building hop-geotools-plugin"
-  mvn -f "$GEOTOOLS_REPO/pom.xml" -B -ntp clean install -DskipTests
+  if [[ -x "$GEOTOOLS_REPO/mvnw" ]]; then
+    (cd "$GEOTOOLS_REPO" && ./mvnw -B -ntp clean verify)
+  else
+    mvn -f "$GEOTOOLS_REPO/pom.xml" -B -ntp clean verify
+  fi
   GEOTOOLS_ZIP="$(find "$GEOTOOLS_REPO/assemblies/assemblies-hop-geotools/target" \
     -maxdepth 1 -name 'hop-geotools-plugin-*.zip' -print | head -n 1)"
-  if [[ -z "$GEOTOOLS_ZIP" || ! -f "$GEOTOOLS_ZIP" ]]; then
-    echo "GeoTools plugin ZIP was not created" >&2
-    exit 1
-  fi
-  echo "==> Installing GeoTools plugin"
+else
+  GEOTOOLS_ZIP=""
+fi
+if [[ -n "$GEOTOOLS_ZIP" && -f "$GEOTOOLS_ZIP" ]]; then
+  echo "==> Installing GeoTools plugin from $GEOTOOLS_ZIP"
   rm -rf "$HOP_HOME/plugins/transforms/geotools-vector"
   unzip -q -o "$GEOTOOLS_ZIP" -d "$HOP_HOME"
   RUN_GPKG=true
 else
-  echo "==> hop-geotools-plugin not found at $GEOTOOLS_REPO; skipping GeoPackage pipeline"
+  echo "==> No compatible GeoTools ZIP; skipping optional GeoPackage pipeline"
   RUN_GPKG=false
 fi
 
@@ -94,12 +113,19 @@ echo "==> Preparing test data in $WORK_DIR"
 mkdir -p "$WORK_DIR/input" "$WORK_DIR/output"
 cp "$PROJECT_DIR/hop-interlis-core/src/test/resources/data/"*.xtf "$WORK_DIR/input/"
 cp "$PROJECT_DIR/hop-interlis-core/src/test/resources/models/"*.ili "$WORK_DIR/input/"
+cp "$PROJECT_DIR/e2e/fixtures/"*.xtf "$WORK_DIR/input/"
 
 run_pipeline() {
   local pipeline="$1"
+  local expected_exit="${2:-0}"
+  local actual_exit=0
   echo "==> E2E: $(basename "$pipeline")"
   "$HOP_HOME/hop-run.sh" -r local -f "$pipeline" \
-    -p E2E_INPUT_DIR="$WORK_DIR/input" -p E2E_OUTPUT_DIR="$WORK_DIR/output"
+    -p E2E_INPUT_DIR="$WORK_DIR/input" -p E2E_OUTPUT_DIR="$WORK_DIR/output" || actual_exit=$?
+  if [[ "$actual_exit" != "$expected_exit" ]]; then
+    echo "Unexpected exit code for $pipeline: $actual_exit (expected $expected_exit)" >&2
+    return 1
+  fi
 }
 
 run_pipeline "$PROJECT_DIR/e2e/pipelines/02-interlis-input-to-csv.hpl"
@@ -120,6 +146,10 @@ run_pipeline "$PROJECT_DIR/e2e/pipelines/17-validate.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/18-enumerations.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/19-delete-roundtrip.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/20-delete-check.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/21-p1-overlay-3d.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/22-p1-append.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/23-p1-validation-failure.hpl" 1
+run_pipeline "$PROJECT_DIR/e2e/pipelines/24-p1-validation-limit.hpl" 1
 if [[ "$RUN_GPKG" == "true" ]]; then
   run_pipeline "$PROJECT_DIR/e2e/pipelines/04-interlis-to-gpkg.hpl"
 fi

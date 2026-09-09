@@ -78,7 +78,8 @@ class InterlisOutputDialogControllerTest {
     assertThat(mappings.get(0).hopField()).isEqualTo("_ili_tid");
     assertThat(mappings.get(1).hopField()).isEqualTo("_ili_bid");
     assertThat(mappings.get(3).type()).contains("COORD");
-    assertThat(mappings)
+    assertThat(mappings.subList(0, 2)).allMatch(m -> m.status().equals("configured identity"));
+    assertThat(mappings.subList(2, mappings.size()))
         .allMatch(m -> m.status().equals("auto-map by name"));
   }
 }

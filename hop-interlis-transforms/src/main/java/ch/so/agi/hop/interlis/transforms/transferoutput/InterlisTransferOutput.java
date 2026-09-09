@@ -2,7 +2,6 @@ package ch.so.agi.hop.interlis.transforms.transferoutput;
 
 import ch.interlis.iom.IomObject;
 import ch.so.agi.hop.interlis.core.io.InterlisEnvelopeRowLayout;
-import ch.so.agi.hop.interlis.core.io.InterlisEventType;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectEnvelope;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectOperation;
 import ch.so.agi.hop.interlis.core.io.InterlisWriteException;
@@ -148,8 +147,8 @@ public class InterlisTransferOutput
   }
 
   private void doInitialize() throws HopException {
-    ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.rejectParallelCopies(
-        getCopy(), getTransformName());
+    ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.requireSingleCopy(
+        getTransformMeta(), this, "file processing or enumeration emission requires one copy");
     InterlisRuntimeSupport.initialize();
 
     String resolvedFile = resolve(meta.getFileName());

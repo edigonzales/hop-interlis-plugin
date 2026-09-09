@@ -34,7 +34,8 @@ class InterlisTransferInputPipelineTest {
     meta.setMode(mode.name());
 
     PipelineMeta pipelineMeta = new PipelineMeta();
-    TransformMeta source = new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", meta);
+    TransformMeta source =
+        new TransformMeta("INTERLIS_TRANSFER_INPUT", "INTERLIS Transfer Input", meta);
     TransformMeta sink = new TransformMeta("Rows to result", new RowsToResultMeta());
     pipelineMeta.addTransform(source);
     pipelineMeta.addTransform(sink);
@@ -57,7 +58,7 @@ class InterlisTransferInputPipelineTest {
   @Test
   void emits_constant_envelope_schema_in_objects_mode() throws Exception {
     List<RowMetaAndData> rows =
-        run("/data/HopIli_Associations_V1_valid.xtf", TransferInputMode.OBJECTS);
+        run("/data/HopIli_Associations_V1_mapping.xtf", TransferInputMode.OBJECTS);
 
     assertThat(rows.get(0).getRowMeta().getFieldNames())
         .containsExactlyElementsOf(InterlisEnvelopeRowLayout.FIELD_NAMES);
@@ -78,7 +79,7 @@ class InterlisTransferInputPipelineTest {
   @Test
   void emits_the_exact_event_sequence_in_events_mode() throws Exception {
     List<RowMetaAndData> rows =
-        run("/data/HopIli_Associations_V1_valid.xtf", TransferInputMode.EVENTS);
+        run("/data/HopIli_Associations_V1_mapping.xtf", TransferInputMode.EVENTS);
 
     assertThat(rows)
         .extracting(row -> row.getData()[InterlisEnvelopeRowLayout.EVENT_TYPE_INDEX])
@@ -101,7 +102,7 @@ class InterlisTransferInputPipelineTest {
   @Test
   void mixed_classes_travel_in_one_stream() throws Exception {
     List<RowMetaAndData> rows =
-        run("/data/HopIli_Associations_V1_valid.xtf", TransferInputMode.OBJECTS);
+        run("/data/HopIli_Associations_V1_mapping.xtf", TransferInputMode.OBJECTS);
 
     assertThat(rows)
         .extracting(row -> row.getData()[InterlisEnvelopeRowLayout.CLASS_INDEX])

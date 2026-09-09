@@ -1,107 +1,77 @@
-<?xml version="1.0" ?>
-<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:geom="http://www.interlis.ch/geometry/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:HopIli_Associations_V1="http://www.interlis.ch/xtf/2.4/HopIli_Associations_V1">
-  
-
+<?xml version='1.0' encoding='UTF-8'?>
+<ili:transfer xmlns:HopIli_Associations_V1="http://www.interlis.ch/xtf/2.4/HopIli_Associations_V1" xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS">
   <ili:headersection>
     <ili:models>
       <ili:model>HopIli_Associations_V1</ili:model>
     </ili:models>
     <ili:sender>hop-interlis-plugin-tests</ili:sender>
   </ili:headersection>
-  
-
   <ili:datasection>
-    
-
     <HopIli_Associations_V1:Data ili:bid="b1">
-      
-
       <HopIli_Associations_V1:Person ili:tid="p1">
         <HopIli_Associations_V1:Name>Meier</HopIli_Associations_V1:Name>
       </HopIli_Associations_V1:Person>
-      
-
       <HopIli_Associations_V1:Person ili:tid="p2">
         <HopIli_Associations_V1:Name>Mueller</HopIli_Associations_V1:Name>
       </HopIli_Associations_V1:Person>
-      
-
       <HopIli_Associations_V1:Person ili:tid="p3">
         <HopIli_Associations_V1:Name>Keller</HopIli_Associations_V1:Name>
       </HopIli_Associations_V1:Person>
-      
-
       <HopIli_Associations_V1:Organisation ili:tid="o1">
         <HopIli_Associations_V1:Name>ACME</HopIli_Associations_V1:Name>
       </HopIli_Associations_V1:Organisation>
-      
-
       <HopIli_Associations_V1:Address ili:tid="a1">
         <HopIli_Associations_V1:Street>Main Street</HopIli_Associations_V1:Street>
+        <HopIli_Associations_V1:Person ili:ref="p1">
+          <HopIli_Associations_V1:AddressOwnership>
+            <HopIli_Associations_V1:Share>0.5</HopIli_Associations_V1:Share>
+          </HopIli_Associations_V1:AddressOwnership>
+        </HopIli_Associations_V1:Person>
       </HopIli_Associations_V1:Address>
-      
-
       <HopIli_Associations_V1:Project ili:tid="pr1">
         <HopIli_Associations_V1:Name>X</HopIli_Associations_V1:Name>
       </HopIli_Associations_V1:Project>
-      
-
       <HopIli_Associations_V1:Task ili:tid="t1">
         <HopIli_Associations_V1:Title>First</HopIli_Associations_V1:Title>
+        <HopIli_Associations_V1:Person ili:ref="p1" ili:order_pos="1" />
       </HopIli_Associations_V1:Task>
-      
-
       <HopIli_Associations_V1:Task ili:tid="t2">
         <HopIli_Associations_V1:Title>Second</HopIli_Associations_V1:Title>
+        <HopIli_Associations_V1:Person ili:ref="p2" ili:order_pos="1" />
       </HopIli_Associations_V1:Task>
-      
-
-      <HopIli_Associations_V1:AddressOwnership>
-        <HopIli_Associations_V1:Person ili:ref="p1"/>
-        <HopIli_Associations_V1:Address ili:ref="a1"/>
-        <HopIli_Associations_V1:Share>0.5</HopIli_Associations_V1:Share>
-      </HopIli_Associations_V1:AddressOwnership>
-      
-
-      <HopIli_Associations_V1:Membership ili:tid="m1">
-        <HopIli_Associations_V1:Person ili:ref="p1"/>
-        <HopIli_Associations_V1:Organisation ili:ref="o1"/>
+      <HopIli_Associations_V1:Membership>
+        <HopIli_Associations_V1:Person ili:ref="p1" />
+        <HopIli_Associations_V1:Organisation ili:ref="o1" />
         <HopIli_Associations_V1:Function>CEO</HopIli_Associations_V1:Function>
         <HopIli_Associations_V1:Entry>2020-01-01</HopIli_Associations_V1:Entry>
       </HopIli_Associations_V1:Membership>
-      
-
       <HopIli_Associations_V1:Membership>
-        <HopIli_Associations_V1:Person ili:ref="p2"/>
-        <HopIli_Associations_V1:Organisation ili:ref="o1"/>
+        <HopIli_Associations_V1:Person ili:ref="p2" />
+        <HopIli_Associations_V1:Organisation ili:ref="o1" />
         <HopIli_Associations_V1:Function>Dev</HopIli_Associations_V1:Function>
         <HopIli_Associations_V1:Entry>2021-06-01</HopIli_Associations_V1:Entry>
       </HopIli_Associations_V1:Membership>
-      
-
       <HopIli_Associations_V1:PersonProject>
-        <HopIli_Associations_V1:ProjectPerson ili:ref="p1"/>
-        <HopIli_Associations_V1:ProjectOrganisation ili:ref="o1"/>
-        <HopIli_Associations_V1:ProjectProject ili:ref="pr1"/>
+        <HopIli_Associations_V1:ProjectPerson ili:ref="p1" />
+        <HopIli_Associations_V1:ProjectOrganisation ili:ref="o1" />
+        <HopIli_Associations_V1:ProjectProject ili:ref="pr1" />
       </HopIli_Associations_V1:PersonProject>
-      
-
-      <HopIli_Associations_V1:PersonTask>
-        <HopIli_Associations_V1:Person ili:ref="p1"/>
-        <HopIli_Associations_V1:Task ili:ref="t1"/>
-      </HopIli_Associations_V1:PersonTask>
-      
-
-      <HopIli_Associations_V1:PersonTask>
-        <HopIli_Associations_V1:Person ili:ref="p2"/>
-        <HopIli_Associations_V1:Task ili:ref="t2" ili:order_pos="1"/>
-      </HopIli_Associations_V1:PersonTask>
-      
-
+      <HopIli_Associations_V1:Address ili:tid="a2">
+        <HopIli_Associations_V1:Street>Street 2</HopIli_Associations_V1:Street>
+        <HopIli_Associations_V1:Person ili:ref="p2">
+          <HopIli_Associations_V1:AddressOwnership>
+            <HopIli_Associations_V1:Share>0.5</HopIli_Associations_V1:Share>
+          </HopIli_Associations_V1:AddressOwnership>
+        </HopIli_Associations_V1:Person>
+      </HopIli_Associations_V1:Address>
+      <HopIli_Associations_V1:Address ili:tid="a3">
+        <HopIli_Associations_V1:Street>Street 3</HopIli_Associations_V1:Street>
+        <HopIli_Associations_V1:Person ili:ref="p3">
+          <HopIli_Associations_V1:AddressOwnership>
+            <HopIli_Associations_V1:Share>0.5</HopIli_Associations_V1:Share>
+          </HopIli_Associations_V1:AddressOwnership>
+        </HopIli_Associations_V1:Person>
+      </HopIli_Associations_V1:Address>
     </HopIli_Associations_V1:Data>
-    
-
   </ili:datasection>
-  
-
 </ili:transfer>

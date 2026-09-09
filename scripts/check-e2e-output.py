@@ -289,3 +289,37 @@ print(f"  {enumerations_csv}: enumeration values incl. sub-enumeration hierarchy
 print(f"  {delete_roundtrip_csv}: DELETE operation preserved through the typed roundtrip")
 if with_gpkg:
     print("  interlis-arcs.gpkg: 2 curve features, axis stored as COMPOUNDCURVE")
+
+# P1: inspect the actual XML to compare every XYZ ordinate (WKT rendering may omit Z).
+import xml.etree.ElementTree as ET
+ns = {"m": "http://www.interlis.ch/xtf/2.4/HopIli_P1_V1",
+      "ili": "http://www.interlis.ch/xtf/2.4/INTERLIS", "g": "http://www.interlis.ch/geometry/1.0"}
+xml = ET.parse(output_dir / "p1-roundtrip.xtf")
+item = xml.find(".//m:Item", ns)
+assert item is not None
+assert item.attrib[f"{{{ns['ili']}}}tid"] == "new-id", "configured TID did not override _ili_tid"
+assert xml.find(".//m:Data", ns).attrib[f"{{{ns['ili']}}}bid"] == "constant"
+assert item.findtext("m:Name", namespaces=ns) == "updated", "source carrier overrode the edited row"
+assert item.findtext("m:Children/m:Detail/m:Code", namespaces=ns) == "keep-child"
+line = [(1., 2., 3.), (4., 5., 6.)]
+polygon = [(1., 1., 3.), (4., 1., 3.), (4., 4., 3.), (1., 1., 3.)]
+for attribute, expected in {"Location": [line[0]], "Axis": line, "Face": polygon, "Axes": line, "Faces": polygon}.items():
+    attributes = item.findall(f"m:{attribute}", ns)
+    assert len(attributes) == 1, f"duplicate {attribute} after source overlay"
+    coords = [tuple(float(c.findtext(f"g:c{i}", namespaces=ns)) for i in (1, 2, 3))
+              for c in attributes[0].findall(".//g:coord", ns)]
+    assert coords == expected, f"XYZ lost in {attribute}: {coords}"
+
+def read_p1_csv(name):
+    with (output_dir / f"{name}.csv").open(newline="", encoding="utf-8") as f:
+        return [[v.strip() for v in row] for row in csv.reader(f, delimiter=";")]
+
+append = read_p1_csv("p1-append")
+assert append == [["_ili_event_type", "_ili_tid", "_ili_bid", "Name"], ["OBJECT", "i0", "b1", "before0"]], append
+for name, count, incomplete in [("23-p1-validation-failure", 10, False), ("24-p1-validation-limit", 2, True)]:
+    findings = read_p1_csv(name)
+    assert len(findings[0]) == 13
+    assert sum(row[0] == "ERROR" for row in findings[1:]) == count, findings
+    assert any("Validation incomplete" in row[1] for row in findings[1:]) == incomplete, findings
+    assert len(findings) == 1 + count + int(incomplete), findings
+print("  P1: source overlay, configured identities, XYZ, append and complete failure diagnostics verified")

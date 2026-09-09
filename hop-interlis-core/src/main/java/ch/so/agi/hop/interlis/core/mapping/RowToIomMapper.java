@@ -92,21 +92,14 @@ public final class RowToIomMapper {
   public InterlisWriteResult mapAll(
       IomObject carrier, Object[] values, InterlisRowMappingPlan plan, RowWriteOptions options)
       throws InterlisMappingException {
+    if (options.isDelete()) return mapAll(values, plan, options);
     if (carrier == null) {
       throw new InterlisMappingException(
           "Source INTERLIS object is null; cannot write " + plan.root().scopedName());
     }
     String tid = requireTid(values, plan);
-    Iom_jObject target;
-    if (tid == null || tid.equals(carrier.getobjectoid())) {
-      target = new Iom_jObject(carrier);
-      if (tid != null && !tid.equals(carrier.getobjectoid())) {
-        target.setobjectoid(tid);
-      }
-    } else {
-      target = new Iom_jObject(plan.root().scopedName(), tid);
-      copyChildren(carrier, target);
-    }
+    Iom_jObject target = new Iom_jObject(carrier);
+    target.setobjectoid(tid);
     return mapInto(target, values, plan, options);
   }
 
@@ -142,6 +135,17 @@ public final class RowToIomMapper {
       Iom_jObject object, Object[] values, InterlisRowMappingPlan plan, RowWriteOptions options)
       throws InterlisMappingException {
     String tid = object.getobjectoid();
+    if (options.isDelete()) {
+      Iom_jObject deleted = new Iom_jObject(plan.root().scopedName(), tid);
+      deleted.setobjectoperation(options.operation().toIom());
+      return new InterlisWriteResult(deleted, List.of());
+    }
+    // Rebuild every projected reference as one unit, dropping stale BID/order metadata.
+    for (InterlisFieldPlan field : plan.fields()) {
+      if (field.source() == InterlisFieldSource.ROLE_REFERENCE) {
+        object.setattrundefined(field.propertyPath().leafName());
+      }
+    }
     Map<String, Iom_jObject> structureCache = new HashMap<>();
     Map<String, LinkBuilder> linkBuilders = new HashMap<>();
     List<IomObject> additionalObjects = new ArrayList<>();
@@ -177,6 +181,8 @@ public final class RowToIomMapper {
         additionalObjects.add(link);
       }
     }
+
+    fieldWriter.finish(object, plan.fields(), options, plan.root().scopedName());
 
     // Strict check for entirely empty mandatory top-level structures.
     if (options.strict() && !options.isDelete()) {
@@ -341,8 +347,12 @@ public final class RowToIomMapper {
             ? null
             : (Iom_jObject) object.getattrobj(roleName, 0);
     if (reference == null) {
-      reference = new Iom_jObject("REF", null);
-      object.addattrobj(roleName, reference);
+      throw new InterlisMappingException(
+          "Role "
+              + roleName
+              + " of "
+              + plan.root().scopedName()
+              + " has a basket identifier but no reference; the role reference field must be set");
     }
     reference.setobjectrefbid(referenceBid);
   }
@@ -373,22 +383,6 @@ public final class RowToIomMapper {
               + "; the projection must include _ili_tid");
     }
     return tid;
-  }
-
-  /** Deep-copies all children of the source into a target that already has a fresh TID. */
-  private void copyChildren(IomObject source, Iom_jObject target) {
-    for (int i = 0; i < source.getattrcount(); i++) {
-      String name = source.getattrname(i);
-      int count = source.getattrvaluecount(name);
-      for (int j = 0; j < count; j++) {
-        IomObject child = source.getattrobj(name, j);
-        if (child != null) {
-          target.addattrobj(name, new Iom_jObject(child));
-        } else {
-          target.addattrvalue(name, source.getattrprim(name, j));
-        }
-      }
-    }
   }
 
   private void writeRoleOrderPos(

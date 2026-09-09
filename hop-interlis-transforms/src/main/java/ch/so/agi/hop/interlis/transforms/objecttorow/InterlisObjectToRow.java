@@ -9,14 +9,12 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisAssociationLinkLookup;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor;
-import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.row.IRowMeta;
-import org.apache.hop.core.row.RowMeta;
 import org.apache.hop.pipeline.Pipeline;
 import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.pipeline.transform.BaseTransform;
@@ -141,7 +139,7 @@ public class InterlisObjectToRow
       Object[] row, IomObject object, InterlisAssociationLinkLookup lookup) throws HopException {
     InterlisObjectEnvelope envelope = InterlisEnvelopeRowLayout.fromRow(row);
     try {
-      return data.mapper.map(envelope, data.plan, lookup);
+      return data.outputPlan.values(row, data.mapper.map(envelope, data.plan, lookup));
     } catch (Exception e) {
       throw new HopException(e.getMessage(), e);
     }
@@ -196,6 +194,10 @@ public class InterlisObjectToRow
       }
 
       data.buffering = data.plan.hasLinkResolvedRoles();
+      if (data.buffering) {
+        ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.requireSingleCopy(
+            getTransformMeta(), this, "association resolution buffers complete baskets");
+      }
       data.pendingRows = new ArrayList<>();
       data.associationLinks = new java.util.HashMap<>();
       data.associationsByScopedName = new java.util.HashMap<>();
@@ -207,10 +209,10 @@ public class InterlisObjectToRow
         }
       }
 
-      data.outputRowMeta =
-          meta.isAppendEnvelopeFields()
-              ? appendSchema(inputRowMeta)
-              : new HopRowSchemaFactory().createRowMeta(data.plan);
+      data.outputPlan =
+          InterlisObjectToRowOutputPlan.create(
+              inputRowMeta, data.plan, meta.isAppendEnvelopeFields());
+      data.outputRowMeta = data.outputPlan.rowMeta();
 
       if (isBasic()) {
         logBasic(
@@ -226,19 +228,6 @@ public class InterlisObjectToRow
     } catch (Exception e) {
       throw new HopException("Failed to initialize INTERLIS Object to Row: " + e.getMessage(), e);
     }
-  }
-
-  private IRowMeta appendSchema(IRowMeta inputRowMeta) throws Exception {
-    RowMeta rowMeta = new RowMeta();
-    rowMeta.addRowMeta(inputRowMeta);
-    var typed = new HopRowSchemaFactory().createRowMeta(data.plan);
-    for (int i = 0; i < typed.size(); i++) {
-      var valueMeta = typed.getValueMeta(i);
-      if (rowMeta.indexOfValue(valueMeta.getName()) < 0) {
-        rowMeta.addValueMeta(valueMeta);
-      }
-    }
-    return rowMeta;
   }
 
   private List<String> resolveModelNames() {

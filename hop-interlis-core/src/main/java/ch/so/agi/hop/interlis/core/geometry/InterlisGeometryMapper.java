@@ -78,15 +78,21 @@ public final class InterlisGeometryMapper {
       if (encoding != InterlisGeometryEncoding.NATIVE) {
         return toHopLegacyMultiGeometry(geometry, kind, dimension, encoding);
       }
+      if (dimension == 3 && containsArc(geometry)) {
+        throw new InterlisGeometryException(
+            "3D curve geometries cannot be read by hop-geometry-type-plugin yet; ARC is not"
+                + " linearized");
+      }
+      boolean curves = dimension == 2;
       Iox2wkb converter = new Iox2wkb(dimension, ByteOrder.BIG_ENDIAN, true);
       byte[] wkb =
           switch (kind) {
             case COORD -> converter.coord2wkb(geometry);
             case MULTICOORD -> converter.multicoord2wkb(geometry);
-            case POLYLINE -> converter.polyline2wkb(geometry, false, true, 0.0);
-            case MULTIPOLYLINE -> converter.multiline2wkb(geometry, true, 0.0);
-            case SURFACE, AREA -> converter.surface2wkb(geometry, true, 0.0);
-            case MULTISURFACE -> converter.multisurface2wkb(geometry, true, 0.0);
+            case POLYLINE -> converter.polyline2wkb(geometry, false, curves, 0.0);
+            case MULTIPOLYLINE -> converter.multiline2wkb(geometry, curves, 0.0);
+            case SURFACE, AREA -> converter.surface2wkb(geometry, curves, 0.0);
+            case MULTISURFACE -> converter.multisurface2wkb(geometry, curves, 0.0);
           };
       Geometry hopGeometry = CurveGeometrySupport.readWkb(wkb);
       return normalizeStraightOnly(hopGeometry);
@@ -121,6 +127,10 @@ public final class InterlisGeometryMapper {
       return null;
     }
 
+    if (dimension != 2 && dimension != 3) {
+      throw new InterlisGeometryException("Unsupported coordinate dimension " + dimension);
+    }
+    geometry = normalizeStraightOnly(geometry);
     try {
       if (encoding != InterlisGeometryEncoding.NATIVE) {
         return toIomLegacyMultiGeometry(geometry, kind, dimension, encoding);
@@ -274,6 +284,18 @@ public final class InterlisGeometryMapper {
         "Unsupported legacy geometry encoding " + encoding + " for geometry kind " + kind);
   }
 
+  private boolean containsArc(IomObject object) {
+    if ("ARC".equals(object.getobjecttag())) return true;
+    for (int i = 0; i < object.getattrcount(); i++) {
+      String attribute = object.getattrname(i);
+      for (int j = 0; j < object.getattrvaluecount(attribute); j++) {
+        IomObject child = object.getattrobj(attribute, j);
+        if (child != null && containsArc(child)) return true;
+      }
+    }
+    return false;
+  }
+
   private boolean hasZ(Geometry geometry) {
     for (org.locationtech.jts.geom.Coordinate coordinate : geometry.getCoordinates()) {
       if (!Double.isNaN(coordinate.getZ())) {
@@ -325,6 +347,26 @@ public final class InterlisGeometryMapper {
         plain.setSRID(geometry.getSRID());
         return plain;
       }
+    }
+    if (geometry instanceof MultiCurve multi && hasZ(multi) && !containsTrueCurve(multi)) {
+      LineString[] lines =
+          multi.getCurves().stream()
+              .map(this::normalizeStraightOnly)
+              .map(g -> (LineString) g)
+              .toArray(LineString[]::new);
+      Geometry plain = geometry.getFactory().createMultiLineString(lines);
+      plain.setSRID(geometry.getSRID());
+      return plain;
+    }
+    if (geometry instanceof MultiSurface multi && hasZ(multi) && !containsTrueCurve(multi)) {
+      Polygon[] polygons =
+          multi.getSurfaces().stream()
+              .map(this::normalizeStraightOnly)
+              .map(g -> (Polygon) g)
+              .toArray(Polygon[]::new);
+      Geometry plain = geometry.getFactory().createMultiPolygon(polygons);
+      plain.setSRID(geometry.getSRID());
+      return plain;
     }
     return geometry;
   }

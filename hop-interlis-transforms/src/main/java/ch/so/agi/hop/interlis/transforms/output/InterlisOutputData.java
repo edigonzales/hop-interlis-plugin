@@ -14,9 +14,7 @@ public class InterlisOutputData extends BaseTransformData {
   InterlisRowMappingPlan plan;
   InterlisTransferWriter writer;
   RowToIomMapper mapper;
-  int[] inputIndexes;
-  int objectIdFieldIndex;
-  int basketIdFieldIndex;
+  InterlisOutputBindings bindings;
   int sourceObjectFieldIndex;
   int operationFieldIndex;
   String currentBid;

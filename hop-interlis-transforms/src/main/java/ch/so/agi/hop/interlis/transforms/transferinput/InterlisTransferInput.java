@@ -75,7 +75,8 @@ public class InterlisTransferInput
   }
 
   private void doInitialize() throws HopException {
-    InterlisParallelCopies.rejectParallelCopies(getCopy(), getTransformName());
+    InterlisParallelCopies.requireSingleCopy(
+        getTransformMeta(), this, "file processing or enumeration emission requires one copy");
     InterlisRuntimeSupport.initialize();
 
     String resolvedFile = resolve(meta.getFileName());

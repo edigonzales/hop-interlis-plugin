@@ -16,7 +16,7 @@
   <transform>
     <type>INTERLIS_INPUT</type>
     <name>INTERLIS Input</name>
-    <fileName>${E2E_INPUT_DIR}/HopIli_Associations_V1_valid.xtf</fileName>
+    <fileName>${E2E_INPUT_DIR}/HopIli_Associations_V1_mapping.xtf</fileName>
     <modelNames>%DATA</modelNames>
     <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
     <className>HopIli_Associations_V1.Data.PersonTask</className>

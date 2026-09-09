@@ -8,9 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.row.RowMeta;
-import org.apache.hop.core.row.value.ValueMetaBoolean;
-import org.apache.hop.core.row.value.ValueMetaInteger;
-import org.apache.hop.core.row.value.ValueMetaString;
 import org.apache.hop.pipeline.Pipeline;
 import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.pipeline.transform.BaseTransform;
@@ -50,7 +47,8 @@ public class InterlisEnumerations
   }
 
   private void doInitialize() throws HopException {
-    InterlisParallelCopies.rejectParallelCopies(getCopy(), getTransformName());
+    InterlisParallelCopies.requireSingleCopy(
+        getTransformMeta(), this, "file processing or enumeration emission requires one copy");
     InterlisRuntimeSupport.initialize();
 
     try {

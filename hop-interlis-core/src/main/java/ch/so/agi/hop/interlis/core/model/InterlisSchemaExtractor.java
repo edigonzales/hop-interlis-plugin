@@ -11,10 +11,10 @@ import ch.interlis.ili2c.metamodel.EnumerationType;
 import ch.interlis.ili2c.metamodel.FormattedType;
 import ch.interlis.ili2c.metamodel.LineForm;
 import ch.interlis.ili2c.metamodel.LineType;
+import ch.interlis.ili2c.metamodel.Model;
 import ch.interlis.ili2c.metamodel.MultiCoordType;
 import ch.interlis.ili2c.metamodel.MultiPolylineType;
 import ch.interlis.ili2c.metamodel.MultiSurfaceType;
-import ch.interlis.ili2c.metamodel.Model;
 import ch.interlis.ili2c.metamodel.NumericType;
 import ch.interlis.ili2c.metamodel.PolylineType;
 import ch.interlis.ili2c.metamodel.RoleDef;
@@ -270,8 +270,14 @@ public final class InterlisSchemaExtractor {
 
     if (type instanceof MultiSurfaceType) {
       return geometryAttribute(
-          attribute, scopedName, cardinality, mandatory, inherited,
-          InterlisGeometryKind.MULTISURFACE, null, allowsArcs(type));
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          inherited,
+          InterlisGeometryKind.MULTISURFACE,
+          lineDimension(type),
+          allowsArcs(type));
     }
     if (type instanceof SurfaceOrAreaType) {
       InterlisGeometryKind geometryKind =
@@ -279,18 +285,36 @@ public final class InterlisSchemaExtractor {
               ? InterlisGeometryKind.AREA
               : InterlisGeometryKind.SURFACE;
       return geometryAttribute(
-          attribute, scopedName, cardinality, mandatory, inherited, geometryKind, null,
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          inherited,
+          geometryKind,
+          lineDimension(type),
           allowsArcs(type));
     }
     if (type instanceof MultiPolylineType) {
       return geometryAttribute(
-          attribute, scopedName, cardinality, mandatory, inherited,
-          InterlisGeometryKind.MULTIPOLYLINE, null, allowsArcs(type));
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          inherited,
+          InterlisGeometryKind.MULTIPOLYLINE,
+          lineDimension(type),
+          allowsArcs(type));
     }
     if (type instanceof PolylineType) {
       return geometryAttribute(
-          attribute, scopedName, cardinality, mandatory, inherited,
-          InterlisGeometryKind.POLYLINE, null, allowsArcs(type));
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          inherited,
+          InterlisGeometryKind.POLYLINE,
+          lineDimension(type),
+          allowsArcs(type));
     }
     if (type instanceof MultiCoordType) {
       return geometryAttribute(
@@ -544,7 +568,7 @@ public final class InterlisSchemaExtractor {
     if ("MultiSurface".equals(rootName) && leafType instanceof SurfaceType) {
       return new LegacyGeometryMapping(
           InterlisGeometryKind.MULTISURFACE,
-          null,
+          lineDimension(leafType),
           allowsArcs(leafType),
           InterlisGeometryEncoding.CHLV95_V1_MULTISURFACE);
     }
@@ -553,7 +577,7 @@ public final class InterlisSchemaExtractor {
         && polyline.isDirected() == "MultiDirectedLine".equals(rootName)) {
       return new LegacyGeometryMapping(
           InterlisGeometryKind.MULTIPOLYLINE,
-          null,
+          lineDimension(leafType),
           allowsArcs(leafType),
           "MultiDirectedLine".equals(rootName)
               ? InterlisGeometryEncoding.CHLV95_V1_MULTIDIRECTED_LINE
@@ -625,6 +649,15 @@ public final class InterlisSchemaExtractor {
     return new InterlisCardinality(
         (int) min,
         max == Cardinality.UNBOUND ? InterlisCardinality.UNBOUNDED : max);
+  }
+
+  private Integer lineDimension(Type type) {
+    if (!(type instanceof LineType line) || line.getControlPointDomain() == null) return null;
+    Type coord = Type.findReal(line.getControlPointDomain().getType());
+    if (coord instanceof CoordType coordinate && coordinate.getDimensions() != null) {
+      return coordinate.getDimensions().length;
+    }
+    return null;
   }
 
   private boolean allowsArcs(Type type) {

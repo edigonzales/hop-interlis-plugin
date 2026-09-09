@@ -1,11 +1,8 @@
 package ch.so.agi.hop.interlis.transforms.rolejoin;
 
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.core.row.RowMeta;
@@ -101,6 +98,8 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
   }
 
   private void doInitialize() throws HopException {
+    ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.requireSingleCopy(
+        getTransformMeta(), this, "independent input streams require a single shared collector");
     InterlisRuntimeSupport.initialize();
 
     try {
@@ -226,7 +225,9 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
     data.lookupTidFieldIndex = lookupRowMeta.indexOfValue(resolve(meta.getLookupTidField()));
     if (data.lookupTidFieldIndex < 0) {
       throw new HopException(
-          "Lookup TID field <" + resolve(meta.getLookupTidField()) + "> not found in the lookup stream");
+          "Lookup TID field <"
+              + resolve(meta.getLookupTidField())
+              + "> not found in the lookup stream");
     }
     List<String> fields = meta.effectiveLookupFields(data.probe);
     data.lookupFieldNames = fields.toArray(new String[0]);

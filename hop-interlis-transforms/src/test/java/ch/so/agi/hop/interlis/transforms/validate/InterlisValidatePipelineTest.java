@@ -113,8 +113,9 @@ class InterlisValidatePipelineTest {
 
     assertThat(engine.getErrors()).isZero();
     List<RowMetaAndData> rows = ((Pipeline) engine).getResultRows();
-    assertThat(rows).isNotEmpty();
-    assertThat(rows).allSatisfy(row -> assertThat(row.getData()[0]).isEqualTo("ERROR"));
+    assertThat(rows).hasSize(2);
+    assertThat(rows.get(0).getData()[0]).isEqualTo("ERROR");
+    assertThat(rows.get(1).getData()[1].toString()).contains("Validation incomplete", "1 error(s)");
   }
 
   @Test

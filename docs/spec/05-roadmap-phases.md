@@ -1790,3 +1790,12 @@ Hardening + Performance + Compatibility
 ```
 
 Diese Reihenfolge liefert früh sichtbaren Nutzen, ohne die langfristig umfassende Architektur zu verbauen.
+
+
+## P1-Korrekturpaket nach Phase 8
+
+Die sieben P1-Befunde werden ohne Änderung der Plugin-IDs oder Bibliotheksversionen
+behoben. Umfang und Abnahme stehen in `../progress/p1-corrections.md`.
+Freies Output-Mapping und eine neue Partitionierungsarchitektur bleiben ausserhalb
+dieses Pakets. P1 wird erst nach vollständigem `clean verify`, Distributionsprüfung
+und isolierter Hop-2.18.1-Paket-E2E-Abnahme als erledigt markiert.

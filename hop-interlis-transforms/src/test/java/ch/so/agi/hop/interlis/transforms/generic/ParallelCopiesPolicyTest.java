@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
-import java.util.List;
 import org.apache.hop.core.HopEnvironment;
 import org.apache.hop.pipeline.Pipeline;
 import org.apache.hop.pipeline.PipelineHopMeta;
@@ -53,7 +52,7 @@ class ParallelCopiesPolicyTest {
 
   private static InterlisInputMeta primitivesInput() {
     InterlisInputMeta meta = new InterlisInputMeta();
-    meta.setFileName(TestData.path("/data/HopIli_Associations_V1_valid.xtf").toString());
+    meta.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
     meta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setClassName("HopIli_Associations_V1.Data.Person");
@@ -65,13 +64,17 @@ class ParallelCopiesPolicyTest {
     IPipelineEngine<PipelineMeta> engine = run(primitivesInput(), 2);
 
     assertThat(engine.getErrors()).isGreaterThan(0);
+    assertThat(((Pipeline) engine).getResultRows()).isEmpty();
   }
 
   @Test
   void guard_messages_are_actionable() {
+    TransformMeta transform = new TransformMeta("INTERLIS Input", primitivesInput());
+    transform.setCopies(2);
     org.assertj.core.api.Assertions.assertThatThrownBy(
-            () -> ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.rejectParallelCopies(
-                1, "INTERLIS Input"))
+            () ->
+                ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.requireSingleCopy(
+                    transform, new org.apache.hop.core.variables.Variables(), "file processing"))
         .isInstanceOf(org.apache.hop.core.exception.HopException.class)
         .hasMessageContaining("does not support parallel copies")
         .hasMessageContaining("INTERLIS Input");
@@ -87,10 +90,10 @@ class ParallelCopiesPolicyTest {
 
   @Test
   void stateless_row_transforms_support_parallel_copies() throws Exception {
-    // INTERLIS Object to Row is per-row stateless; two copies must not fail the pipeline.
+    // A class without link-resolved attributes is safe with two copies.
     ch.so.agi.hop.interlis.transforms.objecttorow.InterlisObjectToRowMeta meta =
         new ch.so.agi.hop.interlis.transforms.objecttorow.InterlisObjectToRowMeta();
-    meta.setClassName("HopIli_Associations_V1.Data.Person");
+    meta.setClassName("HopIli_Associations_V1.Data.Project");
     meta.setModelNames("HopIli_Associations_V1");
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setObjectFieldName("_ili_object");
@@ -98,7 +101,7 @@ class ParallelCopiesPolicyTest {
     PipelineMeta pipelineMeta = new PipelineMeta();
     ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta sourceMeta =
         new ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta();
-    sourceMeta.setFileName(TestData.path("/data/HopIli_Associations_V1_valid.xtf").toString());
+    sourceMeta.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
     sourceMeta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
     sourceMeta.setModelDirectories(TestData.path("/models").toString());
 

@@ -6,7 +6,6 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.core.model.InterlisModelException;
-import ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.util.List;
@@ -14,7 +13,6 @@ import java.util.Optional;
 import org.apache.hop.core.CheckResult;
 import org.apache.hop.core.ICheckResult;
 import org.apache.hop.core.annotations.Transform;
-import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.exception.HopTransformException;
 import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.core.variables.IVariables;
@@ -135,23 +133,16 @@ public class InterlisObjectToRowMeta
       if (projection.isEmpty()) {
         return;
       }
-      if (appendEnvelopeFields) {
-        var detected =
-            new ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory()
-                .createRowMeta(projection.get().plan());
-        for (int i = 0; i < detected.size(); i++) {
-          rowMeta.addValueMeta(detected.getValueMeta(i));
-        }
-      } else {
-        rowMeta.clear();
-        var detected =
-            new ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory()
-                .createRowMeta(projection.get().plan());
-        rowMeta.addRowMeta(detected);
-      }
+      var output =
+          InterlisObjectToRowOutputPlan.create(
+              rowMeta, projection.get().plan(), appendEnvelopeFields);
+      rowMeta.clear();
+      rowMeta.addRowMeta(output.rowMeta());
       for (String warning : projection.get().plan().warnings()) {
         log.logBasic(origin + ": " + warning);
       }
+    } catch (HopTransformException e) {
+      throw e;
     } catch (Exception e) {
       if (isDebug()) {
         logDebug("Unable to probe INTERLIS schema for design-time metadata: " + e.getMessage());
@@ -172,7 +163,8 @@ public class InterlisObjectToRowMeta
       IHopMetadataProvider metadataProvider) {
     if (resolve(variables, className).isBlank()) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
       return;
     }
     try {
@@ -196,7 +188,9 @@ public class InterlisObjectToRowMeta
     } catch (Exception e) {
       remarks.add(
           new CheckResult(
-              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS model check failed: " + e.getMessage(), transformMeta));
+              ICheckResult.TYPE_RESULT_ERROR,
+              "INTERLIS model check failed: " + e.getMessage(),
+              transformMeta));
     }
   }
 

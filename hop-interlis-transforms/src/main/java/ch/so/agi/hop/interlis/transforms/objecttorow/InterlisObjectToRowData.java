@@ -5,9 +5,6 @@ import ch.so.agi.hop.interlis.core.mapping.DefaultInterlisObjectToRowMapper;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowMappingPlan;
 import ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +20,7 @@ public class InterlisObjectToRowData extends BaseTransformData {
   InterlisRowMappingPlan plan;
   DefaultInterlisObjectToRowMapper mapper;
   IRowMeta outputRowMeta;
+  InterlisObjectToRowOutputPlan outputPlan;
   int objectFieldIndex;
   /** True when flattened association attributes require per-basket row buffering. */
   boolean buffering;

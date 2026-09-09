@@ -1501,6 +1501,29 @@ failOnErrors
 
 Output RowMeta siehe Architektur-Dokument (`InterlisValidationRowLayout`).
 
+Der vollständige Transfer wird validiert; nach `EndTransfer` folgt genau ein
+expliziter `doSecondPass()` (automatischer Zweitdurchlauf deaktiviert). Die
+explizite TOML-Konfiguration bleibt wirksam. Referenzziele, Vorwärtsreferenzen
+und objektübergreifende Constraints werden dadurch geprüft.
+
+Runtime-Zustände: Prüfung → Diagnoseausgabe → Abschluss. Der Meldungsadapter
+zählt nur ERROR. `maxErrors=0` bedeutet unbegrenzt, negative Werte sind ungültig;
+`stopOnFirstError` setzt die effektive Grenze auf 1. Bei Erreichen der Grenze
+wird unmittelbar aus dem Validator ausgestiegen, auch im zweiten Durchlauf.
+Ein unvollständiger Lauf erhält zusätzlich eine WARNING-Abschlusszeile mit
+Abbruchgrund, Fehlerzahl und Event-ID `INTERLIS_VALIDATION_INCOMPLETE`. Diese
+Zeile wird unabhängig vom Warnungsfilter vorbereitet. Bei Benutzerabbruch
+werden Ressourcen geschlossen; eine bereits gestoppte Pipeline kann keine
+weitere Zustellung garantieren.
+
+Reader und Validator werden auf jedem Ausgangspfad geschlossen. Fachliche
+Fehler werfen keine Exception und rufen kein `stopAll()` auf. Bei
+`failOnErrors=true` werden zuerst alle Diagnosen ausgegeben. Weil Hop 2.18.1
+auch beim normalen Transform-Abschluss mit positivem Fehlerzähler die übrigen
+Transforms stoppt, setzt ein Pipeline-Abschlusslistener den Fehlerzähler erst
+nach dem Abschluss aller Verbraucher. Technische Fehler bleiben unmittelbare
+Pipelinefehler. Das Fehlerschema bleibt bei 13 Feldern.
+
 ## 23.2 Stream mode später
 
 Envelope-Stream validieren ist komplexer, weil Constraints u.U. globale/zweipassige Informationen benötigen. Deshalb:
@@ -1701,14 +1724,14 @@ Für jeden Transform ist die Parallel-Copy-Unterstützung explizit:
 | `INTERLIS Validate` | **nein** | doppelte Error-Rows pro Kopie |
 | `INTERLIS Enumerations` | **nein** | doppelte Rows pro Kopie |
 | `INTERLIS Structure Explode` | ja | row-stateless |
-| `INTERLIS Structure Collect` | ja | row-stateless |
-| `INTERLIS Role Join` | ja | row-stateless (Lookup read-only) |
-| `INTERLIS Object to Row` | ja | row-stateless |
+| `INTERLIS Structure Collect` | **nein** | getrennte Eltern-/Kindströme ohne garantierte gemeinsame Verteilung |
+| `INTERLIS Role Join` | **nein** | Haupt- und Lookupstrom müssen vollständig in derselben Kopie ankommen |
+| `INTERLIS Object to Row` | bedingt | mehrere Kopien nur ohne Assoziationsauflösung/Basket-Pufferung |
 | `INTERLIS Row to Object` | ja | row-stateless |
 
-Datei-Transforms brechen bei parallelen Kopien mit einer klaren
-Fehlermeldung ab („Set Number of copies back to 1"); sie scheitern nie
-stillschweigend. Zentrale Hilfsklasse: `InterlisParallelCopies`.
+Die konfigurierte Kopienzahl wird vor der Ausgabe geprüft, auch in Kopie 0.
+Die betroffenen Transforms lehnen auch Partitionierung ab. Die Meldung nennt
+den konkreten Grund und verlangt eine Kopie. Zentrale Hilfsklasse: `InterlisParallelCopies`.
 
 Geteilte Dienste: `InterlisModelService` ist thread-sicher (statischer
 Cache, serialisierte Compiles); Mapper und Pläne sind nach der
@@ -1758,3 +1781,28 @@ Bei Schema-Änderungen braucht es Migration in Meta-Klassen oder tolerant lesbar
 - Keine Feldsuche per Name pro Row, wenn sie vorab gebunden werden kann.
 - Kein zweites gebündeltes `jts-core`.
 - Keine SWT-Abhängigkeit in zentralen Mappern.
+
+
+# P1-Verträge für Rückschreiben und Envelope-Projektion (2026-09-09)
+
+- `InterlisFieldPlan.structurePath` enthält die vorab aufgelösten Einzelstrukturen.
+  Das Schreiben benötigt keine erneute Modellnavigation pro Row.
+- Ein Quellobjekt wird tief kopiert. Projizierte primitive Werte, Geometrien und
+  Referenzen ersetzen den bisherigen Inhalt; `null` entfernt ihn. TID, BID und
+  Reihenfolge einer Referenz werden gemeinsam erneuert. BID/Reihenfolge ohne
+  Referenz-TID sind ungültig. Wiederholtes Overlay erzeugt keine Duplikate.
+- Optionale Einzelstrukturen verschwinden, wenn sie nach dem Overlay vollständig
+  leer sind. Nicht projizierte Inhalte, insbesondere gesammelte BAG/LIST-Werte,
+  bleiben erhalten. Pflichtfelder werden am fertig aufgebauten Objekt geprüft.
+  DELETE enthält nur Identität/Operation und erzeugt keine zusätzlichen Links.
+- `InterlisOutputBindings` bindet fachliche Felder nach Namen und Identitäten
+  nach Konfiguration. `objectIdField` gewinnt vor einem zusätzlichen `_ili_tid`.
+  Ein leeres `basketIdField` verwendet den konstanten Basket; ein benanntes Feld
+  muss existieren. Null-/Leerwerte verwenden den konstanten Ersatzwert.
+  Nicht identifizierbare Assoziationen benötigen kein TID-Feld. Runtime, `check()`
+  und Mapping-Anzeige verwenden diese Bindung.
+- `InterlisObjectToRowOutputPlan` bestimmt Designzeit-Metadaten und Runtime-Werte.
+  Append erhält Eingabefelder und ihre Reihenfolge. Kompatible technische
+  Identitätsfelder werden einmalig übernommen, fachliche Namenskollisionen und
+  inkompatible technische Typen sind Konfigurationsfehler. Gepufferte und direkte
+  Projektion verwenden denselben Aufbau; ohne Append bleibt nur die Klassenprojektion.

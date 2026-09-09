@@ -1,0 +1,41 @@
+INTERLIS 2.4;
+
+MODEL HopIli_P1_V1 (en) AT "https://hop.interlis.example/models" VERSION "2026-09-09" =
+  DOMAIN
+    Coord3 = COORD 0.000 .. 100.000, 0.000 .. 100.000, 0.000 .. 100.000;
+    CoordAlias EXTENDS Coord3 = COORD 0.000 .. 100.000, 0.000 .. 100.000, 0.000 .. 100.000;
+    Line3 = POLYLINE WITH (STRAIGHTS, ARCS) VERTEX CoordAlias;
+    Face3 = SURFACE WITH (STRAIGHTS) VERTEX CoordAlias WITHOUT OVERLAPS > 0.001;
+  TOPIC Data =
+    STRUCTURE Tag =
+      Text : TEXT*20;
+    END Tag;
+    STRUCTURE Detail =
+      Code : MANDATORY TEXT*20;
+      Note : TEXT*20;
+      Location : Coord3;
+      Tags : BAG OF Tag;
+    END Detail;
+    CLASS Base =
+      Name : MANDATORY TEXT*30;
+      InheritedAxis : Line3;
+    END Base;
+    CLASS Item EXTENDS Base =
+      Location : Coord3;
+      Axis : Line3;
+      Face : Face3;
+      Axes : MULTIPOLYLINE WITH (STRAIGHTS) VERTEX Coord3;
+      Faces : MULTISURFACE WITH (STRAIGHTS) VERTEX Coord3 WITHOUT OVERLAPS > 0.001;
+      Details : Detail;
+      Children : BAG OF Detail;
+      UNIQUE Name;
+    END Item;
+    CLASS Target =
+      Name : MANDATORY TEXT*30;
+    END Target;
+    ASSOCIATION ItemTarget =
+      Target -- {0..1} Target;
+      Item -- {0..*} Item;
+    END ItemTarget;
+  END Data;
+END HopIli_P1_V1.

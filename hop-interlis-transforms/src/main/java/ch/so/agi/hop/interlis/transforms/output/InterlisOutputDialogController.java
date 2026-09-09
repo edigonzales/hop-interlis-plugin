@@ -50,6 +50,13 @@ public final class InterlisOutputDialogController {
 
   /** Builds the mapping grid rows for the projected plan. */
   public List<InterlisFieldMapping> mapping(InterlisRowMappingPlan plan) {
+    InterlisOutputMeta defaults = new InterlisOutputMeta();
+    defaults.setDefault();
+    return mapping(plan, defaults, new org.apache.hop.core.variables.Variables());
+  }
+
+  public List<InterlisFieldMapping> mapping(
+      InterlisRowMappingPlan plan, InterlisOutputMeta meta, IVariables vars) {
     List<InterlisFieldMapping> mappings = new ArrayList<>();
     for (InterlisFieldPlan field : plan.fields()) {
       String property = propertyLabel(field);
@@ -57,8 +64,19 @@ public final class InterlisOutputDialogController {
           field.attributeDescriptor() == null
               ? "String"
               : field.attributeDescriptor().typeName();
+      String source = InterlisOutputBindings.sourceName(field, meta, vars);
+      boolean constant = field.source() == InterlisFieldSource.BASKET_ID && source.isBlank();
+      String binding =
+          field.source() == InterlisFieldSource.OBJECT_ID
+                  || field.source() == InterlisFieldSource.BASKET_ID
+              ? "configured identity"
+              : "auto-map by name";
       mappings.add(
-          new InterlisFieldMapping(property, field.hopFieldName(), type, "auto-map by name"));
+          new InterlisFieldMapping(
+              property,
+              constant ? vars.resolve(meta.getBasketId()) : source,
+              type,
+              constant ? "constant basket" : binding));
     }
     return mappings;
   }

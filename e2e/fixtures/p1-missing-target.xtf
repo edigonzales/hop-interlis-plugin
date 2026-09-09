@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?><ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:geom="http://www.interlis.ch/geometry/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:HopIli_P1_V1="http://www.interlis.ch/xtf/2.4/HopIli_P1_V1">
+<ili:headersection><ili:models><ili:model>HopIli_P1_V1</ili:model></ili:models><ili:sender>P1 regression</ili:sender></ili:headersection>
+<ili:datasection>
+<HopIli_P1_V1:Data ili:bid="b1">
+<HopIli_P1_V1:Item ili:tid="i0"><HopIli_P1_V1:Name>before0</HopIli_P1_V1:Name><HopIli_P1_V1:Target ili:ref="absent0"></HopIli_P1_V1:Target></HopIli_P1_V1:Item>
+<HopIli_P1_V1:Item ili:tid="i1"><HopIli_P1_V1:Name>before1</HopIli_P1_V1:Name><HopIli_P1_V1:Target ili:ref="absent1"></HopIli_P1_V1:Target></HopIli_P1_V1:Item>
+<HopIli_P1_V1:Item ili:tid="i2"><HopIli_P1_V1:Name>before2</HopIli_P1_V1:Name><HopIli_P1_V1:Target ili:ref="absent2"></HopIli_P1_V1:Target></HopIli_P1_V1:Item>
+<HopIli_P1_V1:Item ili:tid="i3"><HopIli_P1_V1:Name>before3</HopIli_P1_V1:Name><HopIli_P1_V1:Target ili:ref="absent3"></HopIli_P1_V1:Target></HopIli_P1_V1:Item>
+<HopIli_P1_V1:Item ili:tid="i4"><HopIli_P1_V1:Name>before4</HopIli_P1_V1:Name><HopIli_P1_V1:Target ili:ref="absent4"></HopIli_P1_V1:Target></HopIli_P1_V1:Item>
+<HopIli_P1_V1:Item ili:tid="i5"><HopIli_P1_V1:Name>before5</HopIli_P1_V1:Name><HopIli_P1_V1:Target ili:ref="absent5"></HopIli_P1_V1:Target></HopIli_P1_V1:Item>
+<HopIli_P1_V1:Item ili:tid="i6"><HopIli_P1_V1:Name>before6</HopIli_P1_V1:Name><HopIli_P1_V1:Target ili:ref="absent6"></HopIli_P1_V1:Target></HopIli_P1_V1:Item>
+<HopIli_P1_V1:Item ili:tid="i7"><HopIli_P1_V1:Name>before7</HopIli_P1_V1:Name><HopIli_P1_V1:Target ili:ref="absent7"></HopIli_P1_V1:Target></HopIli_P1_V1:Item>
+<HopIli_P1_V1:Item ili:tid="i8"><HopIli_P1_V1:Name>before8</HopIli_P1_V1:Name><HopIli_P1_V1:Target ili:ref="absent8"></HopIli_P1_V1:Target></HopIli_P1_V1:Item>
+<HopIli_P1_V1:Item ili:tid="i9"><HopIli_P1_V1:Name>before9</HopIli_P1_V1:Name><HopIli_P1_V1:Target ili:ref="absent9"></HopIli_P1_V1:Target></HopIli_P1_V1:Item>
+</HopIli_P1_V1:Data>
+</ili:datasection>
+</ili:transfer>

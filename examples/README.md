@@ -10,7 +10,7 @@ E2E_OUTPUT_DIR  directory where output files are written
 
 The models and transfer files the examples use are committed under
 `hop-interlis-core/src/test/resources` (e.g. `models/HopIli_Associations_V1.ili`,
-`data/HopIli_Associations_V1_valid.xtf`); copy them to your input directory.
+`data/HopIli_Associations_V1_mapping.xtf`); copy them to your input directory.
 
 Run an example with the packaged plugin:
 

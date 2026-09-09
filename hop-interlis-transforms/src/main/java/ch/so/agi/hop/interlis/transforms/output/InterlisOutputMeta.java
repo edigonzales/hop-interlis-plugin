@@ -5,9 +5,6 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
-import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
-import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hop.core.CheckResult;
@@ -128,17 +125,14 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
       IHopMetadataProvider metadataProvider) {
     if (fileName == null || fileName.isBlank()) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS output file is required", transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS output file is required", transformMeta));
       return;
     }
     if (className == null || className.isBlank()) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
-      return;
-    }
-    if (objectIdField == null || objectIdField.isBlank()) {
-      remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "Object ID (TID) field is required", transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
       return;
     }
     try {
@@ -151,6 +145,7 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
                 transformMeta));
         return;
       }
+      if (prev != null) InterlisOutputBindings.bind(prev, projection.plan(), this, variables);
       remarks.add(
           new CheckResult(
               ICheckResult.TYPE_RESULT_OK,
@@ -161,7 +156,10 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
               transformMeta));
     } catch (Exception e) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS model check failed: " + e.getMessage(), transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR,
+              "INTERLIS model check failed: " + e.getMessage(),
+              transformMeta));
     }
   }
 

@@ -951,3 +951,17 @@ ItfInterlisTransferReader
 
 Die Typed Mapping Layer bleibt damit weitgehend identisch. ITF-spezifische Linetable-/AREA-Logik sitzt am IO-Rand.
 
+
+
+## P1-Präzisierung der Geometriedimension (2026-09-09)
+
+Die Koordinatendimension im Attributdescriptor stammt bei Linien, Flächen und
+Multi-Geometrien aus der aufgelösten Koordinatendomäne (`LineType.controlPointDomain`).
+Alias- und Vererbungsketten sowie unterstützte CHLV95-Wrapper verwenden denselben
+Vertrag. Eine unauflösbare Dimension führt bei der Konvertierung zu einer
+verständlichen Diagnose; es gibt keinen stillen 2D-Ersatz.
+
+Gerade 3D-Geometrien verwenden den WKB-Pfad ohne Curve-Container und behalten XYZ.
+2D-Kurven bleiben SQL/MM-Kurven. Die gemeinsame Geometry-Bibliothek unterstützt
+3D-Kurven derzeit weder beim WKB-Lesen noch beim WKB-Schreiben: Ein tatsächlicher
+3D-ARC wird explizit abgelehnt und nie still linearisiert.

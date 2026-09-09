@@ -6,9 +6,8 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.mapping.RowToIomMapper;
 import ch.so.agi.hop.interlis.core.mapping.RowWriteOptions;
-import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
-import ch.so.agi.hop.interlis.transforms.mapping.InterlisRowBindings;
+import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.nio.file.Path;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
@@ -52,9 +51,8 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
     }
 
     try {
-      handleBasket(row);
-      Object[] values =
-          InterlisRowBindings.values(row, data.inputIndexes);
+      Object[] values = data.bindings.values(row);
+      handleBasket(values);
       ch.so.agi.hop.interlis.core.io.InterlisObjectOperation operation =
           ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.NONE;
       if (data.operationFieldIndex >= 0) {
@@ -65,17 +63,17 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
                   operationValue.toString().trim());
         }
       }
-      RowWriteOptions writeOptions =
-          new RowWriteOptions(true, resolve(meta.getBasketId()), operation);
+      RowWriteOptions writeOptions = new RowWriteOptions(true, data.currentBid, operation);
       RowToIomMapper.InterlisWriteResult result;
-      if (data.sourceObjectFieldIndex >= 0) {
+      if (data.sourceObjectFieldIndex >= 0 && !writeOptions.isDelete()) {
         Object carrier = row[data.sourceObjectFieldIndex];
         if (carrier == null) {
           throw new HopException(
               "Source object field <"
                   + resolve(meta.getSourceObjectField())
-                  + "> is null; INTERLIS Input must be configured with \"Keep source object for "
-                  + "Structure Explode\" or the field must be updated by INTERLIS Structure Collect");
+                  + "> is null; INTERLIS Input must be configured with \"Keep source object for"
+                  + " Structure Explode\" or the field must be updated by INTERLIS Structure"
+                  + " Collect");
         }
         if (!(carrier instanceof IomObject carrierObject)) {
           throw new HopException(
@@ -84,19 +82,13 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
                   + "> does not contain an INTERLIS object but "
                   + carrier.getClass().getName());
         }
-        result =
-            data.mapper.mapAll(
-                carrierObject,
-                values,
-                data.plan,
-                writeOptions);
+        result = data.mapper.mapAll(carrierObject, values, data.plan, writeOptions);
       } else {
-        result =
-            data.mapper.mapAll(
-                values, data.plan, writeOptions);
+        result = data.mapper.mapAll(values, data.plan, writeOptions);
       }
       for (IomObject object : result.allObjects()) {
-        if (data.operationFieldIndex >= 0 && object == result.object()
+        if (data.operationFieldIndex >= 0
+            && object == result.object()
             && operation != ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.NONE) {
           object.setobjectoperation(operation.toIom());
         }
@@ -105,8 +97,7 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       }
     } catch (Exception e) {
       closeWriter();
-      throw new HopException(
-          "Failed to write INTERLIS object: " + e.getMessage(), e);
+      throw new HopException("Failed to write INTERLIS object: " + e.getMessage(), e);
     }
 
     putRow(getInputRowMeta(), row);
@@ -117,8 +108,8 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
   }
 
   private void initialize() throws HopException {
-    ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.rejectParallelCopies(
-        getCopy(), getTransformName());
+    ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.requireSingleCopy(
+        getTransformMeta(), this, "file processing or enumeration emission requires one copy");
     InterlisRuntimeSupport.initialize();
 
     String resolvedFile = resolve(meta.getFileName());
@@ -135,31 +126,15 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       data.projection =
           new InterlisProjectionService()
               .project(
-                  new InterlisModelRequest(
-                      null, resolveModelNames(), resolveModelDirectories()),
+                  new InterlisModelRequest(null, resolveModelNames(), resolveModelDirectories()),
                   resolve(meta.getClassName()),
                   meta.projectionOptions(this));
       data.plan = data.projection.plan();
       data.mapper = new RowToIomMapper();
-      data.inputIndexes = InterlisRowBindings.bind(getInputRowMeta(), data.plan);
+      data.bindings = InterlisOutputBindings.bind(getInputRowMeta(), data.plan, meta, this);
 
-      data.objectIdFieldIndex = getInputRowMeta().indexOfValue(resolve(meta.getObjectIdField()));
-      boolean hasObjectIdField =
-          data.plan.fields().stream()
-              .anyMatch(
-                  f ->
-                      f.source()
-                          == ch.so.agi.hop.interlis.core.mapping.InterlisFieldSource.OBJECT_ID);
-      if (data.objectIdFieldIndex < 0 && hasObjectIdField) {
-        throw new HopException(
-            "Object ID field <" + resolve(meta.getObjectIdField()) + "> not found in the input");
-      }
-      // Non-identifiable associations carry no TID: the object ID field is absent by design.
-      String basketField = resolve(meta.getBasketIdField());
-      data.basketIdFieldIndex =
-          basketField.isBlank() ? -1 : getInputRowMeta().indexOfValue(basketField);
-
-      String sourceObjectField = resolve(meta.getSourceObjectField() == null ? "" : meta.getSourceObjectField());
+      String sourceObjectField =
+          resolve(meta.getSourceObjectField() == null ? "" : meta.getSourceObjectField());
       data.sourceObjectFieldIndex =
           sourceObjectField.isBlank() ? -1 : getInputRowMeta().indexOfValue(sourceObjectField);
       if (!sourceObjectField.isBlank() && data.sourceObjectFieldIndex < 0) {
@@ -167,19 +142,17 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
             "Source object field <" + sourceObjectField + "> not found in the input");
       }
 
-      String operationField = resolve(meta.getOperationField() == null ? "" : meta.getOperationField());
+      String operationField =
+          resolve(meta.getOperationField() == null ? "" : meta.getOperationField());
       data.operationFieldIndex =
           operationField.isBlank() ? -1 : getInputRowMeta().indexOfValue(operationField);
       if (!operationField.isBlank() && data.operationFieldIndex < 0) {
-        throw new HopException(
-            "Operation field <" + operationField + "> not found in the input");
+        throw new HopException("Operation field <" + operationField + "> not found in the input");
       }
 
       data.writer =
           XtfTransferWriter.open(
-              file,
-              data.projection.model().transferDescription(),
-              data.projection.modelNames());
+              file, data.projection.model().transferDescription(), data.projection.modelNames());
       data.writer.startTransfer("hop-interlis-plugin");
 
       if (isBasic()) {
@@ -202,16 +175,11 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
     }
   }
 
-  private void handleBasket(Object[] row) throws Exception {
-    String bid;
-    if (data.basketIdFieldIndex >= 0 && row[data.basketIdFieldIndex] != null) {
-      bid = row[data.basketIdFieldIndex].toString().trim();
-      if (bid.isEmpty()) {
-        bid = resolve(meta.getBasketId());
-      }
-    } else {
-      bid = resolve(meta.getBasketId());
-    }
+  private void handleBasket(Object[] values) throws Exception {
+    String bid =
+        data.bindings.basketIndex() < 0
+            ? data.bindings.constantBasket()
+            : values[data.bindings.basketIndex()].toString().trim();
 
     if (data.currentBid == null) {
       data.writer.startBasket(data.plan.root().topicScopedName(), bid);

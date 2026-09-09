@@ -2,7 +2,6 @@ package ch.so.agi.hop.interlis.core.mapping;
 
 import ch.so.agi.hop.interlis.core.model.InterlisAssociationDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisAttributeDescriptor;
-import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisPlanRoot;
 import ch.so.agi.hop.interlis.core.model.InterlisPropertyDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisRoleDescriptor;
@@ -214,8 +213,32 @@ public final class InterlisRowSchemaBuilder {
             new InterlisPropertyPath(pathSegments, attribute.name()),
             attribute,
             null,
-            null));
+            null,
+            structurePath(schema, rootScopedName, pathSegments)));
     return index + 1;
+  }
+
+  private List<InterlisAttributeDescriptor> structurePath(
+      InterlisSchemaDescriptor schema, String rootName, List<String> segments) {
+    if (segments.isEmpty()) return List.of();
+    List<? extends InterlisPropertyDescriptor> properties =
+        schema
+            .findPlanRoot(rootName)
+            .map(InterlisPlanRoot::effectiveProperties)
+            .orElseGet(
+                () -> new ArrayList<>(schema.findStructure(rootName).orElseThrow().attributes()));
+    List<InterlisAttributeDescriptor> path = new ArrayList<>();
+    for (String segment : segments) {
+      InterlisAttributeDescriptor attribute =
+          properties.stream()
+              .filter(p -> p.name().equals(segment))
+              .map(p -> (InterlisAttributeDescriptor) p)
+              .findFirst()
+              .orElseThrow();
+      path.add(attribute);
+      properties = schema.findStructure(attribute.structureScopedName()).orElseThrow().attributes();
+    }
+    return path;
   }
 
   /** One reference member per role, plus optional external-basket and order position fields. */
@@ -227,8 +250,16 @@ public final class InterlisRowSchemaBuilder {
       InterlisRoleDescriptor role,
       ProjectionOptions options,
       String rootScopedName) {
-    index = addRoleField(fields, usedNames, index, role.name() + "_ref", InterlisFieldSource.ROLE_REFERENCE,
-        role, rootScopedName, warnings);
+    index =
+        addRoleField(
+            fields,
+            usedNames,
+            index,
+            role.name() + "_ref",
+            InterlisFieldSource.ROLE_REFERENCE,
+            role,
+            rootScopedName,
+            warnings);
     if (options.includeRoleRefBid()) {
       index = addRoleField(fields, usedNames, index, role.name() + "_ref_bid",
           InterlisFieldSource.ROLE_REFERENCE_BID, role, rootScopedName, warnings);
@@ -290,8 +321,15 @@ public final class InterlisRowSchemaBuilder {
       }
       linkResolvedRoles.put(role.name(), association.get());
       index =
-          addRoleField(fields, usedNames, index, role.name() + "_ref", InterlisFieldSource.ROLE_REFERENCE, role,
-              rootScopedName, warnings);
+          addRoleField(
+              fields,
+              usedNames,
+              index,
+              role.name() + "_ref",
+              InterlisFieldSource.ROLE_REFERENCE,
+              role,
+              rootScopedName,
+              warnings);
       if (options.includeRoleRefBid()) {
         index = addRoleField(fields, usedNames, index, role.name() + "_ref_bid",
             InterlisFieldSource.ROLE_REFERENCE_BID, role, rootScopedName, warnings);
@@ -328,8 +366,15 @@ public final class InterlisRowSchemaBuilder {
       return index;
     }
     index =
-        addRoleField(fields, usedNames, index, role.name() + "_ref", InterlisFieldSource.ROLE_REFERENCE, role,
-            rootScopedName, warnings);
+        addRoleField(
+            fields,
+            usedNames,
+            index,
+            role.name() + "_ref",
+            InterlisFieldSource.ROLE_REFERENCE,
+            role,
+            rootScopedName,
+            warnings);
     if (options.includeRoleRefBid()) {
       index = addRoleField(fields, usedNames, index, role.name() + "_ref_bid",
           InterlisFieldSource.ROLE_REFERENCE_BID, role, rootScopedName, warnings);

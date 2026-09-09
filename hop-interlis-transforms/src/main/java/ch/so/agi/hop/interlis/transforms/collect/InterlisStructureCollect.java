@@ -7,8 +7,8 @@ import ch.so.agi.hop.interlis.core.structures.InterlisStructureCollector;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureCollector.StructureChild;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureCollector.StructureCollectOptions;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionService;
-import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
@@ -84,7 +84,8 @@ public class InterlisStructureCollect
                 + res(meta.getSourceObjectField())
                 + "> is null for parent "
                 + data.lastParentKey
-                + "; INTERLIS Input must be configured with \"Keep source object for Structure Explode\"");
+                + "; INTERLIS Input must be configured with \"Keep source object for Structure"
+                + " Explode\"");
       }
       if (!(carrier instanceof IomObject carrierObject)) {
         throw new HopException(
@@ -264,13 +265,17 @@ public class InterlisStructureCollect
     data.parentKeyFieldIndex = parentRowMeta.indexOfValue(res(meta.getParentKeyField()));
     if (data.parentKeyFieldIndex < 0) {
       throw new HopException(
-          "Parent key field <" + res(meta.getParentKeyField()) + "> not found in the parent stream");
+          "Parent key field <"
+              + res(meta.getParentKeyField())
+              + "> not found in the parent stream");
     }
     data.sourceObjectFieldIndex =
         parentRowMeta.indexOfValue(res(meta.getSourceObjectField()));
     if (data.sourceObjectFieldIndex < 0) {
       throw new HopException(
-          "Source object field <" + res(meta.getSourceObjectField()) + "> not found in the parent stream");
+          "Source object field <"
+              + res(meta.getSourceObjectField())
+              + "> not found in the parent stream");
     }
     data.parentBound = true;
   }
@@ -291,12 +296,16 @@ public class InterlisStructureCollect
         childRowMeta.indexOfValue(res(meta.getChildParentKeyField()));
     if (data.childParentKeyFieldIndex < 0) {
       throw new HopException(
-          "Child parent key field <" + res(meta.getChildParentKeyField()) + "> not found in the child stream");
+          "Child parent key field <"
+              + res(meta.getChildParentKeyField())
+              + "> not found in the child stream");
     }
     data.childIndexFieldIndex = childRowMeta.indexOfValue(res(meta.getChildIndexField()));
     if (data.plan.ordered() && data.childIndexFieldIndex < 0) {
       throw new HopException(
-          "Child index field <" + res(meta.getChildIndexField()) + "> not found in the child stream");
+          "Child index field <"
+              + res(meta.getChildIndexField())
+              + "> not found in the child stream");
     }
 
     data.childFieldIndexes = new int[data.plan.childFields().size()];
@@ -317,6 +326,8 @@ public class InterlisStructureCollect
   }
 
   private void doInitialize() throws HopException {
+    ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.requireSingleCopy(
+        getTransformMeta(), this, "independent input streams require a single shared collector");
     InterlisRuntimeSupport.initialize();
 
     try {
@@ -360,7 +371,8 @@ public class InterlisStructureCollect
     } catch (HopException e) {
       throw e;
     } catch (Exception e) {
-      throw new HopException("Failed to initialize INTERLIS Structure Collect: " + e.getMessage(), e);
+      throw new HopException(
+          "Failed to initialize INTERLIS Structure Collect: " + e.getMessage(), e);
     }
   }
 

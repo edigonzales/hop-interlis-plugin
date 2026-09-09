@@ -6,8 +6,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import ch.interlis.iom.IomObject;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import java.math.BigDecimal;
-import java.util.Date;
-import java.util.List;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -38,7 +36,9 @@ class RowToIomMapperAssociationTest {
       "o1",
       "CEO",
       java.util.Date.from(
-          java.time.LocalDate.parse("2020-01-01").atStartOfDay(java.time.ZoneOffset.UTC).toInstant())
+          java.time.LocalDate.parse("2020-01-01")
+              .atStartOfDay(java.time.ZoneOffset.UTC)
+              .toInstant())
     };
 
     IomObject link = mapper.map(values, plan, RowWriteOptions.defaults());
@@ -69,6 +69,29 @@ class RowToIomMapperAssociationTest {
     assertThat(task.getobjectrefbid()).isEqualTo("b2");
     assertThat(task.getobjectreforderpos()).isEqualTo(1L);
     assertThat(link.getattrobj("Person", 0).getobjectrefoid()).isEqualTo("p2");
+  }
+
+  @Test
+  void overlay_replaces_reference_tid_bid_and_order_together() throws Exception {
+    var plan =
+        builder.build(
+            schema,
+            AssociationsTestSupport.root(schema, AssociationsTestSupport.ASSOC_PERSON_TASK),
+            new ProjectionOptions(
+                true, true, false, false, false, true, "_", null, java.util.Set.of(), true, true));
+    var carrier =
+        mapper.map(
+            new Object[] {"b1", "p2", null, "t2", "external", 1L},
+            plan,
+            RowWriteOptions.defaults());
+    var values = new Object[] {"b1", "p2", null, "changed", null, null};
+    var result = mapper.map(carrier, values, plan, RowWriteOptions.defaults());
+    result = mapper.map(result, values, plan, RowWriteOptions.defaults());
+    assertThat(result.getattrvaluecount("Task")).isEqualTo(1);
+    assertThat(result.getattrobj("Task", 0).getobjectrefoid()).isEqualTo("changed");
+    assertThat(result.getattrobj("Task", 0).getobjectrefbid()).isNull();
+    assertThat(result.getattrobj("Task", 0).getobjectreforderpos()).isZero();
+    assertThat(carrier.getattrobj("Task", 0).getobjectreforderpos()).isEqualTo(1);
   }
 
   @Test
