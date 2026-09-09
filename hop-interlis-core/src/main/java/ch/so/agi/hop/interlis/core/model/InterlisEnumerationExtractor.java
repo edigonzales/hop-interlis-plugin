@@ -1,10 +1,8 @@
 package ch.so.agi.hop.interlis.core.model;
 
 import ch.interlis.ili2c.metamodel.AttributeDef;
-import ch.interlis.ili2c.metamodel.Element;
 import ch.interlis.ili2c.metamodel.Enumeration;
 import ch.interlis.ili2c.metamodel.EnumerationType;
-import ch.interlis.ili2c.metamodel.Table;
 import ch.interlis.ili2c.metamodel.Topic;
 import ch.interlis.ili2c.metamodel.Type;
 import ch.interlis.ili2c.metamodel.ViewableTransferElement;
@@ -17,10 +15,10 @@ import java.util.Map;
 /**
  * Extracts the enumeration values of a compiled model into flat rows.
  *
- * <p>Enumeration types are discovered through the attribute domains of classes and structures
- * plus the DOMAIN aliases declared in topics; the same type is listed once (first definition in
- * model order wins). Sub-enumerations are flattened recursively: each value gets its scoped
- * path, its parent, its depth and whether it is a leaf.
+ * <p>Enumeration types are discovered through the attribute domains of classes and structures plus
+ * the DOMAIN aliases declared in topics; the same type is listed once (first definition in model
+ * order wins). Sub-enumerations are flattened recursively: each value gets its scoped path, its
+ * parent, its depth and whether it is a leaf.
  */
 public final class InterlisEnumerationExtractor {
 
@@ -36,24 +34,13 @@ public final class InterlisEnumerationExtractor {
       if (currentModel instanceof ch.interlis.ili2c.metamodel.PredefinedModel) {
         continue;
       }
-      for (Iterator<Element> elements = currentModel.iterator(); elements.hasNext(); ) {
-        Element element = elements.next();
-        if (!(element instanceof Topic topic)) {
-          continue;
-        }
-        for (Iterator<Element> children = topic.iterator(); children.hasNext(); ) {
-          Element child = children.next();
-          if (child instanceof ch.interlis.ili2c.metamodel.Domain domain) {
-            // A DOMAIN declaration may alias an enumeration type.
-            Type real = domain.getType() == null ? null : Type.findReal(domain.getType());
-            if (real instanceof EnumerationType enumerationType) {
-              definitions.putIfAbsent(enumerationType, child.getScopedName(null));
-            }
-          } else if (child instanceof Table table) {
-            collectFromAttributes(table, definitions);
-          }
-        }
-      }
+      collectDefinitions(currentModel, definitions, true);
+    }
+    // Named domains always take precedence over their first consuming attribute.
+    for (var models = model.transferDescription().iterator(); models.hasNext(); ) {
+      var current = models.next();
+      if (!(current instanceof ch.interlis.ili2c.metamodel.PredefinedModel))
+        collectDefinitions(current, definitions, false);
     }
 
     for (Map.Entry<EnumerationType, String> entry : definitions.entrySet()) {
@@ -62,8 +49,27 @@ public final class InterlisEnumerationExtractor {
     return rows;
   }
 
+  private void collectDefinitions(
+      ch.interlis.ili2c.metamodel.Container<?> container,
+      Map<EnumerationType, String> definitions,
+      boolean domains) {
+    for (var it = container.iterator(); it.hasNext(); ) {
+      Object element = it.next();
+      if (domains && element instanceof ch.interlis.ili2c.metamodel.Domain domain) {
+        Type real = domain.getType() == null ? null : Type.findReal(domain.getType());
+        if (real instanceof EnumerationType enumeration)
+          definitions.putIfAbsent(enumeration, domain.getScopedName(null));
+      } else if (!domains
+          && element instanceof ch.interlis.ili2c.metamodel.AbstractClassDef<?> viewable) {
+        collectFromAttributes(viewable, definitions);
+      }
+      if (element instanceof Topic topic) collectDefinitions(topic, definitions, domains);
+    }
+  }
+
   private void collectFromAttributes(
-      Table table, Map<EnumerationType, String> definitions) {
+      ch.interlis.ili2c.metamodel.AbstractClassDef<?> table,
+      Map<EnumerationType, String> definitions) {
     for (Iterator<ViewableTransferElement> attributes = table.getAttributesAndRoles2();
         attributes.hasNext(); ) {
       ViewableTransferElement element = attributes.next();
@@ -87,8 +93,7 @@ public final class InterlisEnumerationExtractor {
     if (enumeration == null) {
       return;
     }
-    for (Iterator<Enumeration.Element> elements = enumeration.getElements();
-        elements.hasNext(); ) {
+    for (Iterator<Enumeration.Element> elements = enumeration.getElements(); elements.hasNext(); ) {
       Enumeration.Element element = elements.next();
       flattenElement(rows, definition, definition + "." + element.getName(), element, null, 0);
     }

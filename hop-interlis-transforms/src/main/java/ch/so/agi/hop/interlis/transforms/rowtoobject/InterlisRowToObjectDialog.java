@@ -31,13 +31,20 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
   private TextVar wModelDirectories;
   private ComboVar wClassName;
   private TextVar wBasketIdField;
+  private TextVar wSourceObjectField;
+  private TextVar wOperationField;
   private InterlisDialogUiSupport.StatusArea wStatus;
 
   private List<InterlisClassDescriptor> classes = List.of();
   private boolean suppressRefresh;
+  private boolean forceReload;
+  private ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator probeCoordinator;
 
   public InterlisRowToObjectDialog(
-      Shell parent, IVariables variables, InterlisRowToObjectMeta transformMeta, PipelineMeta pipelineMeta) {
+      Shell parent,
+      IVariables variables,
+      InterlisRowToObjectMeta transformMeta,
+      PipelineMeta pipelineMeta) {
     super(parent, variables, transformMeta, pipelineMeta);
     this.input = transformMeta;
   }
@@ -46,6 +53,17 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
   public String open() {
     shell = new Shell(getParent(), SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX);
     PropsUi.setLook(shell);
+    var display = shell.getDisplay();
+    probeCoordinator =
+        new ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator(
+            action -> {
+              if (!display.isDisposed())
+                display.asyncExec(
+                    () -> {
+                      if (!shell.isDisposed()) action.run();
+                    });
+            });
+    shell.addListener(SWT.Dispose, e -> probeCoordinator.close());
     setShellImage(shell, input);
     shell.setText("INTERLIS Row to Object");
     shell.setMinimumSize(760, 340);
@@ -78,7 +96,9 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
 
     wModelNames = addTextRow("Models", wTransformName, 0);
     wModelDirectories = addTextRow("Model dirs", wModelNames, 0);
-    wStatus = InterlisDialogUiSupport.createStatusArea(shell, wModelDirectories, props.getMiddlePct(), margin);
+    wStatus =
+        InterlisDialogUiSupport.createStatusArea(
+            shell, wModelDirectories, props.getMiddlePct(), margin);
     Composite classRow = InterlisDialogUiSupport.createRow(shell, wStatus.control(), margin);
     Button wReload = new Button(classRow, SWT.PUSH);
     wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -86,6 +106,9 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
         classRow, "Class", wClassName, wReload, "Reload", props.getMiddlePct(), margin);
 
     wBasketIdField = addTextRow("Basket ID field", classRow, margin);
+
+    wSourceObjectField = addTextRow("Source object field (blank = automatic)", wBasketIdField, 0);
+    wOperationField = addTextRow("Operation field (blank = automatic)", wSourceObjectField, 0);
 
     // OK / Cancel
     wOk = new Button(shell, SWT.PUSH);
@@ -104,7 +127,12 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
     fdCancel.bottom = new FormAttachment(100, 0);
     wCancel.setLayoutData(fdCancel);
 
-    wReload.addListener(SWT.Selection, e -> refresh());
+    wReload.addListener(
+        SWT.Selection,
+        e -> {
+          forceReload = true;
+          refresh();
+        });
     wClassName.addModifyListener(
         e -> {
           input.setChanged();
@@ -115,6 +143,14 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
     wOk.addListener(SWT.Selection, e -> ok());
     wCancel.addListener(SWT.Selection, e -> cancel());
 
+    wModelNames.addModifyListener(
+        e -> {
+          if (!suppressRefresh) refresh();
+        });
+    wModelDirectories.addModifyListener(
+        e -> {
+          if (!suppressRefresh) refresh();
+        });
     getData();
     refresh();
     input.setChanged(changed);
@@ -170,6 +206,9 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
       wModelDirectories.setText(
           input.getModelDirectories() == null ? "" : input.getModelDirectories());
       wClassName.setText(input.getClassName() == null ? "" : input.getClassName());
+      wSourceObjectField.setText(
+          input.getSourceObjectField() == null ? "" : input.getSourceObjectField());
+      wOperationField.setText(input.getOperationField() == null ? "" : input.getOperationField());
       wBasketIdField.setText(input.getBasketIdField() == null ? "" : input.getBasketIdField());
     } finally {
       suppressRefresh = false;
@@ -179,9 +218,22 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
   }
 
   private void refresh() {
+    if (suppressRefresh) return;
     syncMetaFromWidgets();
+    var snapshot = (InterlisRowToObjectMeta) input.clone();
+    var vars = ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator.snapshot(variables);
+    boolean immediate = forceReload;
+    forceReload = false;
+    probeCoordinator.submit(
+        immediate,
+        () -> snapshot.tryProject(vars).orElse(null),
+        this::applyRefresh,
+        this::probeFailed);
+  }
+
+  private void applyRefresh(InterlisProjectionResult result) {
     try {
-      InterlisProjectionResult result = controllerProbe();
+
       classes = result == null ? List.of() : result.schema().selectableClasses();
       populateClassCombo();
       if (result == null) {
@@ -198,10 +250,6 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
           InterlisDialogUiSupport.StatusSeverity.ERROR,
           ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport.rootCauseMessage(e));
     }
-  }
-
-  private InterlisProjectionResult controllerProbe() throws Exception {
-    return input.tryProject(variables).orElse(null);
   }
 
   private void populateClassCombo() {
@@ -228,7 +276,16 @@ public class InterlisRowToObjectDialog extends BaseTransformDialog {
       input.setModelDirectories(wModelDirectories.getText());
       input.setClassName(wClassName.getText());
       input.setBasketIdField(wBasketIdField.getText());
+      input.setSourceObjectField(wSourceObjectField.getText());
+      input.setOperationField(wOperationField.getText());
     }
+  }
+
+  private void probeFailed(Exception error) {
+    wStatus.set(
+        ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport.StatusSeverity.ERROR,
+        ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport.rootCauseMessage(error));
+    shell.layout(true, true);
   }
 
   private void ok() {

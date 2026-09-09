@@ -31,14 +31,12 @@ class Phase6MetaTest {
 
   @Test
   void plugin_contracts() {
-    Transform validate =
-        InterlisValidateMeta.class.getAnnotation(Transform.class);
+    Transform validate = InterlisValidateMeta.class.getAnnotation(Transform.class);
     assertThat(validate).isNotNull();
     assertThat(validate.id()).isEqualTo("INTERLIS_VALIDATE");
     assertThat(validate.classLoaderGroup()).isEqualTo("sogeo-geometry");
 
-    Transform enumerations =
-        InterlisEnumerationsMeta.class.getAnnotation(Transform.class);
+    Transform enumerations = InterlisEnumerationsMeta.class.getAnnotation(Transform.class);
     assertThat(enumerations).isNotNull();
     assertThat(enumerations.id()).isEqualTo("INTERLIS_ENUMERATIONS");
     assertThat(enumerations.classLoaderGroup()).isEqualTo("sogeo-geometry");
@@ -72,7 +70,14 @@ class Phase6MetaTest {
     for (var meta : List.of(new InterlisValidateMeta(), new InterlisEnumerationsMeta())) {
       List<ICheckResult> remarks = new ArrayList<>();
       meta.check(
-          remarks, null, new TransformMeta("step", meta), null, null, null, null, new Variables(),
+          remarks,
+          null,
+          new TransformMeta("step", meta),
+          null,
+          null,
+          null,
+          null,
+          new Variables(),
           new MemoryMetadataProvider());
       assertThat(remarks).isNotEmpty();
       assertThat(remarks.get(0).getType()).isEqualTo(ICheckResult.TYPE_RESULT_ERROR);
@@ -90,8 +95,7 @@ class Phase6MetaTest {
     validate.setStopOnFirstError(true);
     validate.setIncludeWarnings(false);
     validate.setFailOnErrors(true);
-    InterlisValidateMeta validateRestored =
-        roundtrip(validate, new InterlisValidateMeta());
+    InterlisValidateMeta validateRestored = roundtrip(validate, new InterlisValidateMeta());
     assertThat(validateRestored.getFileName()).isEqualTo("/data/x.xtf");
     assertThat(validateRestored.getConfigFile()).isEqualTo("/cfg.toml");
     assertThat(validateRestored.isValidateMultiplicity()).isFalse();
@@ -111,14 +115,18 @@ class Phase6MetaTest {
 
   @Test
   void envelope_schema_now_carries_basket_metadata() throws Exception {
-    RowMeta rowMeta = ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory.createRowMeta();
+    RowMeta rowMeta =
+        ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory.createRowMeta();
 
     assertThat(rowMeta.getFieldNames())
         .containsExactlyElementsOf(InterlisEnvelopeRowLayout.FIELD_NAMES);
     assertThat(InterlisEnvelopeRowLayout.FIELD_NAMES)
         .endsWith(
-            "_ili_basket_consistency", "_ili_basket_kind", "_ili_basket_start_state",
-            "_ili_basket_end_state");
+            "_ili_basket_consistency",
+            "_ili_basket_kind",
+            "_ili_basket_start_state",
+            "_ili_basket_end_state",
+            "_ili_transfer_metadata");
   }
 
   private static <T extends ITransformMeta> T roundtrip(T meta, T restored) throws Exception {

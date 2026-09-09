@@ -66,7 +66,7 @@ Beispiel:
   <hop.version>2.18.1</hop.version>
   <iox.ili.version>...</iox.ili.version>
   <ili2c.version>...</ili2c.version>
-  <hop.geometry.type.version>0.1.0-SNAPSHOT</hop.geometry.type.version>
+  <hop.geometry.type.version>0.2.0-SNAPSHOT</hop.geometry.type.version>
 </properties>
 ```
 
@@ -1443,3 +1443,19 @@ https://hop.apache.org/dev-manual/latest/
 Apache Hop Runner:
 
 https://hop.apache.org/manual/latest/hop-run/hop-run.html
+
+## P2: Reproduzierbare Release-Prüfung
+
+CI und Release rufen denselben Workflow `verify.yml` auf. Die vollständige
+OS-/JDK-Matrix und die Paket-E2E-Suite unter isoliertem Hop 2.18.1 müssen erfolgreich
+sein. Release veröffentlicht das bereits geprüfte Ubuntu/JDK-21-Artefakt.
+Geometry 0.2.0-SNAPSHOT wird aus Commit
+dd20a01ea68d85a3602b2edf2db810b42506aa4d gebaut (XYZ-Serialisierung).
+Die GeoTools-E2E-Abhängigkeit wird für die bestehenden Plugin-IDs aus Commit
+578cacc6eb6e34657d1823f5f88036e7f8751144 gebaut; im E2E-Job ist GeoPackage verpflichtend.
+Die vier INTERLIS-Bibliotheksversionen bleiben unverändert.
+
+Header-JSON verwendet `json-simple` 1.1.1 mit Scope `provided`, bereits in Hop core
+vorhanden. Kein zusätzlicher JSON-Parser wird gebündelt. Filter Rows ist ausschliesslich
+Testabhängigkeit für den E2E-Generator. Der E2E-Runner akzeptiert vorgebaute ZIPs über
+`HOP_GEOMETRY_TYPE_ZIP` und `HOP_GEOTOOLS_ZIP`.

@@ -1,6 +1,5 @@
 package ch.so.agi.hop.interlis.transforms;
 
-import ch.so.agi.hop.interlis.core.mapping.InterlisMappingException;
 import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
@@ -41,11 +40,12 @@ public final class InterlisStructureDialogSupport {
       ProjectionOptions options) {
     if (modelNames == null || modelNames.isEmpty()) {
       return new InterlisStructureProbeResult(
-          false,
-          "Model probe unavailable: no INTERLIS models configured.",
-          null,
-          List.of(),
-          List.of());
+              false,
+              "Model probe unavailable: no INTERLIS models configured.",
+              null,
+              List.of(),
+              List.of())
+          .withStatus(ch.so.agi.hop.interlis.transforms.InterlisProbeStatus.INFO);
     }
     try {
       InterlisModelService modelService = new InterlisModelServiceImpl();
@@ -68,11 +68,12 @@ public final class InterlisStructureDialogSupport {
       InterlisClassDescriptor classDescriptor = schema.findClass(className).orElse(null);
       if (classDescriptor == null) {
         return new InterlisStructureProbeResult(
-            true,
-            "Class " + className + " not found in models " + modelNames,
-            null,
-            classes,
-            List.of());
+                true,
+                "Class " + className + " not found in models " + modelNames,
+                null,
+                classes,
+                List.of())
+            .withStatus(ch.so.agi.hop.interlis.transforms.InterlisProbeStatus.ERROR);
       }
       InterlisStructureLocator locator = new InterlisStructureLocator();
       List<String> structurePaths = locator.multiValuedStructurePaths(schema, classDescriptor);
@@ -80,7 +81,10 @@ public final class InterlisStructureDialogSupport {
       if (structurePath == null || structurePath.isBlank()) {
         return new InterlisStructureProbeResult(
             true,
-            "Class " + className + " loaded; " + structurePaths.size()
+            "Class "
+                + className
+                + " loaded; "
+                + structurePaths.size()
                 + " multi-valued structure(s)",
             null,
             classes,
@@ -97,8 +101,11 @@ public final class InterlisStructureDialogSupport {
                   options);
       return new InterlisStructureProbeResult(
           true,
-          "Structure " + structurePath + " projects "
-              + projection.plan().childFields().size() + " child fields",
+          "Structure "
+              + structurePath
+              + " projects "
+              + projection.plan().childFields().size()
+              + " child fields",
           projection,
           classes,
           structurePaths);
@@ -115,8 +122,6 @@ public final class InterlisStructureDialogSupport {
       current = current.getCause();
     }
     String message = current.getMessage();
-    return message == null || message.isBlank()
-        ? current.getClass().getSimpleName()
-        : message;
+    return message == null || message.isBlank() ? current.getClass().getSimpleName() : message;
   }
 }

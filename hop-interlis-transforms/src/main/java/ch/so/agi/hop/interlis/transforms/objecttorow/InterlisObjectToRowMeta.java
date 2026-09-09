@@ -65,9 +65,8 @@ public class InterlisObjectToRowMeta
   }
 
   /**
-   * Tries to build the projection for the current configuration; returns empty if the
-   * configuration is incomplete (e.g. unresolved variables) and throws if models or the class
-   * cannot be resolved.
+   * Tries to build the projection for the current configuration; returns empty if the configuration
+   * is incomplete (e.g. unresolved variables) and throws if models or the class cannot be resolved.
    */
   public Optional<InterlisProjectionResult> tryProject(IVariables variables)
       throws InterlisModelException, InterlisMappingException {
@@ -176,6 +175,11 @@ public class InterlisObjectToRowMeta
                 "INTERLIS model cannot be resolved yet (variables or repositories unresolved)",
                 transformMeta));
         return;
+      }
+      if (prev != null && !prev.isEmpty()) {
+        ch.so.agi.hop.interlis.transforms.mapping.InterlisEnvelopeBindings.bind(
+            prev, resolve(variables, objectFieldName), false);
+        InterlisObjectToRowOutputPlan.create(prev, projection.plan(), appendEnvelopeFields);
       }
       remarks.add(
           new CheckResult(

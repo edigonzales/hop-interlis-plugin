@@ -735,3 +735,13 @@ Look & feel soll an das bestehende GeoTools-Plugin anschliessen:
 - gemeinsamer `Geospatial`-Kategorieeintrag
 
 Langfristig können INTERLIS-Transforms in einer Unterkategorie erscheinen, falls Hop-Kategorien dies sinnvoll unterstützen; für den Start bleibt `Geospatial` konsistent.
+
+## P2: Asynchrone Modellprobe
+
+Input, Output, Object to Row, Row to Object, Structure Explode/Collect und Role Join
+verwenden einen gemeinsamen Probe-Koordinator: 300 ms Debounce, eine laufende und
+eine ersetzbare Anfrage pro Dialog. Explizites Reload startet ohne Debounce und
+invalidiert den kompilierten Cache. Konfiguration und Variablen werden vor dem
+Hintergrundlauf kopiert. Nur die aktuelle Anfrage darf Ergebnisse im SWT-Thread
+anzeigen; Schliessen des Dialogs verwirft ausstehende Ergebnisse. Probe-Status ist
+typisiert und wird nicht aus englischen Meldungstexten abgeleitet.

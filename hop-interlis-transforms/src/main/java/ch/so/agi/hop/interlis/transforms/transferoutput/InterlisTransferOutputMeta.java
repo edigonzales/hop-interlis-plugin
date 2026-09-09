@@ -15,8 +15,8 @@ import org.apache.hop.pipeline.transform.BaseTransformMeta;
 import org.apache.hop.pipeline.transform.TransformMeta;
 
 /**
- * Metadata of the INTERLIS Transfer Output transform: writes canonical envelope rows back to an
- * XTF transfer.
+ * Metadata of the INTERLIS Transfer Output transform: writes canonical envelope rows back to an XTF
+ * transfer.
  *
  * <p>In object mode (default) the transfer/basket events are derived from the OBJECT rows (basket
  * grouping by {@code _ili_bid}); in event mode the explicit event sequence of the stream is
@@ -77,21 +77,31 @@ public class InterlisTransferOutputMeta
       IHopMetadataProvider metadataProvider) {
     if (fileName == null || fileName.isBlank()) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS output file is required", transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS output file is required", transformMeta));
       return;
     }
     if (modelNames == null || modelNames.isBlank()) {
       remarks.add(
           new CheckResult(
               ICheckResult.TYPE_RESULT_ERROR,
-              "Explicit model names are required (the envelope stream carries no header)",
+              "Explicit model names are required to compile the writer schema",
               transformMeta));
+      return;
+    }
+    try {
+      if (prev != null && !prev.isEmpty())
+        ch.so.agi.hop.interlis.transforms.mapping.InterlisEnvelopeBindings.bind(
+            prev, ch.so.agi.hop.interlis.core.io.InterlisEnvelopeRowLayout.OBJECT, eventMode);
+    } catch (Exception e) {
+      remarks.add(new CheckResult(ICheckResult.TYPE_RESULT_ERROR, e.getMessage(), transformMeta));
       return;
     }
     remarks.add(
         new CheckResult(
             ICheckResult.TYPE_RESULT_OK,
-            "INTERLIS Transfer Output is configured (event mode " + eventMode + ")", transformMeta));
+            "INTERLIS Transfer Output is configured (event mode " + eventMode + ")",
+            transformMeta));
   }
 
   // -- accessors -----------------------------------------------------------

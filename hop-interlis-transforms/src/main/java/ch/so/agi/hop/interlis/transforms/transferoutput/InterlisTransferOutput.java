@@ -54,17 +54,17 @@ public class InterlisTransferOutput
     }
 
     try {
-      InterlisObjectEnvelope envelope = InterlisEnvelopeRowLayout.fromRow(row);
+      InterlisObjectEnvelope envelope = data.envelopeBindings.fromRow(row);
       if (meta.isEventMode()) {
         writeEvent(envelope);
       } else {
         writeObjectMode(envelope);
       }
     } catch (HopException e) {
-      closeWriter();
+      closeAfterFailure(e);
       throw e;
     } catch (Exception e) {
-      closeWriter();
+      closeAfterFailure(e);
       throw new HopException("Failed to write INTERLIS transfer: " + e.getMessage(), e);
     }
 
@@ -83,18 +83,31 @@ public class InterlisTransferOutput
         }
         String bid = envelope.basketId() == null ? "b1" : envelope.basketId();
         if (data.currentBid == null) {
-          data.writer.startBasket(requiredTopic(envelope), bid);
+          if (!data.completedBids.add(bid))
+            throw new HopException("Basket <" + bid + "> reappears after it was completed");
+          data.currentTopic = requiredTopic(envelope);
+          data.currentBasketMetadata = envelope.basket();
+          data.writer.startBasket(data.currentTopic, bid, envelope.basket());
           data.currentBid = bid;
         } else if (!data.currentBid.equals(bid)) {
           data.writer.endBasket();
-          data.writer.startBasket(requiredTopic(envelope), bid);
+          if (!data.completedBids.add(bid))
+            throw new HopException("Basket <" + bid + "> reappears after it was completed");
+          data.currentTopic = requiredTopic(envelope);
+          data.currentBasketMetadata = envelope.basket();
+          data.writer.startBasket(data.currentTopic, bid, envelope.basket());
           data.currentBid = bid;
         }
+        if (!java.util.Objects.equals(data.currentTopic, requiredTopic(envelope))
+            || !java.util.Objects.equals(data.currentBasketMetadata, envelope.basket()))
+          throw new HopException("Conflicting topic or metadata in basket <" + bid + ">");
         writeObject(envelope);
       }
       case START_TRANSFER, START_BASKET, END_BASKET, END_TRANSFER ->
           throw new HopException(
-              "Explicit " + envelope.eventType() + " event in object mode; enable event mode "
+              "Explicit "
+                  + envelope.eventType()
+                  + " event in object mode; enable event mode "
                   + "or feed only OBJECT rows into INTERLIS Transfer Output");
     }
   }
@@ -103,31 +116,56 @@ public class InterlisTransferOutput
   private void writeEvent(InterlisObjectEnvelope envelope)
       throws HopException, InterlisWriteException {
     switch (envelope.eventType()) {
-      case START_TRANSFER -> data.writer.startTransfer("hop-interlis-plugin");
+      case START_TRANSFER -> data.writer.startTransfer(envelope.transferMetadata());
       case START_BASKET -> {
         if (envelope.topicName() == null) {
           throw new HopException("START_BASKET event without a topic");
         }
         data.writer.startBasket(envelope.topicName(), envelope.basketId(), envelope.basket());
+        data.currentBid = envelope.basketId();
+        data.currentTopic = envelope.topicName();
+        data.currentBasketMetadata = envelope.basket();
       }
       case OBJECT -> {
         if (envelope.object() == null) {
           throw new HopException(
               "Envelope row of class <" + envelope.className() + "> carries no INTERLIS object");
         }
+        if ((envelope.basketId() != null
+                && !java.util.Objects.equals(data.currentBid, envelope.basketId()))
+            || (envelope.topicName() != null
+                && !java.util.Objects.equals(data.currentTopic, envelope.topicName()))
+            || (envelope.basket() != null
+                && !java.util.Objects.equals(data.currentBasketMetadata, envelope.basket())))
+          throw new HopException(
+              "Object <"
+                  + envelope.objectId()
+                  + "> has conflicting basket context: row basket <"
+                  + envelope.basketId()
+                  + ">, open basket <"
+                  + data.currentBid
+                  + ">");
         writeObject(envelope);
       }
-      case END_BASKET -> data.writer.endBasket();
+      case END_BASKET -> {
+        data.writer.endBasket();
+        data.currentBid = null;
+        data.currentTopic = null;
+        data.currentBasketMetadata = null;
+      }
       case END_TRANSFER -> data.writer.endTransfer();
     }
   }
 
   private void writeObject(InterlisObjectEnvelope envelope)
       throws HopException, InterlisWriteException {
-    IomObject object = envelope.object();
-    if (envelope.operation() != InterlisObjectOperation.NONE) {
-      object.setobjectoperation(envelope.operation().toIom());
-    }
+    IomObject object = new ch.interlis.iom_j.Iom_jObject(envelope.object());
+    if (envelope.className() != null && !envelope.className().equals(object.getobjecttag()))
+      throw new HopException("Envelope class contradicts object class: " + envelope.className());
+    if (envelope.objectId() != null) object.setobjectoid(envelope.objectId());
+    if (envelope.operation() == InterlisObjectOperation.DELETE)
+      object = new ch.interlis.iom_j.Iom_jObject(object.getobjecttag(), object.getobjectoid());
+    object.setobjectoperation(envelope.operation().toIom());
     data.writer.writeObject(object);
     data.objectsWritten++;
   }
@@ -150,6 +188,9 @@ public class InterlisTransferOutput
     ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.requireSingleCopy(
         getTransformMeta(), this, "file processing or enumeration emission requires one copy");
     InterlisRuntimeSupport.initialize();
+    data.envelopeBindings =
+        ch.so.agi.hop.interlis.transforms.mapping.InterlisEnvelopeBindings.bind(
+            getInputRowMeta(), InterlisEnvelopeRowLayout.OBJECT, meta.isEventMode());
 
     String resolvedFile = resolve(meta.getFileName());
     if (resolvedFile.isBlank()) {
@@ -164,8 +205,7 @@ public class InterlisTransferOutput
     try {
       List<String> modelNames = resolveModelNames();
       if (modelNames.isEmpty()) {
-        throw new HopException(
-            "Explicit model names are required (the envelope stream carries no header)");
+        throw new HopException("Explicit model names are required to compile the writer schema");
       }
       ch.so.agi.hop.interlis.core.model.CompiledInterlisModel model =
           new ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl()
@@ -173,8 +213,7 @@ public class InterlisTransferOutput
                   new ch.so.agi.hop.interlis.core.model.ModelSource(
                       List.of(), modelNames, resolveModelDirectories()),
                   ch.so.agi.hop.interlis.core.model.ModelCompileOptions.defaults());
-      data.writer =
-          XtfTransferWriter.open(file, model.transferDescription(), modelNames);
+      data.writer = XtfTransferWriter.open(file, model.transferDescription(), modelNames);
       if (!meta.isEventMode()) {
         data.writer.startTransfer("hop-interlis-plugin");
       }
@@ -184,16 +223,18 @@ public class InterlisTransferOutput
       }
       data.initialized = true;
     } catch (HopException e) {
-      closeWriter();
+      closeAfterFailure(e);
       throw e;
     } catch (Exception e) {
-      closeWriter();
+      closeAfterFailure(e);
       throw new HopException("Failed to initialize INTERLIS Transfer Output: " + e.getMessage(), e);
     }
   }
 
   private void finishWriting() throws HopException {
     if (data.writer == null) {
+      if (meta.isEventMode())
+        throw new HopException("Empty event stream: START_TRANSFER and END_TRANSFER required");
       return;
     }
     try {
@@ -202,25 +243,36 @@ public class InterlisTransferOutput
           data.writer.endBasket();
         }
         data.writer.endTransfer();
+      } else {
+        data.writer.requireComplete();
       }
+      closeWriterChecked();
     } catch (Exception e) {
+      closeAfterFailure(e);
       throw new HopException("Failed to finish INTERLIS transfer: " + e.getMessage(), e);
-    } finally {
-      closeWriter();
+    }
+  }
+
+  private void closeWriterChecked() throws InterlisWriteException {
+    var writer = data.writer;
+    data.writer = null;
+    if (writer != null) writer.close();
+  }
+
+  private void closeAfterFailure(Exception failure) {
+    try {
+      closeWriterChecked();
+    } catch (InterlisWriteException close) {
+      failure.addSuppressed(close);
     }
   }
 
   private void closeWriter() {
-    if (data.writer != null) {
-      try {
-        data.writer.close();
-      } catch (InterlisWriteException e) {
-        if (isDebug()) {
-          logDebug("Failed to close INTERLIS writer: " + e.getMessage());
-        }
-      } finally {
-        data.writer = null;
-      }
+    try {
+      closeWriterChecked();
+    } catch (InterlisWriteException e) {
+      logError("Failed to close INTERLIS writer", e);
+      setErrors(getErrors() + 1);
     }
   }
 

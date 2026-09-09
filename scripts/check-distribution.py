@@ -40,6 +40,7 @@ with ZipFile(zip_path) as archive:
         "hop-geometry-type",
         "jts-core-1.20",  # org.locationtech.jts shared Hop geometry
         "hop-core-",
+        "json-simple-",
         "hop-engine-",
         "hop-ui-",
         "hop-transform-",

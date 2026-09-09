@@ -42,8 +42,8 @@ export HOP_JAVA_HOME="$JAVA_HOME"
 echo "==> Using JDK $JAVA_HOME"
 
 GEOMETRY_REPO="${HOP_GEOMETRY_TYPE_REPO:-$PROJECT_DIR/../hop-geometry-type-plugin}"
-GEOMETRY_ZIP="$(find "$GEOMETRY_REPO/assemblies/assemblies-hop-geometry-type/target" \
-  -maxdepth 1 -name 'hop-geometry-type-plugin-*.zip' -print 2>/dev/null | head -n 1)"
+GEOMETRY_ZIP="${HOP_GEOMETRY_TYPE_ZIP:-$(find "$GEOMETRY_REPO/assemblies/assemblies-hop-geometry-type/target" \
+  -maxdepth 1 -name 'hop-geometry-type-plugin-*.zip' -print 2>/dev/null | head -n 1)}"
 INTERLIS_ZIP="$(find "$PROJECT_DIR/assemblies/assemblies-hop-interlis/target" \
   -maxdepth 1 -name 'hop-interlis-plugin-*.zip' -print 2>/dev/null | head -n 1)"
 
@@ -106,6 +106,10 @@ if [[ -n "$GEOTOOLS_ZIP" && -f "$GEOTOOLS_ZIP" ]]; then
   RUN_GPKG=true
 else
   echo "==> No compatible GeoTools ZIP; skipping optional GeoPackage pipeline"
+  if [[ "${REQUIRE_GEOTOOLS_E2E:-false}" == "true" ]]; then
+    echo "Required GeoPackage E2E dependency is missing" >&2
+    exit 1
+  fi
   RUN_GPKG=false
 fi
 
@@ -119,11 +123,18 @@ run_pipeline() {
   local pipeline="$1"
   local expected_exit="${2:-0}"
   local actual_exit=0
+  local expected_message="${3:-}"
+  local log_file="$WORK_DIR/$(basename "$pipeline").log"
   echo "==> E2E: $(basename "$pipeline")"
   "$HOP_HOME/hop-run.sh" -r local -f "$pipeline" \
-    -p E2E_INPUT_DIR="$WORK_DIR/input" -p E2E_OUTPUT_DIR="$WORK_DIR/output" || actual_exit=$?
+    -p E2E_INPUT_DIR="$WORK_DIR/input" -p E2E_OUTPUT_DIR="$WORK_DIR/output" > "$log_file" 2>&1 || actual_exit=$?
+  cat "$log_file"
   if [[ "$actual_exit" != "$expected_exit" ]]; then
     echo "Unexpected exit code for $pipeline: $actual_exit (expected $expected_exit)" >&2
+    return 1
+  fi
+  if [[ -n "$expected_message" ]] && ! grep -Fq "$expected_message" "$log_file"; then
+    echo "Expected diagnostic not found: $expected_message" >&2
     return 1
   fi
 }
@@ -150,6 +161,10 @@ run_pipeline "$PROJECT_DIR/e2e/pipelines/21-p1-overlay-3d.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/22-p1-append.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/23-p1-validation-failure.hpl" 1
 run_pipeline "$PROJECT_DIR/e2e/pipelines/24-p1-validation-limit.hpl" 1
+run_pipeline "$PROJECT_DIR/e2e/pipelines/25-p2-header-reordered.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/26-p2-carrier.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/27-p2-incomplete-event.hpl" 1 "END_TRANSFER required"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/28-p2-invalid-operation.hpl" 1 "Invalid _ili_operation"
 if [[ "$RUN_GPKG" == "true" ]]; then
   run_pipeline "$PROJECT_DIR/e2e/pipelines/04-interlis-to-gpkg.hpl"
 fi

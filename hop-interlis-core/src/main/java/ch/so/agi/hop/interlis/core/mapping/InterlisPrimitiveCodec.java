@@ -6,7 +6,6 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Date;
@@ -22,9 +21,9 @@ import java.util.Date;
  *   <li>INTEGER parses as {@link Long};
  *   <li>DECIMAL parses as {@link BigDecimal} – never through {@code double};
  *   <li>DATE parses ISO {@code yyyy-MM-dd} (XMLDate) to a {@link Date} at UTC midnight;
- *   <li>DATETIME parses ISO {@code yyyy-MM-dd'T'HH:mm:ss[.SSS]} without time zone to a
- *       {@link Timestamp} interpreted in the JVM default time zone; formatting is always the
- *       plain ISO form without zone, so values stay stable for round trips;
+ *   <li>DATETIME parses ISO {@code yyyy-MM-dd'T'HH:mm:ss[.SSS]} without time zone to a {@link
+ *       Timestamp} interpreted in the JVM default time zone; formatting is always the plain ISO
+ *       form without zone, so values stay stable for round trips;
  *   <li>TIME passes through as {@link String}.
  * </ul>
  *
@@ -33,9 +32,13 @@ import java.util.Date;
 public final class InterlisPrimitiveCodec {
 
   private static final DateTimeFormatter DATE_FORMAT =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd");
+      DateTimeFormatter.ofPattern("uuuu-MM-dd")
+          .withResolverStyle(java.time.format.ResolverStyle.STRICT);
   private static final DateTimeFormatter DATE_TIME_FORMAT =
-      DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss[.SSS]");
+      DateTimeFormatter.ofPattern("uuuu-MM-dd'T'HH:mm:ss[.SSS]")
+          .withResolverStyle(java.time.format.ResolverStyle.STRICT);
+
+  private final java.time.ZoneId timestampZone = java.time.ZoneId.systemDefault();
 
   public InterlisPrimitiveCodec() {}
 
@@ -69,7 +72,13 @@ public final class InterlisPrimitiveCodec {
       throw e;
     } catch (NumberFormatException | DateTimeParseException e) {
       throw new InterlisMappingException(
-          "Invalid " + kind + " value <" + raw + "> for attribute " + descriptor.name() + ": "
+          "Invalid "
+              + kind
+              + " value <"
+              + raw
+              + "> for attribute "
+              + descriptor.name()
+              + ": "
               + e.getMessage(),
           e);
     }
@@ -94,12 +103,18 @@ public final class InterlisPrimitiveCodec {
       case BOOLEAN -> requireBoolean(value, descriptor) ? "true" : "false";
       case INTEGER -> requireLong(value, descriptor).toString();
       case DECIMAL -> requireDecimal(value, descriptor).toPlainString();
-      case DATE -> DATE_FORMAT.format(
-          LocalDate.ofInstant(((Date) requireDate(value, descriptor)).toInstant(),
-              java.time.ZoneOffset.UTC));
+      case DATE ->
+          DATE_FORMAT.format(
+              LocalDate.ofInstant(
+                  ((Date) requireDate(value, descriptor)).toInstant(), java.time.ZoneOffset.UTC));
       case DATETIME -> {
         Timestamp timestamp = requireTimestamp(value, descriptor);
-        yield DATE_TIME_FORMAT.format(timestamp.toLocalDateTime());
+        if (timestamp.getNanos() % 1_000_000 != 0) {
+          throw new InterlisMappingException(
+              "Timestamp precision exceeds milliseconds for attribute " + descriptor.name());
+        }
+        yield DATE_TIME_FORMAT.format(
+            LocalDateTime.ofInstant(timestamp.toInstant(), timestampZone));
       }
       case GEOMETRY, STRUCTURE ->
           throw new InterlisMappingException(
@@ -116,7 +131,10 @@ public final class InterlisPrimitiveCodec {
       return Boolean.FALSE;
     }
     throw new InterlisMappingException(
-        "Invalid BOOLEAN value <" + raw + "> for attribute " + descriptor.name()
+        "Invalid BOOLEAN value <"
+            + raw
+            + "> for attribute "
+            + descriptor.name()
             + "; expected 'true' or 'false'");
   }
 
@@ -141,7 +159,10 @@ public final class InterlisPrimitiveCodec {
       return Date.from(date.atStartOfDay(java.time.ZoneOffset.UTC).toInstant());
     } catch (DateTimeParseException e) {
       throw new InterlisMappingException(
-          "Invalid date value <" + raw + "> for attribute " + descriptor.name()
+          "Invalid date value <"
+              + raw
+              + "> for attribute "
+              + descriptor.name()
               + "; expected yyyy-MM-dd",
           e);
     }
@@ -151,10 +172,23 @@ public final class InterlisPrimitiveCodec {
       throws InterlisMappingException {
     try {
       LocalDateTime dateTime = LocalDateTime.parse(raw.trim(), DATE_TIME_FORMAT);
-      return Timestamp.valueOf(dateTime);
+      var offsets = timestampZone.getRules().getValidOffsets(dateTime);
+      if (offsets.isEmpty()) {
+        throw new InterlisMappingException(
+            "Invalid date/time value <"
+                + raw
+                + "> for attribute "
+                + descriptor.name()
+                + ": local time does not exist in "
+                + timestampZone);
+      }
+      return Timestamp.from(dateTime.toInstant(offsets.getFirst()));
     } catch (DateTimeParseException e) {
       throw new InterlisMappingException(
-          "Invalid date/time value <" + raw + "> for attribute " + descriptor.name()
+          "Invalid date/time value <"
+              + raw
+              + "> for attribute "
+              + descriptor.name()
               + "; expected yyyy-MM-dd'T'HH:mm:ss[.SSS]",
           e);
     }
@@ -164,7 +198,9 @@ public final class InterlisPrimitiveCodec {
       throws InterlisMappingException {
     if (!(value instanceof String string)) {
       throw new InterlisMappingException(
-          "Expected a String value for attribute " + descriptor.name() + " but got "
+          "Expected a String value for attribute "
+              + descriptor.name()
+              + " but got "
               + value.getClass().getName());
     }
     return string;
@@ -174,7 +210,9 @@ public final class InterlisPrimitiveCodec {
       throws InterlisMappingException {
     if (!(value instanceof Boolean bool)) {
       throw new InterlisMappingException(
-          "Expected a Boolean value for attribute " + descriptor.name() + " but got "
+          "Expected a Boolean value for attribute "
+              + descriptor.name()
+              + " but got "
               + value.getClass().getName());
     }
     return bool;
@@ -184,7 +222,9 @@ public final class InterlisPrimitiveCodec {
       throws InterlisMappingException {
     if (!(value instanceof Long longValue)) {
       throw new InterlisMappingException(
-          "Expected a Long value for attribute " + descriptor.name() + " but got "
+          "Expected a Long value for attribute "
+              + descriptor.name()
+              + " but got "
               + value.getClass().getName());
     }
     return longValue;
@@ -194,7 +234,9 @@ public final class InterlisPrimitiveCodec {
       throws InterlisMappingException {
     if (!(value instanceof BigDecimal decimal)) {
       throw new InterlisMappingException(
-          "Expected a BigDecimal value for attribute " + descriptor.name() + " but got "
+          "Expected a BigDecimal value for attribute "
+              + descriptor.name()
+              + " but got "
               + value.getClass().getName());
     }
     return decimal;
@@ -204,7 +246,9 @@ public final class InterlisPrimitiveCodec {
       throws InterlisMappingException {
     if (!(value instanceof Date date)) {
       throw new InterlisMappingException(
-          "Expected a Date value for attribute " + descriptor.name() + " but got "
+          "Expected a Date value for attribute "
+              + descriptor.name()
+              + " but got "
               + value.getClass().getName());
     }
     return date;
@@ -214,7 +258,9 @@ public final class InterlisPrimitiveCodec {
       throws InterlisMappingException {
     if (!(value instanceof Timestamp timestamp)) {
       throw new InterlisMappingException(
-          "Expected a Timestamp value for attribute " + descriptor.name() + " but got "
+          "Expected a Timestamp value for attribute "
+              + descriptor.name()
+              + " but got "
               + value.getClass().getName());
     }
     return timestamp;

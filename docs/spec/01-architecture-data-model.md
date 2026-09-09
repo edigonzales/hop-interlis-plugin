@@ -122,9 +122,12 @@ _ili_line           Integer
 _ili_column         Integer
 ```
 
-Die Positionen sind konstant und werden in `InterlisEnvelopeRowLayout` zentral
-definiert (Phase 5 umgesetzt; die Schema-Factory `InterlisEnvelopeSchemaFactory`
-und alle generischen Transforms verwenden exakt dieses Layout).
+Die kanonische **Ausgabe** wird in `InterlisEnvelopeRowLayout` zentral definiert.
+Eingänge werden einmalig anhand ihrer Feldnamen und Typen gebunden; die Reihenfolge
+im eingehenden Hop-Stream ist frei. Nach den vier Basket-Metadatenfeldern folgt
+optional `_ili_transfer_metadata` (String, JSON-Schema-Version 1). Die bisherigen
+14 Felder behalten ihre Positionen und Typen; alte Streams ohne Headerfeld bleiben
+lesbar.
 
 ## 4. Typed row projection
 
@@ -965,3 +968,31 @@ Gerade 3D-Geometrien verwenden den WKB-Pfad ohne Curve-Container und behalten XY
 2D-Kurven bleiben SQL/MM-Kurven. Die gemeinsame Geometry-Bibliothek unterstützt
 3D-Kurven derzeit weder beim WKB-Lesen noch beim WKB-Schreiben: Ein tatsächlicher
 3D-ARC wird explizit abgelehnt und nie still linearisiert.
+
+## P2: Erhaltung und Projektion
+
+Ein vollständiger Eventstrom erhält unterstützte Headersemantik (Sender, Kommentar,
+Modelleinträge), Basket-Metadaten, Objektinhalte und Operationen. Objektmodus erzeugt
+Header und Transfergrenzen und übernimmt vorhandene Basket-Metadaten. Es besteht
+keine Zusicherung identischer XML-Bytes, Formatierung oder Reihenfolge von
+Header-Modelleinträgen. Nicht unterstützte Headerobjekte werden im Descriptor
+gekennzeichnet und beim Event-Schreiben mit einer Diagnose abgelehnt.
+
+iox-ili 1.24.4 ersetzt beim Lesen von XTF 2.3 OID-Space-Namen durch künstliche Namen.
+Originalnamen sind über diese API nicht rekonstruierbar; der Descriptor kennzeichnet
+diesen Verlust ausdrücklich. XTF-2.4-Ausgabe unterstützt keine OID-Spaces. Ein
+Erhaltungsversprechen für diese Fälle ist ausgeschlossen; der Event-Writer lehnt
+sie ab. Ein Versionswechsel zwischen Header und kompiliertem Modell wird ebenfalls
+abgelehnt.
+
+`Row to Object` bindet optional ein Quellobjekt und eine Operation. Leere
+Feldkonfiguration erkennt `_ili_source_object` (alternativ `_ili_object`) und
+`_ili_operation`, sofern vorhanden. Explizite Feldnamen müssen existieren und den
+passenden Typ haben. Explizite Operation hat Vorrang, danach Quellobjektoperation,
+sonst NONE. Es gelten die P1-Overlay- und DELETE-Regeln. Ausgabeobjekte sind eigene
+Kopien; geteilte Eingangsobjekte bleiben unverändert.
+
+Die Auswahl eines tiefen Blatts traversiert Elternstrukturen, ohne Geschwister
+mit auszuwählen. Auswahl einer Struktur umfasst alle unterstützten Nachfahren.
+Strukturpfade werden im Plan aufgelöst. Klassenprojektion und Strukturprojektion
+verwenden dieselben Auswahlregeln.

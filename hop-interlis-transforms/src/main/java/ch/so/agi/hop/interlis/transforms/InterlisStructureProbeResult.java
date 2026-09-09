@@ -1,14 +1,14 @@
 package ch.so.agi.hop.interlis.transforms;
 
-import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionResult;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
+import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionResult;
 import java.util.List;
 
 /**
  * Result of probing the model configuration of INTERLIS Structure Explode/Collect dialogs.
  *
- * @param ok whether the probe succeeded; failures are returned as a friendly message and never
- *     make the dialog unusable
+ * @param ok whether the probe succeeded; failures are returned as a friendly message and never make
+ *     the dialog unusable
  * @param message diagnostic or success message
  * @param projection the structure projection, or {@code null} when not yet resolvable
  * @param classes all transferable classes of the resolved models
@@ -19,7 +19,30 @@ public record InterlisStructureProbeResult(
     String message,
     InterlisStructureProjectionResult projection,
     List<InterlisClassDescriptor> classes,
-    List<String> structurePaths) {
+    List<String> structurePaths,
+    InterlisProbeStatus status) {
+
+  public InterlisStructureProbeResult(
+      boolean ok,
+      String message,
+      InterlisStructureProjectionResult projection,
+      List<InterlisClassDescriptor> classes,
+      List<String> structurePaths) {
+    this(
+        ok,
+        message,
+        projection,
+        classes,
+        structurePaths,
+        projection != null
+            ? InterlisProbeStatus.SUCCESS
+            : ok ? InterlisProbeStatus.INFO : InterlisProbeStatus.ERROR);
+  }
+
+  public InterlisStructureProbeResult withStatus(InterlisProbeStatus value) {
+    return new InterlisStructureProbeResult(
+        ok, message, projection, classes, structurePaths, value);
+  }
 
   public InterlisStructureProbeResult {
     classes = classes == null ? List.of() : List.copyOf(classes);

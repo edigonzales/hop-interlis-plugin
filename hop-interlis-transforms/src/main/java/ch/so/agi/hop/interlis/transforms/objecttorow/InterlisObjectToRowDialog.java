@@ -45,6 +45,8 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
 
   private List<InterlisClassDescriptor> classes = List.of();
   private boolean suppressRefresh;
+  private boolean forceReload;
+  private ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator probeCoordinator;
 
   public InterlisObjectToRowDialog(
       Shell parent,
@@ -59,6 +61,17 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
   public String open() {
     shell = new Shell(getParent(), SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX);
     PropsUi.setLook(shell);
+    var display = shell.getDisplay();
+    probeCoordinator =
+        new ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator(
+            action -> {
+              if (!display.isDisposed())
+                display.asyncExec(
+                    () -> {
+                      if (!shell.isDisposed()) action.run();
+                    });
+            });
+    shell.addListener(SWT.Dispose, e -> probeCoordinator.close());
     setShellImage(shell, input);
     shell.setText("INTERLIS Object to Row");
     shell.setMinimumSize(860, 560);
@@ -91,7 +104,9 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
 
     wModelNames = addTextRow("Models", wTransformName, 0);
     wModelDirectories = addTextRow("Model dirs", wModelNames, 0);
-    wStatus = InterlisDialogUiSupport.createStatusArea(shell, wModelDirectories, props.getMiddlePct(), margin);
+    wStatus =
+        InterlisDialogUiSupport.createStatusArea(
+            shell, wModelDirectories, props.getMiddlePct(), margin);
     Composite classRow = InterlisDialogUiSupport.createRow(shell, wStatus.control(), margin);
     Button wReload = new Button(classRow, SWT.PUSH);
     wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -159,7 +174,12 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
     fdCancel.bottom = new FormAttachment(100, 0);
     wCancel.setLayoutData(fdCancel);
 
-    wReload.addListener(SWT.Selection, e -> refresh());
+    wReload.addListener(
+        SWT.Selection,
+        e -> {
+          forceReload = true;
+          refresh();
+        });
     wClassName.addModifyListener(
         e -> {
           input.setChanged();
@@ -170,6 +190,14 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
     wOk.addListener(SWT.Selection, e -> ok());
     wCancel.addListener(SWT.Selection, e -> cancel());
 
+    wModelNames.addModifyListener(
+        e -> {
+          if (!suppressRefresh) refresh();
+        });
+    wModelDirectories.addModifyListener(
+        e -> {
+          if (!suppressRefresh) refresh();
+        });
     getData();
     refresh();
     input.setChanged(changed);
@@ -238,9 +266,19 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
   }
 
   private void refresh() {
+    if (suppressRefresh) return;
     syncMetaFromWidgets();
+    var snapshot = (InterlisObjectToRowMeta) input.clone();
+    var vars = ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator.snapshot(variables);
+    boolean immediate = forceReload;
+    forceReload = false;
+    probeCoordinator.submit(
+        immediate, () -> controller.probe(snapshot, vars), this::applyRefresh, this::probeFailed);
+  }
+
+  private void applyRefresh(InterlisProjectionResult result) {
     try {
-      InterlisProjectionResult result = controller.probe(input, variables);
+
       classes = controller.classes(result);
       populateClassCombo();
       if (result == null) {
@@ -297,6 +335,13 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
       input.setAppendEnvelopeFields(wAppendEnvelopeFields.getSelection());
       input.setDefaultSrid(wDefaultSrid.getText());
     }
+  }
+
+  private void probeFailed(Exception error) {
+    wStatus.set(
+        ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport.StatusSeverity.ERROR,
+        ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport.rootCauseMessage(error));
+    shell.layout(true, true);
   }
 
   private void ok() {

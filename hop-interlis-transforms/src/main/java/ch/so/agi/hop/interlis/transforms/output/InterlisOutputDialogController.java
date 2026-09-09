@@ -13,8 +13,8 @@ import org.apache.hop.core.variables.IVariables;
 /**
  * SWT-free controller for the INTERLIS Output dialog.
  *
- * <p>Provides the model probe and the field mapping grid contents; the dialog only renders
- * widgets, all model interpretation lives here and is unit-tested without a display.
+ * <p>Provides the model probe and the field mapping grid contents; the dialog only renders widgets,
+ * all model interpretation lives here and is unit-tested without a display.
  */
 public final class InterlisOutputDialogController {
 
@@ -27,11 +27,12 @@ public final class InterlisOutputDialogController {
     }
     if (projection.isEmpty()) {
       return new InterlisProbeResult(
-          false,
-          "Mapping preview unavailable: the configuration is incomplete "
-              + "(missing output file, models, class or unresolved variables).",
-          null,
-          List.of());
+              false,
+              "Mapping preview unavailable: the configuration is incomplete "
+                  + "(missing output file, models, class or unresolved variables).",
+              null,
+              List.of())
+          .withStatus(ch.so.agi.hop.interlis.transforms.InterlisProbeStatus.INFO);
     }
     InterlisProjectionResult result = projection.get();
     return new InterlisProbeResult(
@@ -61,9 +62,7 @@ public final class InterlisOutputDialogController {
     for (InterlisFieldPlan field : plan.fields()) {
       String property = propertyLabel(field);
       String type =
-          field.attributeDescriptor() == null
-              ? "String"
-              : field.attributeDescriptor().typeName();
+          field.attributeDescriptor() == null ? "String" : field.attributeDescriptor().typeName();
       String source = InterlisOutputBindings.sourceName(field, meta, vars);
       boolean constant = field.source() == InterlisFieldSource.BASKET_ID && source.isBlank();
       String binding =
@@ -111,8 +110,6 @@ public final class InterlisOutputDialogController {
       current = current.getCause();
     }
     String message = current.getMessage();
-    return message == null || message.isBlank()
-        ? current.getClass().getSimpleName()
-        : message;
+    return message == null || message.isBlank() ? current.getClass().getSimpleName() : message;
   }
 }

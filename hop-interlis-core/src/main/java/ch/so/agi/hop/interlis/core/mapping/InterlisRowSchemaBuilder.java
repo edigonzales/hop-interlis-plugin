@@ -63,35 +63,51 @@ public final class InterlisRowSchemaBuilder {
       if (property.inherited() && !options.includeInheritedProperties()) {
         continue;
       }
-      if (!options.isPropertySelected(property.name())) {
+      if (!options.shouldTraverse(property.name())) {
         continue;
       }
       if (property instanceof InterlisAttributeDescriptor attribute) {
         index =
             addAttribute(
-                schema, fields, warnings, usedNames, index, attribute, List.of(), options,
+                schema,
+                fields,
+                warnings,
+                usedNames,
+                index,
+                attribute,
+                List.of(),
+                options,
                 root.scopedName());
       } else if (property instanceof InterlisRoleDescriptor role) {
         if (association) {
-          index = addAssociationRole(fields, warnings, usedNames, index, role, options, root.scopedName());
+          index =
+              addAssociationRole(
+                  fields, warnings, usedNames, index, role, options, root.scopedName());
         } else {
           index =
               addClassRole(
-                  schema, fields, warnings, usedNames, index, role, options, root.scopedName(),
+                  schema,
+                  fields,
+                  warnings,
+                  usedNames,
+                  index,
+                  role,
+                  options,
+                  root.scopedName(),
                   linkResolvedRoles);
         }
       }
     }
 
-    return new InterlisRowMappingPlan(root, fields, warnings, options.defaultSrid(),
-        linkResolvedRoles);
+    return new InterlisRowMappingPlan(
+        root, fields, warnings, options.defaultSrid(), linkResolvedRoles);
   }
 
   /**
-   * Builds the flattened child field list for a structure root. Used by INTERLIS Structure
-   * Explode and INTERLIS Structure Collect so the child row schema is produced by the same
-   * projection rules as class schemas (flattened single structures, collision checks, warnings
-   * for nested multi-valued structures).
+   * Builds the flattened child field list for a structure root. Used by INTERLIS Structure Explode
+   * and INTERLIS Structure Collect so the child row schema is produced by the same projection rules
+   * as class schemas (flattened single structures, collision checks, warnings for nested
+   * multi-valued structures).
    *
    * @param schema the model schema
    * @param structure the structure whose attributes are projected
@@ -111,7 +127,14 @@ public final class InterlisRowSchemaBuilder {
     for (InterlisAttributeDescriptor attribute : structure.attributes()) {
       index =
           addAttribute(
-              schema, fields, warnings, usedNames, index, attribute, List.of(), options,
+              schema,
+              fields,
+              warnings,
+              usedNames,
+              index,
+              attribute,
+              List.of(),
+              options,
               structure.scopedName());
     }
     return new InterlisStructureChildProjection(fields, warnings);
@@ -129,8 +152,9 @@ public final class InterlisRowSchemaBuilder {
       String name,
       InterlisFieldSource source) {
     usedNames.add(name);
-    fields.add(new InterlisFieldPlan(index, name, source, InterlisPropertyPath.root(name), null,
-        null, null));
+    fields.add(
+        new InterlisFieldPlan(
+            index, name, source, InterlisPropertyPath.root(name), null, null, null));
     return index + 1;
   }
 
@@ -174,7 +198,14 @@ public final class InterlisRowSchemaBuilder {
       for (InterlisAttributeDescriptor child : structure.get().attributes()) {
         index =
             addAttribute(
-                schema, fields, warnings, usedNames, index, child, childPath, options,
+                schema,
+                fields,
+                warnings,
+                usedNames,
+                index,
+                child,
+                childPath,
+                options,
                 rootScopedName);
       }
       return index;
@@ -192,10 +223,7 @@ public final class InterlisRowSchemaBuilder {
                 + attribute.name();
     if (!usedNames.add(hopFieldName)) {
       throw new InterlisMappingException(
-          "Duplicate output field name <"
-              + hopFieldName
-              + "> while projecting "
-              + rootScopedName);
+          "Duplicate output field name <" + hopFieldName + "> while projecting " + rootScopedName);
     }
 
     InterlisFieldSource source =
@@ -261,20 +289,36 @@ public final class InterlisRowSchemaBuilder {
             rootScopedName,
             warnings);
     if (options.includeRoleRefBid()) {
-      index = addRoleField(fields, usedNames, index, role.name() + "_ref_bid",
-          InterlisFieldSource.ROLE_REFERENCE_BID, role, rootScopedName, warnings);
+      index =
+          addRoleField(
+              fields,
+              usedNames,
+              index,
+              role.name() + "_ref_bid",
+              InterlisFieldSource.ROLE_REFERENCE_BID,
+              role,
+              rootScopedName,
+              warnings);
     }
     if (role.ordered()) {
-      index = addRoleField(fields, usedNames, index, role.name() + "_order_pos",
-          InterlisFieldSource.ROLE_ORDER_POS, role, rootScopedName, warnings);
+      index =
+          addRoleField(
+              fields,
+              usedNames,
+              index,
+              role.name() + "_order_pos",
+              InterlisFieldSource.ROLE_ORDER_POS,
+              role,
+              rootScopedName,
+              warnings);
     }
     return index;
   }
 
   /**
    * Class-side roles: plain single-valued roles become {@code <role>_ref} fields; attributes of
-   * uniquely embeddable attributed associations are flattened as {@code <role>_<attribute>}
-   * fields resolved from the association link object.
+   * uniquely embeddable attributed associations are flattened as {@code <role>_<attribute>} fields
+   * resolved from the association link object.
    */
   private int addClassRole(
       InterlisSchemaDescriptor schema,
@@ -291,8 +335,7 @@ public final class InterlisRowSchemaBuilder {
         role.associationScopedName() == null
             ? Optional.empty()
             : schema.findAssociation(role.associationScopedName());
-    boolean attributed =
-        association.isPresent() && !association.get().attributes().isEmpty();
+    boolean attributed = association.isPresent() && !association.get().attributes().isEmpty();
 
     if (attributed) {
       if (!options.flattenAssociationAttributes()) {
@@ -331,14 +374,24 @@ public final class InterlisRowSchemaBuilder {
               rootScopedName,
               warnings);
       if (options.includeRoleRefBid()) {
-        index = addRoleField(fields, usedNames, index, role.name() + "_ref_bid",
-            InterlisFieldSource.ROLE_REFERENCE_BID, role, rootScopedName, warnings);
+        index =
+            addRoleField(
+                fields,
+                usedNames,
+                index,
+                role.name() + "_ref_bid",
+                InterlisFieldSource.ROLE_REFERENCE_BID,
+                role,
+                rootScopedName,
+                warnings);
       }
       for (InterlisAttributeDescriptor attribute : association.get().attributes()) {
         String hopFieldName = role.name() + "_" + attribute.name();
         if (!usedNames.add(hopFieldName)) {
           throw new InterlisMappingException(
-              "Duplicate output field name <" + hopFieldName + "> while projecting "
+              "Duplicate output field name <"
+                  + hopFieldName
+                  + "> while projecting "
                   + rootScopedName);
         }
         fields.add(
@@ -376,8 +429,16 @@ public final class InterlisRowSchemaBuilder {
             rootScopedName,
             warnings);
     if (options.includeRoleRefBid()) {
-      index = addRoleField(fields, usedNames, index, role.name() + "_ref_bid",
-          InterlisFieldSource.ROLE_REFERENCE_BID, role, rootScopedName, warnings);
+      index =
+          addRoleField(
+              fields,
+              usedNames,
+              index,
+              role.name() + "_ref_bid",
+              InterlisFieldSource.ROLE_REFERENCE_BID,
+              role,
+              rootScopedName,
+              warnings);
     }
     return index;
   }
@@ -393,25 +454,24 @@ public final class InterlisRowSchemaBuilder {
       List<String> warnings) {
     if (!usedNames.add(hopFieldName)) {
       warnings.add(
-          "Duplicate output field name <" + hopFieldName + "> for role " + role.name()
-              + " while projecting " + rootScopedName + "; the role field is skipped");
+          "Duplicate output field name <"
+              + hopFieldName
+              + "> for role "
+              + role.name()
+              + " while projecting "
+              + rootScopedName
+              + "; the role field is skipped");
       return index;
     }
     fields.add(
         new InterlisFieldPlan(
-            index,
-            hopFieldName,
-            source,
-            InterlisPropertyPath.root(role.name()),
-            null,
-            role,
-            null));
+            index, hopFieldName, source, InterlisPropertyPath.root(role.name()), null, role, null));
     return index + 1;
   }
 
   /**
-   * A binary association is uniquely embeddable on the given role when the role is single-valued
-   * on the class and every other role has multiplicity exactly 1..1.
+   * A binary association is uniquely embeddable on the given role when the role is single-valued on
+   * the class and every other role has multiplicity exactly 1..1.
    */
   private boolean isUniquelyEmbeddable(
       InterlisAssociationDescriptor association, InterlisRoleDescriptor role) {

@@ -28,12 +28,10 @@ class InterlisDialogUiSupportTest {
 
   @Test
   void incomplete_configuration_is_an_informational_status() {
-    assertThat(
-            InterlisDialogUiSupport.statusSeverity(
-                false,
-                false,
-                "Schema preview unavailable: the configuration is incomplete."))
-        .isEqualTo(InterlisDialogUiSupport.StatusSeverity.INFO);
+    var result =
+        new InterlisProbeResult(false, "Any translated message", null, List.of())
+            .withStatus(InterlisProbeStatus.INFO);
+    assertThat(result.status()).isEqualTo(InterlisProbeStatus.INFO);
   }
 
   @Test

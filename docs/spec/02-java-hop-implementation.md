@@ -250,8 +250,7 @@ Plugin die dort implementierte Repository-Suche (`RepositoryVisitor` und
   löst der ili2c `IliManager` auf;
 - Fehlerfälle (unreachable, unbekanntes Modell) ergeben actionable
   Diagnostik mit Repository-Liste und Offline-/Override-Hinweisen;
-- der kompilierte Model-Cache ist JVM-weit statisch (ein Compile pro
-  Modell-Set und Hop-Sitzung).
+- der kompilierte Model-Cache ist JVM-weit statisch (Wiederverwendung unveränderter Modellquellen und Imports).
 
 ### Cache-Key
 
@@ -264,7 +263,13 @@ meta config
 relevante ili2c settings
 ```
 
-Dateibasierten lokalen Modellen kann optional `lastModified`/Hash beigefügt werden, damit Änderungen beim Entwickeln nicht unsichtbar bleiben.
+Cache-Einträge enthalten SHA-256-Fingerprints der tatsächlich kompilierten Dateien
+inklusive Imports. Lokale Verzeichnislisten erkennen hinzugekommene oder entfernte
+Kandidaten. Die Prüfung geschieht bei Modellzugriff, niemals pro Zeile. Reload
+invalidiert den kompilierten Cache und kompiliert unter MODEL_LOCK erneut; die
+separate Downloadcache-/TTL-Politik von ili2c bleibt erhalten. Reload garantiert
+keinen erneuten Download unveränderter Remotequellen. Explizite Dateien werden
+anhand deklarierter Modellnamen ausgewertet, nicht anhand ihres Dateinamens.
 
 # 4. Schema Extraction
 
@@ -1806,3 +1811,25 @@ Bei Schema-Änderungen braucht es Migration in Meta-Klassen oder tolerant lesbar
   Identitätsfelder werden einmalig übernommen, fachliche Namenskollisionen und
   inkompatible technische Typen sind Konfigurationsfehler. Gepufferte und direkte
   Projektion verwenden denselben Aufbau; ohne Append bleibt nur die Klassenprojektion.
+
+## P2: Runtime-Verträge
+
+- `InterlisEnvelopeBindings` bindet Eingangsmetadaten einmalig; unbekannte Events,
+  Operationen, Basket-Werte und falsche Feldtypen sind Fehler mit Zeilenkontext.
+- `InterlisBasketProjectionBuffer` enthält genau einen Basket samt benötigten Links;
+  Input und Object to Row verwenden dieselbe Komponente. Drain leert auch einen
+  Basket, der ausschliesslich Links enthält. Die P1-Kopienregeln bleiben bestehen.
+- Writer sind einmalig verwendbar. Eventmodus verlangt einen vollständigen Transfer
+  einschliesslich END_TRANSFER; EOF ersetzt keinen Abschluss. Flush- und Close-Fehler
+  werden weitergereicht, Close wird auch nach Flush-Fehler versucht. Beim Aufräumen
+  bleibt der ursprüngliche Fehler erhalten; zusätzliche Fehler werden angehängt.
+- Objektmodus verlangt zusammenhängende Baskets und konsistente Topic-/Metadaten.
+- Im Eventmodus muss der Basket-Kontext einer Objektzeile zum geöffneten Basket
+  passen; widersprüchliche BID, Topic oder Basket-Metadaten werden abgelehnt.
+- Structure Collect liest Restkinder auch bei leerem Parent-Stream. Je nach Regel
+  folgt ein Fehler oder vollständiges Leeren mit zusammengefasster Skip-Meldung.
+- DATE und DATETIME werden strikt mit `uuuu` geparst. DATE bleibt UTC-Mitternacht.
+  DATETIME hält die JVM-Zeitzone pro Codec fest, lehnt Sommerzeitlücken ab und nutzt
+  bei Überlappung den früheren Offset. Präzision über Millisekunden wird abgelehnt.
+- Enumerationen umfassen Modell-/Topic-Domains sowie Klassen-, Struktur- und
+  Assoziationsattribute. Benannte Domains haben Vorrang vor konsumierenden Attributen.

@@ -323,3 +323,19 @@ for name, count, incomplete in [("23-p1-validation-failure", 10, False), ("24-p1
     assert any("Validation incomplete" in row[1] for row in findings[1:]) == incomplete, findings
     assert len(findings) == 1 + count + int(incomplete), findings
 print("  P1: source overlay, configured identities, XYZ, append and complete failure diagnostics verified")
+
+# P2: event headers survive reordering; typed inverse mapping preserves the carrier's BAG.
+header = ET.parse(output_dir / "p2-header.xtf")
+assert header.findtext(".//ili:sender", namespaces=ns) == "P1 regression"
+preserved = header.find(".//m:Item", ns)
+assert preserved.findtext("m:Name", namespaces=ns) == "before0"
+carrier = ET.parse(output_dir / "p2-carrier.xtf").find(".//m:Item", ns)
+assert carrier.findtext("m:Name", namespaces=ns) == "updated"
+assert carrier.findtext("m:Children/m:Detail/m:Code", namespaces=ns) == "keep-child"
+for attribute in ["Location", "Axis", "Face", "Axes", "Faces"]:
+    before = [tuple(c.findtext(f"g:c{i}", namespaces=ns) for i in (1, 2, 3))
+              for c in preserved.findall(f"m:{attribute}//g:coord", ns)]
+    after = [tuple(c.findtext(f"g:c{i}", namespaces=ns) for i in (1, 2, 3))
+             for c in carrier.findall(f"m:{attribute}//g:coord", ns)]
+    assert before == after, f"P2 carrier changed XYZ in {attribute}"
+print("  P2: reordered envelope, header semantics, carrier BAG/XYZ and expected technical failures verified")

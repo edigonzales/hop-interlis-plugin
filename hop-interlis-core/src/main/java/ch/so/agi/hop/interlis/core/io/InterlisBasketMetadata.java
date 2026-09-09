@@ -14,6 +14,12 @@ public record InterlisBasketMetadata(
   public InterlisBasketMetadata {
     consistency = normalize(consistency);
     kind = normalize(kind);
+    if (consistency != null
+        && !java.util.Set.of("COMPLETE", "INCOMPLETE", "INCONSISTENT", "ADAPTED")
+            .contains(consistency))
+      throw new IllegalArgumentException("Invalid _ili_basket_consistency <" + consistency + ">");
+    if (kind != null && !java.util.Set.of("FULL", "UPDATE", "INITIAL").contains(kind))
+      throw new IllegalArgumentException("Invalid _ili_basket_kind <" + kind + ">");
     startState = normalize(startState);
     endState = normalize(endState);
   }
@@ -55,7 +61,7 @@ public record InterlisBasketMetadata(
       case IomConstants.IOM_INCOMPLETE -> "INCOMPLETE";
       case IomConstants.IOM_INCONSISTENT -> "INCONSISTENT";
       case IomConstants.IOM_ADAPTED -> "ADAPTED";
-      // IOM_COMPLETE (0) is the default and is not emitted in XTF.
+        // IOM_COMPLETE (0) is the default and is not emitted in XTF.
       default -> null;
     };
   }
@@ -64,7 +70,7 @@ public record InterlisBasketMetadata(
     return switch (kind) {
       case IomConstants.IOM_UPDATE -> "UPDATE";
       case IomConstants.IOM_INITIAL -> "INITIAL";
-      // IOM_FULL (0) is the default and is not emitted in XTF.
+        // IOM_FULL (0) is the default and is not emitted in XTF.
       default -> null;
     };
   }

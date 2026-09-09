@@ -22,53 +22,112 @@ import java.util.concurrent.ConcurrentHashMap;
  * Compiles INTERLIS models through the ili2c compiler entry points.
  *
  * <p>Compilation results are cached per resolved request. Local model files contribute their
- * last-modified timestamp to the cache key so that model edits during development are picked up.
- * The cache is static: compiled models are shared by all service instances (and therefore all
+ * content fingerprints to dependency validation so that model edits during development are picked
+ * up. The cache is static: compiled models are shared by all service instances (and therefore all
  * transforms) in the JVM. A {@link CompiledInterlisModel} is immutable after construction, so
  * sharing it is safe; model compilation is a design-time operation.
  *
  * <p><b>Thread-safety rule:</b> the INTERLIS libraries (ili2c, iox-ili, ehibasics) are
- * single-threaded by design and not thread-safe. ili2c keeps static compiler state, therefore
- * every compilation must run under {@link #MODEL_LOCK}. The resulting
- * {@code TransferDescription} is treated as immutable afterwards and may be shared freely
- * (verified: its getters return fresh deep copies or are pure reads).
+ * single-threaded by design and not thread-safe. ili2c keeps static compiler state, therefore every
+ * compilation must run under {@link #MODEL_LOCK}. The resulting {@code TransferDescription} is
+ * treated as immutable afterwards and may be shared freely (verified: its getters return fresh deep
+ * copies or are pure reads).
  */
 public final class InterlisModelServiceImpl implements InterlisModelService {
 
   /**
-   * Central serialization point for every ili2c use in the plugin. ili2c uses shared static
-   * state internally and is not safe for concurrent compilation; all compiles are serialized
-   * through this lock (model compilation is a design-time operation). Readers and writers on
-   * the other hand are per-instance and never shared between threads, so they do not need this
-   * lock.
+   * Central serialization point for every ili2c use in the plugin. ili2c uses shared static state
+   * internally and is not safe for concurrent compilation; all compiles are serialized through this
+   * lock (model compilation is a design-time operation). Readers and writers on the other hand are
+   * per-instance and never shared between threads, so they do not need this lock.
    */
   private static final Object MODEL_LOCK = new Object();
 
-  private static final ConcurrentHashMap<String, CompiledInterlisModel> cache =
-      new ConcurrentHashMap<>();
+  private record CacheEntry(
+      CompiledInterlisModel model,
+      java.util.Map<Path, String> files,
+      List<String> directoryFiles) {}
+
+  private static final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
   private final InterlisSchemaExtractor schemaExtractor = new InterlisSchemaExtractor();
 
   @Override
   public CompiledInterlisModel compile(ModelSource source, ModelCompileOptions options)
       throws InterlisModelException {
-    String cacheKey = cacheKey(source, options);
-    CompiledInterlisModel cached = cache.get(cacheKey);
-    if (cached != null) {
-      return cached;
-    }
-
     synchronized (MODEL_LOCK) {
-      // Double-checked: a thread waiting for the lock may find the result another thread
-      // compiled in the meantime; compiling again would break the one-compile guarantee and
-      // could hand out a second TransferDescription instance for the same request.
-      cached = cache.get(cacheKey);
-      if (cached != null) {
-        return cached;
+      String key = cacheKey(source, options);
+      List<String> listing = directoryFiles(source);
+      CacheEntry entry = cache.get(key);
+      if (entry != null
+          && entry.directoryFiles().equals(listing)
+          && entry.files().entrySet().stream()
+              .allMatch(f -> f.getValue().equals(fingerprint(f.getKey())))) {
+        return entry.model();
       }
-      CompiledInterlisModel compiled = doCompile(source, options);
-      cache.put(cacheKey, compiled);
-      return compiled;
+      cache.remove(key);
+      CompiledInterlisModel model = doCompile(source, options);
+      java.util.Map<Path, String> files = new java.util.LinkedHashMap<>();
+      for (var it = model.transferDescription().iterator(); it.hasNext(); ) {
+        var declared = it.next();
+        if (!(declared instanceof ch.interlis.ili2c.metamodel.PredefinedModel)
+            && declared.getFileName() != null) {
+          Path file = Path.of(declared.getFileName()).toAbsolutePath().normalize();
+          files.put(file, fingerprint(file));
+        }
+      }
+      for (Path file : source.iliFiles())
+        files.put(file.toAbsolutePath().normalize(), fingerprint(file));
+      cache.put(key, new CacheEntry(model, java.util.Map.copyOf(files), listing));
+      return model;
     }
+  }
+
+  /** Explicit reload; callers with an existing model keep their immutable instance. */
+  public CompiledInterlisModel reload(ModelSource source, ModelCompileOptions options)
+      throws InterlisModelException {
+    synchronized (MODEL_LOCK) {
+      cache.remove(cacheKey(source, options));
+      return compile(source, options);
+    }
+  }
+
+  private static String fingerprint(Path file) {
+    try {
+      var digest = java.security.MessageDigest.getInstance("SHA-256");
+      try (var input = Files.newInputStream(file)) {
+        byte[] buffer = new byte[8192];
+        for (int count; (count = input.read(buffer)) != -1; ) digest.update(buffer, 0, count);
+      }
+      return java.util.HexFormat.of().formatHex(digest.digest());
+    } catch (IOException e) {
+      return "unavailable";
+    } catch (java.security.NoSuchAlgorithmException e) {
+      throw new IllegalStateException("SHA-256 unavailable", e);
+    }
+  }
+
+  /** Detect added/removed local candidates that can change repository override resolution. */
+  private static List<String> directoryFiles(ModelSource source) throws InterlisModelException {
+    List<String> files = new ArrayList<>();
+    for (String directory : source.modelDirectories()) {
+      if (directory.contains("://")) continue;
+      Path path = Path.of(directory).toAbsolutePath().normalize();
+      if (!Files.isDirectory(path)) continue;
+      try (var paths = Files.walk(path)) {
+        files.addAll(
+            paths
+                .filter(
+                    p ->
+                        p.toString().endsWith(".ili")
+                            || p.getFileName().toString().equals("ilimodels.xml"))
+                .map(p -> p.toString().endsWith(".xml") ? p + "@" + fingerprint(p) : p.toString())
+                .sorted()
+                .toList());
+      } catch (IOException e) {
+        throw new InterlisModelException("Cannot inspect model directory " + path, e);
+      }
+    }
+    return List.copyOf(files);
   }
 
   private CompiledInterlisModel doCompile(ModelSource source, ModelCompileOptions options)
@@ -112,22 +171,23 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
     }
     if (transferDescription == null) {
       throw new InterlisModelException(
-          "INTERLIS model compilation returned no TransferDescription for "
-              + source.modelNames());
+          "INTERLIS model compilation returned no TransferDescription for " + source.modelNames());
     }
 
     // IliManager returns the complete configuration, including imported model files.  Only the
     // names explicitly requested by the caller are verification targets; imported files are
     // dependencies and their cache filenames are not necessarily the INTERLIS model names (for
     // example, versioned repository filenames such as Units-20120220.ili).
+    verifyCompiledModels(transferDescription, source.modelNames());
     List<String> compiledNames = new ArrayList<>(source.modelNames());
-    for (Path file : source.iliFiles()) {
-      String modelName = modelNameFromFile(file);
-      if (!compiledNames.contains(modelName)) {
-        compiledNames.add(modelName);
-      }
+    var explicitFiles =
+        source.iliFiles().stream().map(p -> p.toAbsolutePath().normalize()).toList();
+    for (var it = transferDescription.iterator(); it.hasNext(); ) {
+      var model = it.next();
+      if (model.getFileName() != null
+          && explicitFiles.contains(Path.of(model.getFileName()).toAbsolutePath().normalize())
+          && !compiledNames.contains(model.getName())) compiledNames.add(model.getName());
     }
-    verifyCompiledModels(transferDescription, compiledNames);
     return new CompiledInterlisModel(transferDescription, compiledNames);
   }
 
@@ -139,8 +199,7 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
       TransferDescription transferDescription, List<String> expectedNames)
       throws InterlisModelException {
     java.util.HashSet<String> compiled = new java.util.HashSet<>();
-    for (java.util.Iterator<ch.interlis.ili2c.metamodel.Model> it =
-            transferDescription.iterator();
+    for (java.util.Iterator<ch.interlis.ili2c.metamodel.Model> it = transferDescription.iterator();
         it.hasNext(); ) {
       compiled.add(it.next().getName());
     }
@@ -151,17 +210,18 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
                 + expected
                 + " was not included in the compilation result "
                 + compiled
-                + "; check the model name, its INTERLIS language version and the model directories");
+                + "; check the model name, its INTERLIS language version and the model"
+                + " directories");
       }
     }
   }
 
   /**
-   * Resolves the request into a list of model files. Explicit files are used as-is; model names
-   * are looked up as {@code <name>.ili} inside every model directory. When a model is not found
-   * locally and a model directory is an INTERLIS model repository ({@code http(s)://...}), the
-   * model is fetched through the ilirepository machinery into its local cache
-   * ({@code ~/.ilicache} by default, 24h TTL, 15s/40s connect/read timeouts).
+   * Resolves the request into a list of model files. Explicit files are used as-is; model names are
+   * looked up as {@code <name>.ili} inside every model directory. When a model is not found locally
+   * and a model directory is an INTERLIS model repository ({@code http(s)://...}), the model is
+   * fetched through the ilirepository machinery into its local cache ({@code ~/.ilicache} by
+   * default, 24h TTL, 15s/40s connect/read timeouts).
    */
   private List<Path> resolveModelFiles(ModelSource source, ModelCompileOptions options)
       throws InterlisModelException {
@@ -209,8 +269,8 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
 
   /**
    * The local download cache for model repositories. Defaults to the ilirepository standard cache
-   * ({@code ~/.ilicache}); tests and deployments can override it with the system property
-   * {@code hop.interlis.repository.cache}.
+   * ({@code ~/.ilicache}); tests and deployments can override it with the system property {@code
+   * hop.interlis.repository.cache}.
    */
   private static java.io.File repositoryCacheDir() {
     String override = System.getProperty("hop.interlis.repository.cache");
@@ -229,12 +289,15 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
       List<String> modelNames, List<String> directories, ModelCompileOptions options)
       throws InterlisModelException {
     List<String> searchPaths =
-        directories.stream().filter(directory -> directory != null && !directory.isBlank()).toList();
+        directories.stream()
+            .filter(directory -> directory != null && !directory.isBlank())
+            .toList();
     if (searchPaths.isEmpty()) {
       throw new InterlisModelException(
           "Models "
               + modelNames
-              + " were not found locally and no model directories or repositories were configured in "
+              + " were not found locally and no model directories or repositories were configured"
+              + " in "
               + directories
               + ". Place the .ili files in a model directory to override repository lookup");
     }
@@ -248,20 +311,18 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
 
     double iliVersion = iliVersion(options);
     try {
-      Configuration configuration =
-          manager.getConfig(new ArrayList<>(modelNames), iliVersion);
+      Configuration configuration = manager.getConfig(new ArrayList<>(modelNames), iliVersion);
       List<Path> resolved = new ArrayList<>();
-      for (java.util.Iterator<?> entries = configuration.iteratorFileEntry();
-          entries.hasNext(); ) {
+      for (java.util.Iterator<?> entries = configuration.iteratorFileEntry(); entries.hasNext(); ) {
         FileEntry entry = (FileEntry) entries.next();
         resolved.add(Path.of(entry.getFilename()).toAbsolutePath().normalize());
       }
       if (resolved.isEmpty()) {
         throw new InterlisModelException(
             "The model repositories returned no .ili files for models "
-              + modelNames
-              + ": "
-              + searchPaths);
+                + modelNames
+                + ": "
+                + searchPaths);
       }
       return resolved;
     } catch (ch.interlis.ili2c.Ili2cException e) {
@@ -271,7 +332,8 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
                   modelName ->
                       "The model "
                           + modelName
-                          + " was not found (a repository may be unreachable or does not contain model "
+                          + " was not found (a repository may be unreachable or does not contain"
+                          + " model "
                           + modelName
                           + ")")
               .collect(java.util.stream.Collectors.joining("; "));
@@ -302,21 +364,11 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
     }
   }
 
-  private String modelNameFromFile(Path file) {
-    String name = file.getFileName().toString();
-    return name.endsWith(".ili") ? name.substring(0, name.length() - 4) : name;
-  }
-
   private String cacheKey(ModelSource source, ModelCompileOptions options) {
     StringBuilder key = new StringBuilder();
     key.append("ili:").append(options.iliLanguageVersion()).append(';');
     for (Path file : source.iliFiles()) {
       key.append(file.toAbsolutePath().normalize());
-      try {
-        key.append('@').append(Files.getLastModifiedTime(file).toMillis());
-      } catch (IOException e) {
-        key.append("@missing");
-      }
       key.append(';');
     }
     for (String modelName : source.modelNames()) {
@@ -358,6 +410,8 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
 
   @Override
   public void clearCache() {
-    cache.clear();
+    synchronized (MODEL_LOCK) {
+      cache.clear();
+    }
   }
 }

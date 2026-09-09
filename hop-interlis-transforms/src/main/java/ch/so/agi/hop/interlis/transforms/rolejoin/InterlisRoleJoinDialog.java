@@ -29,8 +29,8 @@ import org.eclipse.swt.widgets.Text;
  * INTERLIS Role Join dialog: selects the two input streams, the model-derived role and the fields
  * to join, with a live configuration preview.
  *
- * <p>All model interpretation happens in {@link InterlisRoleJoinDialogController}; probing
- * failures are shown in the preview area and never make the dialog unusable.
+ * <p>All model interpretation happens in {@link InterlisRoleJoinDialogController}; probing failures
+ * are shown in the preview area and never make the dialog unusable.
  */
 public class InterlisRoleJoinDialog extends BaseTransformDialog {
 
@@ -58,9 +58,14 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
 
   private List<InterlisClassDescriptor> classes = List.of();
   private boolean suppressRefresh;
+  private boolean forceReload;
+  private ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator probeCoordinator;
 
   public InterlisRoleJoinDialog(
-      Shell parent, IVariables variables, InterlisRoleJoinMeta transformMeta, PipelineMeta pipelineMeta) {
+      Shell parent,
+      IVariables variables,
+      InterlisRoleJoinMeta transformMeta,
+      PipelineMeta pipelineMeta) {
     super(parent, variables, transformMeta, pipelineMeta);
     this.input = transformMeta;
   }
@@ -69,6 +74,17 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
   public String open() {
     shell = new Shell(getParent(), SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX);
     PropsUi.setLook(shell);
+    var display = shell.getDisplay();
+    probeCoordinator =
+        new ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator(
+            action -> {
+              if (!display.isDisposed())
+                display.asyncExec(
+                    () -> {
+                      if (!shell.isDisposed()) action.run();
+                    });
+            });
+    shell.addListener(SWT.Dispose, e -> probeCoordinator.close());
     setShellImage(shell, input);
     shell.setText("INTERLIS Role Join");
     shell.setMinimumSize(860, 600);
@@ -105,7 +121,9 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     wModelNames = addTextRow("Models", wLookupInputTransform, margin);
     wModelDirectories = addTextRow("Model dirs", wModelNames, 0);
 
-    wStatus = InterlisDialogUiSupport.createStatusArea(shell, wModelDirectories, props.getMiddlePct(), margin);
+    wStatus =
+        InterlisDialogUiSupport.createStatusArea(
+            shell, wModelDirectories, props.getMiddlePct(), margin);
     Composite classRow = InterlisDialogUiSupport.createRow(shell, wStatus.control(), margin);
     Button wReload = new Button(classRow, SWT.PUSH);
     wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -178,7 +196,12 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     wCancel.setLayoutData(fdCancel);
 
     // Listeners
-    wReload.addListener(SWT.Selection, e -> refresh());
+    wReload.addListener(
+        SWT.Selection,
+        e -> {
+          forceReload = true;
+          refresh();
+        });
     wClassName.addModifyListener(
         e -> {
           input.setChanged();
@@ -196,6 +219,14 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     wOk.addListener(SWT.Selection, e -> ok());
     wCancel.addListener(SWT.Selection, e -> cancel());
 
+    wModelNames.addModifyListener(
+        e -> {
+          if (!suppressRefresh) refresh();
+        });
+    wModelDirectories.addModifyListener(
+        e -> {
+          if (!suppressRefresh) refresh();
+        });
     getData();
     populateStreamCombos();
     refresh();
@@ -259,8 +290,7 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
       wRoleName.setText(input.getRoleName() == null ? "" : input.getRoleName());
       wMainReferenceField.setText(
           input.getMainReferenceField() == null ? "" : input.getMainReferenceField());
-      wLookupTidField.setText(
-          input.getLookupTidField() == null ? "" : input.getLookupTidField());
+      wLookupTidField.setText(input.getLookupTidField() == null ? "" : input.getLookupTidField());
       wPrefix.setText(input.getPrefix() == null ? "" : input.getPrefix());
       wLookupFields.setText(
           input.getLookupFields() == null ? "" : String.join(",", input.getLookupFields()));
@@ -287,16 +317,27 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
   }
 
   private void refresh() {
+    if (suppressRefresh) return;
     syncMetaFromWidgets();
+    var snapshot = (InterlisRoleJoinMeta) input.clone();
+    var vars = ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator.snapshot(variables);
+    boolean immediate = forceReload;
+    forceReload = false;
+    probeCoordinator.submit(
+        immediate, () -> controller.probe(snapshot, vars), this::applyRefresh, this::probeFailed);
+  }
+
+  private void applyRefresh(InterlisRoleJoinProbeResult result) {
     try {
-      InterlisRoleJoinProbeResult result = controller.probe(input, variables);
+
       classes = result.schema().selectableClasses();
       populateClassCombo();
       populateRoleCombo(result);
       wSummary.setText(
           "The lookup stream is loaded into memory once (max "
               + input.getMaxLookupRows()
-              + " rows). Fields from the selected role target are added with the configured prefix.");
+              + " rows). Fields from the selected role target are added with the configured"
+              + " prefix.");
       InterlisSchemaPreview preview = controller.createSchemaPreview(input, result);
       wStatus.set(
           InterlisDialogUiSupport.statusSeverity(
@@ -368,8 +409,10 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
       input.setMainReferenceField(wMainReferenceField.getText());
       input.setLookupTidField(wLookupTidField.getText());
       input.setPrefix(wPrefix.getText());
-      input.setLookupFields(InterlisRoleJoinDialogController.parseCommaSeparated(wLookupFields.getText()));
-      input.setMaxLookupRows(parseLong(wMaxLookupRows.getText(), InterlisRoleJoinMeta.DEFAULT_MAX_LOOKUP_ROWS));
+      input.setLookupFields(
+          InterlisRoleJoinDialogController.parseCommaSeparated(wLookupFields.getText()));
+      input.setMaxLookupRows(
+          parseLong(wMaxLookupRows.getText(), InterlisRoleJoinMeta.DEFAULT_MAX_LOOKUP_ROWS));
       input.setFailOnMissingMandatoryReference(wFailOnMissingMandatoryReference.getSelection());
       input.setFailOnDuplicateTid(wFailOnDuplicateTid.getSelection());
     }
@@ -381,6 +424,13 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     } catch (Exception e) {
       return fallback;
     }
+  }
+
+  private void probeFailed(Exception error) {
+    wStatus.set(
+        ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport.StatusSeverity.ERROR,
+        ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport.rootCauseMessage(error));
+    shell.layout(true, true);
   }
 
   private void ok() {

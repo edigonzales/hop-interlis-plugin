@@ -15,6 +15,11 @@
   <description>INTERLIS model, transfer and geometry logic without SWT or Hop runtime dependencies.</description>
 
   <dependencies>
+    <!-- Already supplied by Hop core. No second JSON implementation in the plugin ZIP. -->
+    <dependency>
+      <groupId>com.googlecode.json-simple</groupId><artifactId>json-simple</artifactId>
+      <version>1.1.1</version><scope>provided</scope>
+    </dependency>
     <!-- INTERLIS transfer I/O (XTF reader/writer, Iox2wkb/Wkb2iox). -->
     <dependency>
       <groupId>ch.interlis</groupId>

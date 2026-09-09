@@ -45,6 +45,8 @@ public final class InterlisEnvelopeRowLayout {
   public static final String BASKET_START_STATE = "_ili_basket_start_state";
   public static final String BASKET_END_STATE = "_ili_basket_end_state";
 
+  public static final String TRANSFER_METADATA = "_ili_transfer_metadata";
+
   public static final List<String> FIELD_NAMES =
       List.of(
           EVENT_TYPE,
@@ -60,10 +62,12 @@ public final class InterlisEnvelopeRowLayout {
           BASKET_CONSISTENCY,
           BASKET_KIND,
           BASKET_START_STATE,
-          BASKET_END_STATE);
+          BASKET_END_STATE,
+          TRANSFER_METADATA);
 
   /** Indexes in the row value array. */
   public static final int EVENT_TYPE_INDEX = 0;
+
   public static final int MODEL_INDEX = 1;
   public static final int TOPIC_INDEX = 2;
   public static final int BID_INDEX = 3;
@@ -77,6 +81,8 @@ public final class InterlisEnvelopeRowLayout {
   public static final int BASKET_KIND_INDEX = 11;
   public static final int BASKET_START_STATE_INDEX = 12;
   public static final int BASKET_END_STATE_INDEX = 13;
+
+  public static final int TRANSFER_METADATA_INDEX = 14;
 
   public static final int FIELD_COUNT = FIELD_NAMES.size();
 
@@ -105,27 +111,41 @@ public final class InterlisEnvelopeRowLayout {
       basket == null ? null : basket.consistency(),
       basket == null ? null : basket.kind(),
       basket == null ? null : basket.startState(),
-      basket == null ? null : basket.endState()
+      basket == null ? null : basket.endState(),
+      envelope == null || envelope.transferMetadata() == null
+          ? null
+          : envelope.transferMetadata().toJson()
     };
   }
 
   /** Parses row values back into an envelope. */
   public static InterlisObjectEnvelope fromRow(Object[] values) {
-    if (values == null || values.length < FIELD_COUNT) {
+    if (values == null || values.length < 14) {
       throw new IllegalArgumentException(
-          "Envelope row must have " + FIELD_COUNT + " values but has "
+          "Envelope row must have "
+              + FIELD_COUNT
+              + " values but has "
               + (values == null ? 0 : values.length));
     }
     InterlisEventType eventType =
-        enumValue(InterlisEventType.class, string(values[EVENT_TYPE_INDEX]),
-            InterlisEventType.OBJECT);
+        enumValue(
+            InterlisEventType.class, string(values[EVENT_TYPE_INDEX]), InterlisEventType.OBJECT);
     InterlisObjectOperation operation =
         enumValue(
             InterlisObjectOperation.class,
             string(values[OPERATION_INDEX]),
             InterlisObjectOperation.NONE);
     Object objectValue = values[OBJECT_INDEX];
-    IomObject object = objectValue instanceof IomObject iomObject ? iomObject : null;
+    if (objectValue != null && !(objectValue instanceof IomObject))
+      throw new IllegalArgumentException("Field _ili_object must contain an INTERLIS object");
+    IomObject object = (IomObject) objectValue;
+    if (eventType == InterlisEventType.OBJECT && object == null)
+      throw new IllegalArgumentException(
+          "OBJECT event has no _ili_object (TID "
+              + values[TID_INDEX]
+              + ", basket "
+              + values[BID_INDEX]
+              + ")");
     InterlisBasketMetadata basket =
         new InterlisBasketMetadata(
             string(values[BASKET_CONSISTENCY_INDEX]),
@@ -141,7 +161,10 @@ public final class InterlisEnvelopeRowLayout {
         string(values[TID_INDEX]),
         operation,
         object,
-        basket.isEmpty() ? null : basket);
+        basket.isEmpty() ? null : basket,
+        values.length > TRANSFER_METADATA_INDEX
+            ? InterlisTransferMetadata.fromJson(string(values[TRANSFER_METADATA_INDEX]))
+            : null);
   }
 
   /** The event type value of a row, or {@code null} when absent. */
@@ -229,7 +252,13 @@ public final class InterlisEnvelopeRowLayout {
     try {
       return Enum.valueOf(type, name);
     } catch (IllegalArgumentException e) {
-      return fallback;
+      throw new IllegalArgumentException(
+          "Invalid "
+              + (type == InterlisEventType.class ? EVENT_TYPE : OPERATION)
+              + " value <"
+              + name
+              + ">",
+          e);
     }
   }
 }

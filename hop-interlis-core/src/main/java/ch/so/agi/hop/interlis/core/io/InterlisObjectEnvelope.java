@@ -29,7 +29,23 @@ public record InterlisObjectEnvelope(
     String objectId,
     InterlisObjectOperation operation,
     IomObject object,
-    InterlisBasketMetadata basket) {
+    InterlisBasketMetadata basket,
+    InterlisTransferMetadata transferMetadata) {
+
+  public InterlisObjectEnvelope(
+      InterlisEventType eventType,
+      String modelName,
+      String topicName,
+      String basketId,
+      String className,
+      String objectId,
+      InterlisObjectOperation operation,
+      IomObject object,
+      InterlisBasketMetadata basket) {
+    this(
+        eventType, modelName, topicName, basketId, className, objectId, operation, object, basket,
+        null);
+  }
 
   /** Backwards-compatible constructor without basket metadata. */
   public InterlisObjectEnvelope(

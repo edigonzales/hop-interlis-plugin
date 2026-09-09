@@ -26,8 +26,8 @@ import org.eclipse.swt.widgets.Table;
 import org.eclipse.swt.widgets.Text;
 
 /**
- * INTERLIS Structure Collect dialog: selects the parent and child input streams and the
- * model-aware structure to collect, with a live configuration preview.
+ * INTERLIS Structure Collect dialog: selects the parent and child input streams and the model-aware
+ * structure to collect, with a live configuration preview.
  *
  * <p>All model interpretation happens in {@link InterlisStructureCollectDialogController}; this
  * class only renders widgets and delegates. Probing failures are shown in the preview area and
@@ -60,6 +60,8 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
   private List<InterlisClassDescriptor> classes = List.of();
   private List<String> structurePaths = List.of();
   private boolean suppressRefresh;
+  private boolean forceReload;
+  private ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator probeCoordinator;
 
   public InterlisStructureCollectDialog(
       Shell parent,
@@ -74,6 +76,17 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
   public String open() {
     shell = new Shell(getParent(), SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX);
     PropsUi.setLook(shell);
+    var display = shell.getDisplay();
+    probeCoordinator =
+        new ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator(
+            action -> {
+              if (!display.isDisposed())
+                display.asyncExec(
+                    () -> {
+                      if (!shell.isDisposed()) action.run();
+                    });
+            });
+    shell.addListener(SWT.Dispose, e -> probeCoordinator.close());
     setShellImage(shell, input);
     shell.setText("INTERLIS Structure Collect");
     shell.setMinimumSize(860, 620);
@@ -115,7 +128,9 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
     wModelNames = addTextRow("Models", wChildIndexField, margin);
     wModelDirectories = addTextRow("Model dirs", wModelNames, 0);
     // Model status and class reload
-    wStatus = InterlisDialogUiSupport.createStatusArea(shell, wModelDirectories, props.getMiddlePct(), margin);
+    wStatus =
+        InterlisDialogUiSupport.createStatusArea(
+            shell, wModelDirectories, props.getMiddlePct(), margin);
     Composite classRow = InterlisDialogUiSupport.createRow(shell, wStatus.control(), margin);
     Button wReload = new Button(classRow, SWT.PUSH);
     wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -193,7 +208,12 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
     wCancel.setLayoutData(fdCancel);
 
     // Listeners
-    wReload.addListener(SWT.Selection, e -> reloadAndPreview());
+    wReload.addListener(
+        SWT.Selection,
+        e -> {
+          forceReload = true;
+          reloadAndPreview();
+        });
     wClassName.addModifyListener(
         e -> {
           input.setChanged();
@@ -211,6 +231,14 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
     wOk.addListener(SWT.Selection, e -> ok());
     wCancel.addListener(SWT.Selection, e -> cancel());
 
+    wModelNames.addModifyListener(
+        e -> {
+          if (!suppressRefresh) refreshStructureComboAndPreview();
+        });
+    wModelDirectories.addModifyListener(
+        e -> {
+          if (!suppressRefresh) refreshStructureComboAndPreview();
+        });
     getData();
     populateStreamCombos();
     reloadAndPreview();
@@ -303,17 +331,25 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
   }
 
   private void reloadAndPreview() {
-    syncMetaFromWidgets();
-    InterlisStructureProbeResult result = controller.probe(input, variables);
-    classes = result.classes();
-    structurePaths = result.structurePaths();
-    populateClassCombo();
     refreshStructureComboAndPreview();
   }
 
   private void refreshStructureComboAndPreview() {
+    if (suppressRefresh) return;
     syncMetaFromWidgets();
-    InterlisStructureProbeResult result = controller.probe(input, variables);
+    var snapshot = (InterlisStructureCollectMeta) input.clone();
+    var vars = ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator.snapshot(variables);
+    boolean immediate = forceReload;
+    forceReload = false;
+    probeCoordinator.submit(
+        immediate,
+        () -> controller.probe(snapshot, vars),
+        this::applyRefreshStructureComboAndPreview,
+        this::probeFailed);
+  }
+
+  private void applyRefreshStructureComboAndPreview(InterlisStructureProbeResult result) {
+
     classes = result.classes();
     structurePaths = result.structurePaths();
     populateClassCombo();
@@ -322,8 +358,7 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
   }
 
   private void refreshPreview() {
-    syncMetaFromWidgets();
-    refreshPreview(controller.probe(input, variables));
+    refreshStructureComboAndPreview();
   }
 
   private void refreshPreview(InterlisStructureProbeResult result) {
@@ -344,17 +379,13 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
               wChildParentKeyField.getText());
       wStatus.set(
           InterlisDialogUiSupport.statusSeverity(
-              InterlisDialogUiSupport.statusSeverity(
-                  result.projection() != null, result.ok(), result.message()),
-              preview),
+              InterlisDialogUiSupport.StatusSeverity.valueOf(result.status().name()), preview),
           result.message());
       InterlisDialogUiSupport.populatePreviewTable(wPreview, preview.rows());
       InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, preview);
     } else {
       wStatus.set(
-          InterlisDialogUiSupport.statusSeverity(
-              result.projection() != null, result.ok(), result.message()),
-          result.message());
+          InterlisDialogUiSupport.StatusSeverity.valueOf(result.status().name()), result.message());
       wSummary.setText("");
       InterlisDialogUiSupport.populatePreviewTable(wPreview, List.of());
       InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, "");
@@ -412,6 +443,13 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
       input.setFailOnDuplicateIndex(wFailOnDuplicateIndex.getSelection());
       input.setFailOnChildWithoutParent(wFailOnChildWithoutParent.getSelection());
     }
+  }
+
+  private void probeFailed(Exception error) {
+    wStatus.set(
+        ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport.StatusSeverity.ERROR,
+        ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport.rootCauseMessage(error));
+    shell.layout(true, true);
   }
 
   private void ok() {

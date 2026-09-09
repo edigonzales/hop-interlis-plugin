@@ -1,8 +1,7 @@
 package ch.so.agi.hop.interlis.core.io;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.*;
 
-import ch.interlis.iom.IomObject;
 import ch.interlis.iom_j.Iom_jObject;
 import ch.so.agi.hop.interlis.core.TestResources;
 import java.util.List;
@@ -29,9 +28,22 @@ class InterlisEnvelopeRowLayoutTest {
 
     assertThat(row)
         .containsExactly(
-            "OBJECT", "Model", "Model.Topic", "b1", "Model.Topic.ClassA", "t1", "DELETE", object,
-            null, null, null, null, null, null);
-    assertThat(InterlisEnvelopeRowLayout.fieldCount()).isEqualTo(14);
+            "OBJECT",
+            "Model",
+            "Model.Topic",
+            "b1",
+            "Model.Topic.ClassA",
+            "t1",
+            "DELETE",
+            object,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
+    assertThat(InterlisEnvelopeRowLayout.fieldCount()).isEqualTo(15);
   }
 
   @Test
@@ -39,8 +51,20 @@ class InterlisEnvelopeRowLayoutTest {
     Iom_jObject object = new Iom_jObject("Model.Topic.ClassA", "t1");
     Object[] row =
         new Object[] {
-          "OBJECT", "Model", "Model.Topic", "b1", "Model.Topic.ClassA", "t1", "DELETE", object,
-          null, null, null, null, null, null
+          "OBJECT",
+          "Model",
+          "Model.Topic",
+          "b1",
+          "Model.Topic.ClassA",
+          "t1",
+          "DELETE",
+          object,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
         };
 
     InterlisObjectEnvelope envelope = InterlisEnvelopeRowLayout.fromRow(row);
@@ -56,17 +80,30 @@ class InterlisEnvelopeRowLayoutTest {
   }
 
   @Test
-  void tolerates_unknown_event_and_operation_values() {
+  void rejects_unknown_event_and_operation_values() {
     Object[] row =
         new Object[] {
-          "SOMETHING_NEW", null, null, null, null, null, "WHATEVER", null, null, null,
-          null, null, null, null
+          "SOMETHING_NEW",
+          null,
+          null,
+          null,
+          null,
+          null,
+          "WHATEVER",
+          null,
+          null,
+          null,
+          null,
+          null,
+          null,
+          null
         };
 
-    InterlisObjectEnvelope envelope = InterlisEnvelopeRowLayout.fromRow(row);
-
-    assertThat(envelope.eventType()).isEqualTo(InterlisEventType.OBJECT);
-    assertThat(envelope.operation()).isEqualTo(InterlisObjectOperation.NONE);
+    assertThatThrownBy(() -> InterlisEnvelopeRowLayout.fromRow(row))
+        .hasMessageContaining("_ili_event_type");
+    row[0] = "OBJECT";
+    assertThatThrownBy(() -> InterlisEnvelopeRowLayout.fromRow(row))
+        .hasMessageContaining("_ili_operation");
   }
 
   @Test
@@ -74,7 +111,8 @@ class InterlisEnvelopeRowLayoutTest {
     Iom_jObject object = new Iom_jObject("Model.Topic.ClassA", "t1");
 
     Object[] row =
-        InterlisEnvelopeRowLayout.objectRow(object, "b1", "Model.Topic", InterlisObjectOperation.INSERT);
+        InterlisEnvelopeRowLayout.objectRow(
+            object, "b1", "Model.Topic", InterlisObjectOperation.INSERT);
 
     assertThat(InterlisEnvelopeRowLayout.eventType(row)).isEqualTo("OBJECT");
     assertThat(InterlisEnvelopeRowLayout.basketId(row)).isEqualTo("b1");

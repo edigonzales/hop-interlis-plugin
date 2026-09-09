@@ -1,47 +1,9 @@
 name: CI
-
 on:
   push:
   pull_request:
-
+permissions:
+  contents: read
 jobs:
   verify:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        # Compatibility matrix: the plugin builds against the Hop version in the parent POM
-        # (hop.version property, currently 2.18.1 - the minimum supported Hop release line).
-        # Newer Hop releases can be added by appending to this list once they are available;
-        # the build uses the Maven property, so no pom changes are needed.
-        jdk: ['21', '25']
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up JDK ${{ matrix.jdk }}
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: ${{ matrix.jdk }}
-
-      - name: Check out hop-geometry-type-plugin
-        uses: actions/checkout@v4
-        with:
-          repository: edigonzales/hop-geometry-type-plugin
-          path: ../hop-geometry-type-plugin
-
-      - name: Build and install hop-geometry-type-plugin
-        run: mvn -B -ntp -f ../hop-geometry-type-plugin/pom.xml clean install
-
-      - name: Build and verify
-        run: mvn -B -ntp clean verify
-
-      - name: Check plugin distribution
-        run: python scripts/check-distribution.py
-
-      - name: Upload plugin distribution
-        uses: actions/upload-artifact@v4
-        with:
-          name: hop-interlis-plugin-${{ matrix.os }}-jdk${{ matrix.jdk }}
-          path: assemblies/assemblies-hop-interlis/target/hop-interlis-plugin-*.zip
+    uses: ./.github/workflows/verify.yml

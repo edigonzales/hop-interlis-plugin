@@ -8,7 +8,6 @@ import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.core.model.InterlisModelException;
 import ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
-import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hop.core.CheckResult;
@@ -44,6 +43,24 @@ public class InterlisRowToObjectMeta
   @HopMetadataProperty private String modelDirectories;
   @HopMetadataProperty private String className;
   @HopMetadataProperty private String basketIdField;
+  @HopMetadataProperty private String sourceObjectField;
+  @HopMetadataProperty private String operationField;
+
+  public String getSourceObjectField() {
+    return sourceObjectField == null ? "" : sourceObjectField;
+  }
+
+  public void setSourceObjectField(String value) {
+    sourceObjectField = value;
+  }
+
+  public String getOperationField() {
+    return operationField == null ? "" : operationField;
+  }
+
+  public void setOperationField(String value) {
+    operationField = value;
+  }
 
   public InterlisRowToObjectMeta() {
     super();
@@ -58,8 +75,8 @@ public class InterlisRowToObjectMeta
   }
 
   /**
-   * Tries to build the projection for the current configuration; returns empty if the
-   * configuration is incomplete and throws if models or the class cannot be resolved.
+   * Tries to build the projection for the current configuration; returns empty if the configuration
+   * is incomplete and throws if models or the class cannot be resolved.
    */
   public Optional<InterlisProjectionResult> tryProject(IVariables variables)
       throws InterlisModelException, InterlisMappingException {
@@ -84,8 +101,8 @@ public class InterlisRowToObjectMeta
 
   /** Builds the projection options from the persisted configuration. */
   public ProjectionOptions projectionOptions() {
-    return new ProjectionOptions(true, true, false, false, false, true, "_", null,
-        java.util.Set.of());
+    return new ProjectionOptions(
+        true, true, false, false, false, true, "_", null, java.util.Set.of());
   }
 
   @Override
@@ -119,7 +136,8 @@ public class InterlisRowToObjectMeta
       IHopMetadataProvider metadataProvider) {
     if (resolve(variables, className).isBlank()) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
       return;
     }
     try {
@@ -132,14 +150,19 @@ public class InterlisRowToObjectMeta
                 transformMeta));
         return;
       }
+      if (prev != null && !prev.isEmpty())
+        InterlisRowToObjectBindings.bind(prev, projection.plan(), this, variables);
       remarks.add(
           new CheckResult(
               ICheckResult.TYPE_RESULT_OK,
-              "INTERLIS Row to Object is configured for class " + className, transformMeta));
+              "INTERLIS Row to Object is configured for class " + className,
+              transformMeta));
     } catch (Exception e) {
       remarks.add(
           new CheckResult(
-              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS model check failed: " + e.getMessage(), transformMeta));
+              ICheckResult.TYPE_RESULT_ERROR,
+              "INTERLIS model check failed: " + e.getMessage(),
+              transformMeta));
     }
   }
 

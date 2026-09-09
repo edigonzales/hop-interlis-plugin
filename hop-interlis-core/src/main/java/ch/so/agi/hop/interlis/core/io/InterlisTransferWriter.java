@@ -5,8 +5,8 @@ import ch.interlis.iom.IomObject;
 /**
  * Streaming writer over an INTERLIS transfer file.
  *
- * <p>The event order is enforced by the caller:
- * {@code startTransfer → startBasket → (writeObject)* → endBasket → endTransfer}.
+ * <p>The event order is enforced by the caller: {@code startTransfer → startBasket → (writeObject)*
+ * → endBasket → endTransfer}.
  *
  * <p>Writers are single-use; {@link #close()} must be called exactly once.
  */
@@ -14,6 +14,12 @@ public interface InterlisTransferWriter extends AutoCloseable {
 
   /** Writes the transfer header. Must be called exactly once, before any basket. */
   void startTransfer(String sender) throws InterlisWriteException;
+
+  /** Writes preserved header semantics. */
+  void startTransfer(InterlisTransferMetadata metadata) throws InterlisWriteException;
+
+  /** Rejects EOF before the transfer has been completed. */
+  void requireComplete() throws InterlisWriteException;
 
   /**
    * Opens a basket.
@@ -31,8 +37,7 @@ public interface InterlisTransferWriter extends AutoCloseable {
    * @param bid basket identifier
    * @param metadata basket metadata, may be {@code null}
    */
-  default void startBasket(
-      String topicScopedName, String bid, InterlisBasketMetadata metadata)
+  default void startBasket(String topicScopedName, String bid, InterlisBasketMetadata metadata)
       throws InterlisWriteException {
     startBasket(topicScopedName, bid);
   }

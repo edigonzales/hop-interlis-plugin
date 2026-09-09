@@ -28,8 +28,8 @@ import org.eclipse.swt.widgets.TableItem;
 import org.eclipse.swt.widgets.Text;
 
 /**
- * INTERLIS Output dialog: target file, model source, class browser, identity/basket options and
- * a field mapping grid (INTERLIS property → Hop field → status).
+ * INTERLIS Output dialog: target file, model source, class browser, identity/basket options and a
+ * field mapping grid (INTERLIS property → Hop field → status).
  *
  * <p>All model interpretation happens in {@link InterlisOutputDialogController}; probing failures
  * are shown as messages and never make the dialog unusable.
@@ -59,9 +59,14 @@ public class InterlisOutputDialog extends BaseTransformDialog {
       List.of();
   private final Map<String, String> classChoiceToScopedName = new HashMap<>();
   private boolean suppressRefresh;
+  private boolean forceReload;
+  private ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator probeCoordinator;
 
   public InterlisOutputDialog(
-      Shell parent, IVariables variables, InterlisOutputMeta transformMeta, PipelineMeta pipelineMeta) {
+      Shell parent,
+      IVariables variables,
+      InterlisOutputMeta transformMeta,
+      PipelineMeta pipelineMeta) {
     super(parent, variables, transformMeta, pipelineMeta);
     this.input = transformMeta;
   }
@@ -70,6 +75,17 @@ public class InterlisOutputDialog extends BaseTransformDialog {
   public String open() {
     shell = new Shell(getParent(), SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX);
     PropsUi.setLook(shell);
+    var display = shell.getDisplay();
+    probeCoordinator =
+        new ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator(
+            action -> {
+              if (!display.isDisposed())
+                display.asyncExec(
+                    () -> {
+                      if (!shell.isDisposed()) action.run();
+                    });
+            });
+    shell.addListener(SWT.Dispose, e -> probeCoordinator.close());
     setShellImage(shell, input);
     shell.setText("INTERLIS Output");
     shell.setMinimumSize(860, 640);
@@ -144,7 +160,9 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     wModelDirectories.setLayoutData(fdDirs);
 
     // Model status and class reload
-    wStatus = InterlisDialogUiSupport.createStatusArea(shell, wModelDirectories, props.getMiddlePct(), margin);
+    wStatus =
+        InterlisDialogUiSupport.createStatusArea(
+            shell, wModelDirectories, props.getMiddlePct(), margin);
     Composite classRow = InterlisDialogUiSupport.createRow(shell, wStatus.control(), margin);
     Button wReload = new Button(classRow, SWT.PUSH);
     wClassName = new ComboVar(variables, classRow, SWT.SINGLE | SWT.LEFT | SWT.BORDER);
@@ -278,10 +296,23 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     wBasketId.addModifyListener(e -> input.setChanged());
     wOverwrite.addListener(SWT.Selection, e -> input.setChanged());
     wbFile.addListener(SWT.Selection, e -> browse());
-    wReload.addListener(SWT.Selection, e -> refresh());
+    wReload.addListener(
+        SWT.Selection,
+        e -> {
+          forceReload = true;
+          refresh();
+        });
     wOk.addListener(SWT.Selection, e -> ok());
     wCancel.addListener(SWT.Selection, e -> cancel());
 
+    wModelNames.addModifyListener(
+        e -> {
+          if (!suppressRefresh) refresh();
+        });
+    wModelDirectories.addModifyListener(
+        e -> {
+          if (!suppressRefresh) refresh();
+        });
     getData();
     refresh();
     input.setChanged(changed);
@@ -334,15 +365,23 @@ public class InterlisOutputDialog extends BaseTransformDialog {
   }
 
   private void refresh() {
+    if (suppressRefresh) return;
     syncMetaFromWidgets();
-    InterlisProbeResult result = controller.probe(input, variables);
+    var snapshot = (InterlisOutputMeta) input.clone();
+    var vars = ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator.snapshot(variables);
+    boolean immediate = forceReload;
+    forceReload = false;
+    probeCoordinator.submit(
+        immediate, () -> controller.probe(snapshot, vars), this::applyRefresh, this::probeFailed);
+  }
+
+  private void applyRefresh(InterlisProbeResult result) {
+
     classes = result.classes();
     associations = result.associations();
     populateClassCombo();
     wStatus.set(
-        InterlisDialogUiSupport.statusSeverity(
-            result.successful(), result.configured(), result.message()),
-        result.message());
+        InterlisDialogUiSupport.StatusSeverity.valueOf(result.status().name()), result.message());
     if (result.successful()) {
       populateMapping(controller.mapping(result.projection().plan(), input, variables));
     } else {
@@ -354,8 +393,7 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     suppressRefresh = true;
     try {
       String current = wClassName.getText();
-      String currentScopedName =
-          classChoiceToScopedName.getOrDefault(current, selectedClassName());
+      String currentScopedName = classChoiceToScopedName.getOrDefault(current, selectedClassName());
       wClassName.removeAll();
       classChoiceToScopedName.clear();
       for (InterlisClassDescriptor descriptor : classes) {
@@ -428,6 +466,13 @@ public class InterlisOutputDialog extends BaseTransformDialog {
       return displayName.substring(0, displayName.length() - ASSOCIATION_DISPLAY_SUFFIX.length());
     }
     return displayName;
+  }
+
+  private void probeFailed(Exception error) {
+    wStatus.set(
+        ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport.StatusSeverity.ERROR,
+        ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport.rootCauseMessage(error));
+    shell.layout(true, true);
   }
 
   private void ok() {

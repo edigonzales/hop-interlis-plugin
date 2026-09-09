@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.core.io;
 
 import ch.interlis.ili2c.metamodel.TransferDescription;
 import ch.interlis.iom.IomObject;
+import ch.interlis.iom_j.xtf.XtfStartTransferEvent;
 import ch.interlis.iox.IoxEvent;
 import ch.interlis.iox.IoxException;
 import ch.interlis.iox.IoxReader;
@@ -12,8 +13,6 @@ import ch.interlis.iox_j.ObjectEvent;
 import ch.interlis.iox_j.StartBasketEvent;
 import ch.interlis.iox_j.StartTransferEvent;
 import ch.interlis.iox_j.utility.ReaderFactory;
-import ch.interlis.iom_j.xtf.XtfStartTransferEvent;
-import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,9 +21,9 @@ import java.util.Map;
 /**
  * Streaming reader for INTERLIS XTF files, backed by iox-ili.
  *
- * <p>The reader emits the transfer event stream as {@link InterlisObjectEnvelope} instances:
- * {@code START_TRANSFER}, {@code START_BASKET}, {@code OBJECT}, {@code END_BASKET},
- * {@code END_TRANSFER}. The XTF header is used to detect the model names.
+ * <p>The reader emits the transfer event stream as {@link InterlisObjectEnvelope} instances: {@code
+ * START_TRANSFER}, {@code START_BASKET}, {@code OBJECT}, {@code END_BASKET}, {@code END_TRANSFER}.
+ * The XTF header is used to detect the model names.
  */
 public final class XtfTransferReader implements InterlisTransferReader {
 
@@ -51,12 +50,10 @@ public final class XtfTransferReader implements InterlisTransferReader {
 
   public static XtfTransferReader open(Path file, TransferDescription transferDescription)
       throws InterlisReadException {
-    XtfTransferReader transferReader =
-        new XtfTransferReader(file, transferDescription);
+    XtfTransferReader transferReader = new XtfTransferReader(file, transferDescription);
     try {
       rejectUnsupportedFormat(file);
-      transferReader.reader =
-          new ReaderFactory().createReader(file.toFile(), null);
+      transferReader.reader = new ReaderFactory().createReader(file.toFile(), null);
       if (transferReader.reader instanceof IoxIliReader ioxIliReader
           && transferDescription != null) {
         ioxIliReader.setModel(transferDescription);
@@ -65,8 +62,7 @@ public final class XtfTransferReader implements InterlisTransferReader {
     } catch (InterlisReadException e) {
       throw e;
     } catch (Exception e) {
-      throw new InterlisReadException(
-          "Failed to open XTF file " + file + ": " + e.getMessage(), e);
+      throw new InterlisReadException("Failed to open XTF file " + file + ": " + e.getMessage(), e);
     }
   }
 
@@ -81,7 +77,8 @@ public final class XtfTransferReader implements InterlisTransferReader {
     String name = file.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
     if (name.endsWith(".itf") || name.endsWith(".ili1")) {
       throw new InterlisReadException(
-          "INTERLIS 1 (ITF) transfers are not supported by hop-interlis-plugin: " + file
+          "INTERLIS 1 (ITF) transfers are not supported by hop-interlis-plugin: "
+              + file
               + ". Convert the data to INTERLIS 2 (XTF) with ili2c or use a different tool "
               + "for INTERLIS 1 data");
     }
@@ -109,9 +106,11 @@ public final class XtfTransferReader implements InterlisTransferReader {
             null,
             null,
             InterlisObjectOperation.NONE,
-            null);
+            null,
+            null,
+            InterlisTransferMetadata.fromEvent(startTransferEvent));
       }
-      if (event instanceof StartTransferEvent) {
+      if (event instanceof StartTransferEvent startTransferEvent) {
         return new InterlisObjectEnvelope(
             InterlisEventType.START_TRANSFER,
             null,
@@ -120,7 +119,9 @@ public final class XtfTransferReader implements InterlisTransferReader {
             null,
             null,
             InterlisObjectOperation.NONE,
-            null);
+            null,
+            null,
+            InterlisTransferMetadata.fromEvent(startTransferEvent));
       }
       if (event instanceof StartBasketEvent startBasketEvent) {
         currentTopic = startBasketEvent.getType();

@@ -1744,3 +1744,13 @@ Exit-Code 1 (unbegrenzt sowie Limit 2). Der E2E-Runner erzeugt isolierte Hop-Met
 prüft jeden Exit-Code explizit und führt auch die bisherigen Pipelines aus.
 `HOP_GEOTOOLS_ZIP` kann ein kompatibles vorgebautes GeoTools-Paket für den optionalen
 GeoPackage-Test liefern. Ohne diese Option erfolgt der Build mit Tests.
+
+## P2-Regressionspaket
+
+Deterministische Tests decken tiefe Feldselektion, strikte Daten/DST, Modellimporte,
+Reload, Dateinamen, Enumeration-Domains, Envelope-Feldbindung, Header-JSON,
+Writer-Abschlussfehler, Carrier/Operation, Restkinder und veraltete UI-Proben ab.
+Paket-E2E 25–28 prüfen umgeordnete Envelope-Felder mit Header-Erhalt, Rückprojektion
+mit Carrier/BAG/XYZ, fehlendes END_TRANSFER und eine ungültige Operation. Die
+Fehlerfälle müssen Exit-Code 1 und die erwartete konkrete Diagnose liefern.
+Die P1-E2E-Prüfungen bleiben Bestandteil der Suite.

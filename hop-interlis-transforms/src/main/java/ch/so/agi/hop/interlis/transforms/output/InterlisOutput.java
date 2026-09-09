@@ -96,7 +96,7 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
         data.writtenObjects++;
       }
     } catch (Exception e) {
-      closeWriter();
+      closeAfterFailure(e);
       throw new HopException("Failed to write INTERLIS object: " + e.getMessage(), e);
     }
 
@@ -167,10 +167,10 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       }
       data.initialized = true;
     } catch (HopException e) {
-      closeWriter();
+      closeAfterFailure(e);
       throw e;
     } catch (Exception e) {
-      closeWriter();
+      closeAfterFailure(e);
       throw new HopException("Failed to initialize INTERLIS Output: " + e.getMessage(), e);
     }
   }
@@ -200,24 +200,33 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
         data.writer.endBasket();
       }
       data.writer.endTransfer();
+      closeWriterChecked();
     } catch (Exception e) {
+      closeAfterFailure(e);
       throw new HopException("Failed to finish INTERLIS transfer: " + e.getMessage(), e);
-    } finally {
-      closeWriter();
+    }
+  }
+
+  private void closeWriterChecked() throws ch.so.agi.hop.interlis.core.io.InterlisWriteException {
+    var writer = data.writer;
+    data.writer = null;
+    if (writer != null) writer.close();
+  }
+
+  private void closeAfterFailure(Exception failure) {
+    try {
+      closeWriterChecked();
+    } catch (ch.so.agi.hop.interlis.core.io.InterlisWriteException e) {
+      failure.addSuppressed(e);
     }
   }
 
   private void closeWriter() {
-    if (data.writer != null) {
-      try {
-        data.writer.close();
-      } catch (Exception e) {
-        if (isDebug()) {
-          logDebug("Failed to close INTERLIS writer: " + e.getMessage());
-        }
-      } finally {
-        data.writer = null;
-      }
+    try {
+      closeWriterChecked();
+    } catch (ch.so.agi.hop.interlis.core.io.InterlisWriteException e) {
+      logError("Failed to close INTERLIS writer", e);
+      setErrors(getErrors() + 1);
     }
   }
 

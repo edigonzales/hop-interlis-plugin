@@ -1,7 +1,6 @@
 package ch.so.agi.hop.interlis.transforms;
 
 import java.util.List;
-import java.util.Locale;
 import org.apache.hop.ui.core.PropsUi;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.events.ControlAdapter;
@@ -37,8 +36,7 @@ public final class InterlisDialogUiSupport {
    *
    * <p>The row uses the same label/control split as the surrounding form and keeps its height
    * synchronized with the wrapped message as the dialog is resized. Dialogs only need to retain
-   * this small view object and call
-   * {@link #set(StatusSeverity, String)}.
+   * this small view object and call {@link #set(StatusSeverity, String)}.
    */
   public static final class StatusArea {
     private static final int PADDING = 3;
@@ -92,11 +90,9 @@ public final class InterlisDialogUiSupport {
       try {
         int messageWidth = Math.max(1, width - 2 * PADDING);
         Point messageSize = message.computeSize(messageWidth, SWT.DEFAULT);
-        int desiredHeight =
-            calculateStatusHeight(messageSize.y, PADDING, card.getBorderWidth());
+        int desiredHeight = calculateStatusHeight(messageSize.y, PADDING, card.getBorderWidth());
         boolean changed = false;
-        if (card.getLayoutData() instanceof FormData cardData
-            && cardData.height != desiredHeight) {
+        if (card.getLayoutData() instanceof FormData cardData && cardData.height != desiredHeight) {
           cardData.height = desiredHeight;
           changed = true;
         }
@@ -177,8 +173,7 @@ public final class InterlisDialogUiSupport {
     int effectiveMessageHeight = Math.max(0, messageHeight);
     int effectivePadding = Math.max(0, padding);
     int effectiveBorderWidth = Math.max(0, borderWidth);
-    return Math.max(
-        1, effectiveMessageHeight + 2 * effectivePadding + 2 * effectiveBorderWidth);
+    return Math.max(1, effectiveMessageHeight + 2 * effectivePadding + 2 * effectiveBorderWidth);
   }
 
   /** Maps a probe result to a non-modal status severity without changing its existing message. */
@@ -187,23 +182,7 @@ public final class InterlisDialogUiSupport {
     if (successful) {
       return StatusSeverity.SUCCESS;
     }
-    String normalized = message == null ? "" : message.toLowerCase(Locale.ROOT);
-    if (normalized.contains("not found")
-        || normalized.contains("unresolved")
-        || normalized.contains("failed")
-        || normalized.contains("no such")
-        || normalized.contains("exception")
-        || normalized.contains("error")) {
-      return StatusSeverity.ERROR;
-    }
-    if (normalized.contains("configuration is incomplete")
-        || normalized.contains("probe unavailable")
-        || normalized.contains("no interlis models configured")
-        || normalized.contains("select an interlis class")
-        || normalized.contains("loaded")) {
-      return StatusSeverity.INFO;
-    }
-    return configured ? StatusSeverity.ERROR : StatusSeverity.INFO;
+    return configured ? StatusSeverity.INFO : StatusSeverity.ERROR;
   }
 
   /**
@@ -296,17 +275,12 @@ public final class InterlisDialogUiSupport {
   /** Creates the native SWT table used for read-only INTERLIS schema previews. */
   public static Table createPreviewTable(Composite parent) {
     return createTable(
-        parent,
-        new String[] {"Field", "Hop type", "Source"},
-        new int[] {240, 150, 480});
+        parent, new String[] {"Field", "Hop type", "Source"}, new int[] {240, 150, 480});
   }
 
   /** Creates a consistently configured read-only table for an INTERLIS dialog. */
   public static Table createTable(Composite parent, String[] columns, int[] widths) {
-    Table table =
-        new Table(
-            parent,
-            SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL);
+    Table table = new Table(parent, SWT.BORDER | SWT.FULL_SELECTION | SWT.V_SCROLL | SWT.H_SCROLL);
     table.setHeaderVisible(true);
     table.setLinesVisible(true);
     PropsUi.setLook(table);

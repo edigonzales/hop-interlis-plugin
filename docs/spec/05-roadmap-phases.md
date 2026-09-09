@@ -1799,3 +1799,8 @@ behoben. Umfang und Abnahme stehen in `../progress/p1-corrections.md`.
 Freies Output-Mapping und eine neue Partitionierungsarchitektur bleiben ausserhalb
 dieses Pakets. P1 wird erst nach vollständigem `clean verify`, Distributionsprüfung
 und isolierter Hop-2.18.1-Paket-E2E-Abnahme als erledigt markiert.
+
+## P2-Korrekturen nach dem Review
+
+Implementierung und Abnahme werden in `../progress/p2-corrections.md` geführt.
+P2 gilt erst nach vollständigem Verify, Paket-E2E und UI-Prüfung als abgeschlossen.

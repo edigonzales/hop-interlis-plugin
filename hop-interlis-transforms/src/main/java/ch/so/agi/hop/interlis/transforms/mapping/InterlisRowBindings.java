@@ -8,8 +8,8 @@ import org.apache.hop.core.row.IRowMeta;
 /**
  * Binds an incoming Hop row to the field order of a {@link InterlisRowMappingPlan}.
  *
- * <p>The binding is computed once per transform initialization; the runtime mapper then works
- * with plan-ordered value arrays without any per-row name lookups.
+ * <p>The binding is computed once per transform initialization; the runtime mapper then works with
+ * plan-ordered value arrays without any per-row name lookups.
  */
 public final class InterlisRowBindings {
 
@@ -44,7 +44,7 @@ public final class InterlisRowBindings {
   public static Object[] values(Object[] row, int[] inputIndexes) {
     Object[] values = new Object[inputIndexes.length];
     for (int i = 0; i < inputIndexes.length; i++) {
-      values[i] = row[inputIndexes[i]];
+      values[i] = inputIndexes[i] < 0 ? null : row[inputIndexes[i]];
     }
     return values;
   }

@@ -10,8 +10,8 @@ import org.apache.hop.core.row.value.ValueMetaString;
 /**
  * Builds the canonical Hop row schema of the INTERLIS envelope stream.
  *
- * <p>The schema is defined by {@link InterlisEnvelopeRowLayout}; all generic transforms share
- * this factory so the layout cannot drift between them.
+ * <p>The schema is defined by {@link InterlisEnvelopeRowLayout}; all generic transforms share this
+ * factory so the layout cannot drift between them.
  */
 public final class InterlisEnvelopeSchemaFactory {
 
@@ -35,6 +35,7 @@ public final class InterlisEnvelopeSchemaFactory {
     rowMeta.addValueMeta(new ValueMetaString(InterlisEnvelopeRowLayout.BASKET_KIND));
     rowMeta.addValueMeta(new ValueMetaString(InterlisEnvelopeRowLayout.BASKET_START_STATE));
     rowMeta.addValueMeta(new ValueMetaString(InterlisEnvelopeRowLayout.BASKET_END_STATE));
+    rowMeta.addValueMeta(new ValueMetaString(InterlisEnvelopeRowLayout.TRANSFER_METADATA));
     return rowMeta;
   }
 
@@ -42,7 +43,8 @@ public final class InterlisEnvelopeSchemaFactory {
   public static RowMeta validationRowMeta() throws HopException {
     InterlisRuntimeSupport.initialize();
     RowMeta rowMeta = new RowMeta();
-    for (String fieldName : ch.so.agi.hop.interlis.core.io.InterlisValidationRowLayout.FIELD_NAMES) {
+    for (String fieldName :
+        ch.so.agi.hop.interlis.core.io.InterlisValidationRowLayout.FIELD_NAMES) {
       if (ch.so.agi.hop.interlis.core.io.InterlisValidationRowLayout.LINE.equals(fieldName)
           || ch.so.agi.hop.interlis.core.io.InterlisValidationRowLayout.COLUMN.equals(fieldName)) {
         rowMeta.addValueMeta(new ValueMetaInteger(fieldName));

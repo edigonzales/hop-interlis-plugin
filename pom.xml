@@ -38,7 +38,7 @@
     <ili2c.version>5.6.8</ili2c.version>
     <iox.api.version>1.0.3</iox.api.version>
     <ehibasics.version>1.4.1</ehibasics.version>
-    <hop.geometry.type.version>0.1.0-SNAPSHOT</hop.geometry.type.version>
+    <hop.geometry.type.version>0.2.0-SNAPSHOT</hop.geometry.type.version>
     <jts.version>1.20.0</jts.version>
     <junit.version>5.12.0</junit.version>
     <assertj.version>3.27.3</assertj.version>

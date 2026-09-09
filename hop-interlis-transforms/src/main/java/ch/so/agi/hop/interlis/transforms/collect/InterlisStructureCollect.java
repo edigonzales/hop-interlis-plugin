@@ -18,12 +18,12 @@ import org.apache.hop.pipeline.transform.BaseTransform;
 import org.apache.hop.pipeline.transform.TransformMeta;
 
 /**
- * INTERLIS Structure Collect: merges a sorted child stream back into the multi-valued structure
- * of the parent row's source object.
+ * INTERLIS Structure Collect: merges a sorted child stream back into the multi-valued structure of
+ * the parent row's source object.
  *
- * <p>Streaming sorted merge: the parent stream must be sorted by the parent key, the child
- * stream by (parent key, index). Each parent row is emitted once with an updated carrier
- * ({@code _ili_source_object}); the collected structure replaces the carrier's structure content.
+ * <p>Streaming sorted merge: the parent stream must be sorted by the parent key, the child stream
+ * by (parent key, index). Each parent row is emitted once with an updated carrier ({@code
+ * _ili_source_object}); the collected structure replaces the carrier's structure content.
  */
 public class InterlisStructureCollect
     extends BaseTransform<InterlisStructureCollectMeta, InterlisStructureCollectData> {
@@ -75,7 +75,8 @@ public class InterlisStructureCollect
     }
 
     try {
-      List<StructureChild> children = collectChildrenFor(key(data.pendingParentRow[data.parentKeyFieldIndex]));
+      List<StructureChild> children =
+          collectChildrenFor(key(data.pendingParentRow[data.parentKeyFieldIndex]));
 
       Object carrier = data.pendingParentRow[data.sourceObjectFieldIndex];
       if (carrier == null) {
@@ -96,8 +97,7 @@ public class InterlisStructureCollect
       }
 
       IomObject updated =
-          data.collector.collect(
-              carrierObject, children, data.plan, collectOptions());
+          data.collector.collect(carrierObject, children, data.plan, collectOptions());
 
       Object[] outputRow = data.pendingParentRow.clone();
       outputRow[data.sourceObjectFieldIndex] = updated;
@@ -224,7 +224,9 @@ public class InterlisStructureCollect
     }
     Object[] childRow = data.pendingChildRow;
     data.pendingChildRow = null;
-    while (childRow != null) {
+    if (childRow == null) childRow = getRowFrom(data.childRowSet);
+    long skipped = 0;
+    while (childRow != null && !isStopped()) {
       bindChildRowMeta();
       String childKey = key(childRow[data.childParentKeyFieldIndex]);
       if (meta.isFailOnChildWithoutParent()) {
@@ -234,23 +236,21 @@ public class InterlisStructureCollect
                 + " has no matching parent row; configure INTERLIS Structure Collect or fix "
                 + "the child stream");
       }
-      if (isBasic()) {
-        logBasic(
-            "INTERLIS Structure Collect: skipping child row with unknown parent " + childKey);
-      }
+      skipped++;
       try {
         childRow = getRowFrom(data.childRowSet);
       } catch (Exception e) {
         throw new HopException("Failed to read child stream: " + e.getMessage(), e);
       }
     }
+    data.childStreamExhausted = childRow == null;
+    if (skipped > 0 && isBasic())
+      logBasic("INTERLIS Structure Collect: skipped " + skipped + " children without a parent");
   }
 
   private StructureCollectOptions collectOptions() {
     return new StructureCollectOptions(
-        meta.isStrictOrdering(),
-        meta.isFailOnDuplicateIndex(),
-        new RowWriteOptions(true, null));
+        meta.isStrictOrdering(), meta.isFailOnDuplicateIndex(), new RowWriteOptions(true, null));
   }
 
   /** Binds the parent stream row meta once the first parent row is available. */
@@ -269,8 +269,7 @@ public class InterlisStructureCollect
               + res(meta.getParentKeyField())
               + "> not found in the parent stream");
     }
-    data.sourceObjectFieldIndex =
-        parentRowMeta.indexOfValue(res(meta.getSourceObjectField()));
+    data.sourceObjectFieldIndex = parentRowMeta.indexOfValue(res(meta.getSourceObjectField()));
     if (data.sourceObjectFieldIndex < 0) {
       throw new HopException(
           "Source object field <"
@@ -292,8 +291,7 @@ public class InterlisStructureCollect
     if (childRowMeta == null) {
       throw new HopException("Child stream of INTERLIS Structure Collect has no row metadata");
     }
-    data.childParentKeyFieldIndex =
-        childRowMeta.indexOfValue(res(meta.getChildParentKeyField()));
+    data.childParentKeyFieldIndex = childRowMeta.indexOfValue(res(meta.getChildParentKeyField()));
     if (data.childParentKeyFieldIndex < 0) {
       throw new HopException(
           "Child parent key field <"
@@ -314,7 +312,9 @@ public class InterlisStructureCollect
       data.childFieldIndexes[i] = childRowMeta.indexOfValue(fieldName);
       if (data.childFieldIndexes[i] < 0) {
         throw new HopException(
-            "Child stream is missing field <" + fieldName + "> of structure "
+            "Child stream is missing field <"
+                + fieldName
+                + "> of structure "
                 + data.plan.structure().scopedName());
       }
     }

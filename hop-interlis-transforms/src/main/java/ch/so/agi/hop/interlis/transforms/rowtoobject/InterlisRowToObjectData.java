@@ -8,6 +8,9 @@ import org.apache.hop.pipeline.transform.BaseTransformData;
 
 /** Runtime state of the {@link InterlisRowToObject} transform. */
 public class InterlisRowToObjectData extends BaseTransformData {
+  public int sourceObjectIndex = -1;
+  public int operationIndex = -1;
+  public int[] basketMetadataIndexes;
 
   boolean initialized;
   InterlisProjectionResult projection;

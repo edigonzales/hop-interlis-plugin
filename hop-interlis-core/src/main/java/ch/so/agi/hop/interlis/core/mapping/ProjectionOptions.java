@@ -1,6 +1,5 @@
 package ch.so.agi.hop.interlis.core.mapping;
 
-import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
@@ -14,8 +13,8 @@ import java.util.Set;
  * @param includeInheritedProperties include properties contributed by base classes
  * @param structureSeparator separator for flattened structure field names, default {@code _}
  * @param defaultSrid SRID assigned to mapped geometries; {@code null} keeps SRID 0
- * @param selectedPropertyPaths dotted paths of the properties to project;
- *     empty means all supported properties
+ * @param selectedPropertyPaths dotted paths of the properties to project; empty means all supported
+ *     properties
  * @param includeRoleRefBid emit {@code <role>_ref_bid} fields for reference roles
  * @param flattenAssociationAttributes flatten attributes of uniquely embeddable attributed
  *     associations onto the class rows ({@code <role>_<attribute>})
@@ -70,14 +69,19 @@ public record ProjectionOptions(
         true);
   }
 
+  /** Whether a path can contain a selected descendant. Does not select sibling leaves. */
+  public boolean shouldTraverse(String dottedPath) {
+    return isPropertySelected(dottedPath)
+        || selectedPropertyPaths.stream()
+            .anyMatch(selected -> selected.startsWith(dottedPath + "."));
+  }
+
   public boolean isPropertySelected(String dottedPath) {
     if (selectedPropertyPaths.isEmpty()) {
       return true;
     }
     // Selecting a structure selects all flattened fields below it.
     return selectedPropertyPaths.stream()
-        .anyMatch(
-            selected ->
-                dottedPath.equals(selected) || dottedPath.startsWith(selected + "."));
+        .anyMatch(selected -> dottedPath.equals(selected) || dottedPath.startsWith(selected + "."));
   }
 }

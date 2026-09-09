@@ -38,8 +38,8 @@ public final class InterlisInputDialogController {
   }
 
   /**
-   * Probes the current configuration. Failures are returned as a friendly message; the dialog
-   * stays usable.
+   * Probes the current configuration. Failures are returned as a friendly message; the dialog stays
+   * usable.
    */
   public InterlisProbeResult probe(InterlisInputMeta meta, IVariables variables) {
     String resolvedClass = meta.resolvedClassName(variables);
@@ -72,11 +72,12 @@ public final class InterlisInputDialogController {
                   + " was not found; select an INTERLIS class."
               : modelLoadedMessage(context) + ". Schema projection failed: " + rootCauseMessage(e);
       return new InterlisProbeResult(
-          true,
-          message,
-          null,
-          context.schema().selectableClasses(),
-          context.schema().selectableAssociations());
+              true,
+              message,
+              null,
+              context.schema().selectableClasses(),
+              context.schema().selectableAssociations())
+          .withStatus(ch.so.agi.hop.interlis.transforms.InterlisProbeStatus.ERROR);
     }
     return new InterlisProbeResult(
         true,
@@ -97,11 +98,12 @@ public final class InterlisInputDialogController {
 
   private InterlisProbeResult incompleteConfiguration() {
     return new InterlisProbeResult(
-        false,
-        "Schema preview unavailable: the configuration is incomplete "
-            + "(missing transfer file, model directories or unresolved variables).",
-        null,
-        List.of());
+            false,
+            "Schema preview unavailable: the configuration is incomplete "
+                + "(missing transfer file, model directories or unresolved variables).",
+            null,
+            List.of())
+        .withStatus(ch.so.agi.hop.interlis.transforms.InterlisProbeStatus.INFO);
   }
 
   private String modelLoadedMessage(InterlisModelContext model) {
@@ -147,8 +149,6 @@ public final class InterlisInputDialogController {
       current = current.getCause();
     }
     String message = current.getMessage();
-    return message == null || message.isBlank()
-        ? current.getClass().getSimpleName()
-        : message;
+    return message == null || message.isBlank() ? current.getClass().getSimpleName() : message;
   }
 }

@@ -23,8 +23,8 @@ import org.apache.hop.pipeline.transform.TransformMeta;
  *
  * <p>The output schema is the constant envelope schema; the typed values are mapped to the IOM
  * object via {@link RowToIomMapper} (including regenerated association link objects, which become
- * additional OBJECT envelope rows). The result can be merged with other classes' envelope rows
- * and written by INTERLIS Transfer Output.
+ * additional OBJECT envelope rows). The result can be merged with other classes' envelope rows and
+ * written by INTERLIS Transfer Output.
  */
 public class InterlisRowToObject
     extends BaseTransform<InterlisRowToObjectMeta, InterlisRowToObjectData> {
@@ -61,8 +61,25 @@ public class InterlisRowToObject
 
     try {
       Object[] values = InterlisRowBindings.values(row, data.inputIndexes);
+      IomObject carrier =
+          data.sourceObjectIndex < 0 ? null : (IomObject) row[data.sourceObjectIndex];
+      Object operationValue = data.operationIndex < 0 ? null : row[data.operationIndex];
+      InterlisObjectOperation operation;
+      try {
+        operation =
+            operationValue == null || operationValue.toString().isBlank()
+                ? (carrier == null
+                    ? InterlisObjectOperation.NONE
+                    : InterlisObjectOperation.fromIom(carrier.getobjectoperation()))
+                : InterlisObjectOperation.valueOf(operationValue.toString());
+      } catch (IllegalArgumentException e) {
+        throw new HopException("Invalid operation field value <" + operationValue + ">", e);
+      }
+      var writeOptions = new RowWriteOptions(true, null, operation);
       RowToIomMapper.InterlisWriteResult result =
-          data.mapper.mapAll(values, data.plan, new RowWriteOptions(true, null));
+          data.sourceObjectIndex < 0
+              ? data.mapper.mapAll(values, data.plan, writeOptions)
+              : data.mapper.mapAll(carrier, values, data.plan, writeOptions);
 
       String basketId =
           data.basketIdFieldIndex >= 0 && row[data.basketIdFieldIndex] != null
@@ -74,8 +91,17 @@ public class InterlisRowToObject
       String topicName = data.plan.root().topicScopedName();
 
       Object[] primary =
-          InterlisEnvelopeRowLayout.objectRow(
-              result.object(), basketId, topicName, InterlisObjectOperation.NONE);
+          InterlisEnvelopeRowLayout.objectRow(result.object(), basketId, topicName, operation);
+      var basket =
+          new ch.so.agi.hop.interlis.core.io.InterlisBasketMetadata(
+              metadataValue(row, 0),
+              metadataValue(row, 1),
+              metadataValue(row, 2),
+              metadataValue(row, 3));
+      primary[InterlisEnvelopeRowLayout.BASKET_CONSISTENCY_INDEX] = basket.consistency();
+      primary[InterlisEnvelopeRowLayout.BASKET_KIND_INDEX] = basket.kind();
+      primary[InterlisEnvelopeRowLayout.BASKET_START_STATE_INDEX] = basket.startState();
+      primary[InterlisEnvelopeRowLayout.BASKET_END_STATE_INDEX] = basket.endState();
       if (result.additionalObjects().isEmpty()) {
         data.rowsMapped++;
         putRow(data.outputRowMeta, primary);
@@ -85,9 +111,16 @@ public class InterlisRowToObject
       List<Object[]> envelopeRows = new java.util.ArrayList<>();
       envelopeRows.add(primary);
       for (IomObject link : result.additionalObjects()) {
-        envelopeRows.add(
+        var linkRow =
             InterlisEnvelopeRowLayout.objectRow(
-                link, basketId, topicName, InterlisObjectOperation.NONE));
+                link, basketId, topicName, InterlisObjectOperation.NONE);
+        System.arraycopy(
+            primary,
+            InterlisEnvelopeRowLayout.BASKET_CONSISTENCY_INDEX,
+            linkRow,
+            InterlisEnvelopeRowLayout.BASKET_CONSISTENCY_INDEX,
+            4);
+        envelopeRows.add(linkRow);
       }
       data.pendingRows = envelopeRows.iterator();
       data.rowsMapped++;
@@ -115,15 +148,12 @@ public class InterlisRowToObject
                   meta.projectionOptions());
       data.plan = data.projection.plan();
       data.mapper = new RowToIomMapper();
-      data.inputIndexes = InterlisRowBindings.bind(getInputRowMeta(), data.plan);
-
-      String basketField = resolve(meta.getBasketIdField());
-      data.basketIdFieldIndex =
-          basketField.isBlank() ? -1 : getInputRowMeta().indexOfValue(basketField);
-      if (!basketField.isBlank() && data.basketIdFieldIndex < 0) {
-        throw new HopException("Basket ID field <" + basketField + "> not found in the input");
-      }
-
+      var bindings = InterlisRowToObjectBindings.bind(getInputRowMeta(), data.plan, meta, this);
+      data.inputIndexes = bindings.values();
+      data.basketIdFieldIndex = bindings.basket();
+      data.sourceObjectIndex = bindings.source();
+      data.operationIndex = bindings.operation();
+      data.basketMetadataIndexes = bindings.basketMetadata();
       data.outputRowMeta = InterlisEnvelopeSchemaFactory.createRowMeta();
       if (isBasic()) {
         logBasic("Mapping rows of " + data.plan.root().scopedName() + " to envelope rows");
@@ -134,6 +164,11 @@ public class InterlisRowToObject
     } catch (Exception e) {
       throw new HopException("Failed to initialize INTERLIS Row to Object: " + e.getMessage(), e);
     }
+  }
+
+  private String metadataValue(Object[] row, int field) {
+    int index = data.basketMetadataIndexes[field];
+    return index < 0 || row[index] == null ? null : row[index].toString();
   }
 
   private List<String> resolveModelNames() {
