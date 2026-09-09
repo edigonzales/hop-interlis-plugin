@@ -58,6 +58,8 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
         return true;
       }
 
+      data.pendingOutput = null;
+
       InterlisObjectEnvelope envelope;
       try {
         envelope = data.reader.next();
@@ -69,6 +71,7 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
         if (data.pendingOutput != null && data.pendingOutput.hasNext()) {
           continue;
         }
+        clearBufferedRows();
         closeReader();
         setOutputDone();
         if (isBasic()) {
@@ -250,7 +253,14 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
 
   @Override
   public void dispose() {
+    clearBufferedRows();
     closeReader();
     super.dispose();
+  }
+
+  private void clearBufferedRows() {
+    if (data.basketBuffer != null) data.basketBuffer.clear();
+    data.basketBuffer = null;
+    data.pendingOutput = null;
   }
 }

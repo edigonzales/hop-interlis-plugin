@@ -6,7 +6,6 @@ import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.core.model.InterlisModelException;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionResult;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionService;
-import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import java.util.List;
 import java.util.Optional;
@@ -122,8 +121,9 @@ public class InterlisStructureCollectMeta
       IVariables variables,
       IHopMetadataProvider metadataProvider)
       throws HopTransformException {
-    // The parent stream passes through unchanged; the collected structure is written into the
-    // technical source-object carrier field.
+    var output = InterlisStructureCollectBindings.output(rowMeta, this, variables);
+    rowMeta.clear();
+    rowMeta.addRowMeta(output);
   }
 
   @Override
@@ -140,13 +140,18 @@ public class InterlisStructureCollectMeta
     if (resolve(variables, childInputTransform).isBlank()) {
       remarks.add(
           new CheckResult(
-              ICheckResult.TYPE_RESULT_ERROR, "The child input transform must be selected", transformMeta));
+              ICheckResult.TYPE_RESULT_ERROR,
+              "The child input transform must be selected",
+              transformMeta));
       return;
     }
-    if (resolve(variables, className).isBlank() || resolve(variables, structureAttributePath).isBlank()) {
+    if (resolve(variables, className).isBlank()
+        || resolve(variables, structureAttributePath).isBlank()) {
       remarks.add(
           new CheckResult(
-              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class and structure must be selected", transformMeta));
+              ICheckResult.TYPE_RESULT_ERROR,
+              "INTERLIS class and structure must be selected",
+              transformMeta));
       return;
     }
     try {
@@ -159,6 +164,25 @@ public class InterlisStructureCollectMeta
                 transformMeta));
         return;
       }
+      var parents =
+          ch.so.agi.hop.interlis.transforms.mapping.InterlisInputSchemaSupport.available(
+              pipelineMeta,
+              parentInputTransform,
+              variables,
+              "Structure Collect parent",
+              remarks,
+              transformMeta);
+      var children =
+          ch.so.agi.hop.interlis.transforms.mapping.InterlisInputSchemaSupport.available(
+              pipelineMeta,
+              childInputTransform,
+              variables,
+              "Structure Collect child",
+              remarks,
+              transformMeta);
+      if (parents != null) InterlisStructureCollectBindings.parent(parents, this, variables);
+      if (children != null)
+        InterlisStructureCollectBindings.child(children, projection.plan(), this, variables);
       remarks.add(
           new CheckResult(
               ICheckResult.TYPE_RESULT_OK,
@@ -170,7 +194,9 @@ public class InterlisStructureCollectMeta
     } catch (Exception e) {
       remarks.add(
           new CheckResult(
-              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS structure check failed: " + e.getMessage(), transformMeta));
+              ICheckResult.TYPE_RESULT_ERROR,
+              "INTERLIS structure check failed: " + e.getMessage(),
+              transformMeta));
     }
   }
 

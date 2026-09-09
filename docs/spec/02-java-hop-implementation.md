@@ -1833,3 +1833,39 @@ Bei Schema-Änderungen braucht es Migration in Meta-Klassen oder tolerant lesbar
   bei Überlappung den früheren Offset. Präzision über Millisekunden wird abgelehnt.
 - Enumerationen umfassen Modell-/Topic-Domains sowie Klassen-, Struktur- und
   Assoziationsattribute. Benannte Domains haben Vorrang vor konsumierenden Attributen.
+
+## Einheitliche Feldbindung und Pufferfreigabe
+
+`InterlisFieldBinding` und `InterlisRowBindings` im Transform-Modul lösen Namen,
+Eingangsindizes, Zielindizes und Typen einmalig auf. Kleine Adapter legen die
+Pflicht-/Optional-/Konstantenregeln der jeweiligen Transforms fest. Fachtypen
+stammen weiterhin ausschliesslich aus `HopRowSchemaFactory`. Eingangsmetadaten
+werden für die Bindung kopiert; Runtime-Zeilen führen keine Namenssuche aus.
+
+IDs, Referenzen und Struktur-/Join-Schlüssel verlangen String, Reihenfolgefelder
+Integer und Carrier den gemeinsamen INTERLIS-Objekttyp. Zahlen werden nicht mehr
+implizit zu Schlüsseln konvertiert. Namen werden mit Variablen aufgelöst und ohne
+Beachtung der Gross-/Kleinschreibung gesucht; doppelte Treffer sind Fehler.
+Ausgewählte Parent-/Lookup-Felder dürfen nicht fehlen. Ein optionaler Wert darf
+null sein, auch wenn seine konfigurierte Spalte zwingend vorhanden sein muss.
+
+Hop Lazy Conversion und indexierte Speicherung werden vor dem Mapping mit
+`convertToNormalStorageType()` normalisiert. Unveränderte Pass-through-Spalten
+behalten ihre Werte und Speicher-Metadaten. Collect gibt den geänderten Carrier
+mit normaler Speicherung aus. Explode und Role Join verwenden gemeinsame
+Ausgabepläne in Designzeit und Runtime; neue Namenskollisionen werden abgelehnt.
+Die bestehende Object-to-Row-Ausnahme für kompatible technische Identitätsfelder
+bleibt bestehen.
+
+`check()` bindet verfügbare Eingangsschemata nach denselben Regeln. Collect und
+Role Join ermitteln ihre getrennt konfigurierten Streams über Hop-Metadaten.
+Nicht verfügbare Schemata erzeugen eine Designzeit-Diagnose; Runtime bindet die
+wirklichen Metadaten jedes Streams. Unaufgelöste Modellproben verhindern nicht
+das Öffnen eines Dialogs.
+
+Der Basket-Puffer hält nur den aktiven Basket. `drain()` liefert einen unabhängigen
+Batch; dessen Lookup hält keine Referenz auf den veränderlichen Puffer. `clear()`
+verwirft Inhalte und Kapazitäten idempotent. Input und Object to Row geben Puffer
+und Ausgabeiteratoren bei EOF beziehungsweise in `dispose()` auch nach Fehler und
+Benutzerabbruch frei. Der Speicherbedarf hängt vom grössten Basket und ausstehenden
+Ausgabezeilen ab; es gibt kein neues Produktionslimit oder Spill-to-disk.

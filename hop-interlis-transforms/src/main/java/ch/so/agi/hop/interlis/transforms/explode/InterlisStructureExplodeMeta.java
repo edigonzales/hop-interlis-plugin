@@ -7,8 +7,8 @@ import ch.so.agi.hop.interlis.core.model.InterlisModelException;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructurePlan;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionResult;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionService;
-import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -19,8 +19,6 @@ import org.apache.hop.core.ICheckResult;
 import org.apache.hop.core.annotations.Transform;
 import org.apache.hop.core.exception.HopTransformException;
 import org.apache.hop.core.row.IRowMeta;
-import org.apache.hop.core.row.IValueMeta;
-import org.apache.hop.core.row.RowMeta;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.metadata.api.HopMetadataProperty;
 import org.apache.hop.metadata.api.IHopMetadataProvider;
@@ -30,8 +28,8 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 
 /**
  * Metadata of the INTERLIS Structure Explode transform: explodes one multi-valued structure
- * attribute of a typed parent row (carried by a hidden source-object field) into one child row
- * per element.
+ * attribute of a typed parent row (carried by a hidden source-object field) into one child row per
+ * element.
  */
 @Transform(
     id = "INTERLIS_STRUCTURE_EXPLODE",
@@ -103,7 +101,8 @@ public class InterlisStructureExplodeMeta
     if (resolvedDirs.stream().anyMatch(d -> d.contains("${"))) {
       return Optional.empty();
     }
-    if (resolve(variables, className).isBlank() || resolve(variables, structureAttributePath).isBlank()) {
+    if (resolve(variables, className).isBlank()
+        || resolve(variables, structureAttributePath).isBlank()) {
       return Optional.empty();
     }
     InterlisModelRequest request = new InterlisModelRequest(null, resolvedModels, resolvedDirs);
@@ -148,39 +147,17 @@ public class InterlisStructureExplodeMeta
       }
       InterlisStructurePlan plan = projection.get().plan();
 
-      IRowMeta inputFields = new RowMeta();
-      inputFields.addRowMeta(rowMeta);
+      var output = InterlisStructureExplodeBindings.output(rowMeta, plan, this, variables);
       rowMeta.clear();
-
-      rowMeta.addValueMeta(
-          new org.apache.hop.core.row.value.ValueMetaString(resolvedParentKeyFieldName()));
-      if (emitParentBid) {
-        rowMeta.addValueMeta(
-            new org.apache.hop.core.row.value.ValueMetaString(resolvedParentBidKeyFieldName()));
-      }
-      if (plan.ordered() || emitIndexForBag) {
-        rowMeta.addValueMeta(
-            new org.apache.hop.core.row.value.ValueMetaInteger(resolvedIndexFieldName()));
-      }
-      var schemaFactory = new ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory();
-      for (var field : plan.childFields()) {
-        rowMeta.addValueMeta(schemaFactory.createValueMeta(field));
-      }
-      for (String parentFieldName : includeParentFields == null
-          ? List.<String>of()
-          : includeParentFields) {
-        IValueMeta parentField = inputFields.searchValueMeta(parentFieldName);
-        if (parentField != null) {
-          rowMeta.addValueMeta(parentField.clone());
-        }
-      }
+      rowMeta.addRowMeta(output);
       for (String warning : plan.warnings()) {
         log.logBasic(origin + ": " + warning);
       }
     } catch (Exception e) {
       if (isDebug()) {
-        logDebug("Unable to probe INTERLIS structure schema for design-time metadata: "
-            + e.getMessage());
+        logDebug(
+            "Unable to probe INTERLIS structure schema for design-time metadata: "
+                + e.getMessage());
       }
     }
   }
@@ -198,13 +175,16 @@ public class InterlisStructureExplodeMeta
       IHopMetadataProvider metadataProvider) {
     if (resolve(variables, className).isBlank()) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
       return;
     }
     if (resolve(variables, structureAttributePath).isBlank()) {
       remarks.add(
           new CheckResult(
-              ICheckResult.TYPE_RESULT_ERROR, "A multi-valued structure attribute must be selected", transformMeta));
+              ICheckResult.TYPE_RESULT_ERROR,
+              "A multi-valued structure attribute must be selected",
+              transformMeta));
       return;
     }
     try {
@@ -217,6 +197,8 @@ public class InterlisStructureExplodeMeta
                 transformMeta));
         return;
       }
+      if (prev != null && !prev.isEmpty())
+        InterlisStructureExplodeBindings.bind(prev, projection.plan(), this, variables);
       remarks.add(
           new CheckResult(
               ICheckResult.TYPE_RESULT_OK,
@@ -231,15 +213,15 @@ public class InterlisStructureExplodeMeta
     } catch (Exception e) {
       remarks.add(
           new CheckResult(
-              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS structure check failed: " + e.getMessage(), transformMeta));
+              ICheckResult.TYPE_RESULT_ERROR,
+              "INTERLIS structure check failed: " + e.getMessage(),
+              transformMeta));
     }
   }
 
   /** Names of the available multi-valued structure paths for the configured class. */
   public List<String> multiValuedStructurePaths(IVariables variables) throws Exception {
-    return tryStructurePlan(variables)
-        .map(r -> List.<String>of())
-        .orElseGet(() -> List.of());
+    return tryStructurePlan(variables).map(r -> List.<String>of()).orElseGet(() -> List.of());
   }
 
   private List<String> resolveModelNames(IVariables variables) {
@@ -275,7 +257,9 @@ public class InterlisStructureExplodeMeta
   }
 
   public String resolvedIndexFieldName() {
-    return indexFieldName == null || indexFieldName.isBlank() ? DEFAULT_INDEX_FIELD : indexFieldName;
+    return indexFieldName == null || indexFieldName.isBlank()
+        ? DEFAULT_INDEX_FIELD
+        : indexFieldName;
   }
 
   // -- accessors -----------------------------------------------------------

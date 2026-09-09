@@ -55,8 +55,8 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       handleBasket(values);
       ch.so.agi.hop.interlis.core.io.InterlisObjectOperation operation =
           ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.NONE;
-      if (data.operationFieldIndex >= 0) {
-        Object operationValue = row[data.operationFieldIndex];
+      if (data.bindings.operation().present()) {
+        Object operationValue = data.bindings.operation().read(row);
         if (operationValue != null && !operationValue.toString().isBlank()) {
           operation =
               ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.valueOf(
@@ -65,8 +65,8 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       }
       RowWriteOptions writeOptions = new RowWriteOptions(true, data.currentBid, operation);
       RowToIomMapper.InterlisWriteResult result;
-      if (data.sourceObjectFieldIndex >= 0 && !writeOptions.isDelete()) {
-        Object carrier = row[data.sourceObjectFieldIndex];
+      if (data.bindings.carrier().present() && !writeOptions.isDelete()) {
+        Object carrier = data.bindings.carrier().read(row);
         if (carrier == null) {
           throw new HopException(
               "Source object field <"
@@ -87,7 +87,7 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
         result = data.mapper.mapAll(values, data.plan, writeOptions);
       }
       for (IomObject object : result.allObjects()) {
-        if (data.operationFieldIndex >= 0
+        if (data.bindings.operation().present()
             && object == result.object()
             && operation != ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.NONE) {
           object.setobjectoperation(operation.toIom());
@@ -132,23 +132,6 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       data.plan = data.projection.plan();
       data.mapper = new RowToIomMapper();
       data.bindings = InterlisOutputBindings.bind(getInputRowMeta(), data.plan, meta, this);
-
-      String sourceObjectField =
-          resolve(meta.getSourceObjectField() == null ? "" : meta.getSourceObjectField());
-      data.sourceObjectFieldIndex =
-          sourceObjectField.isBlank() ? -1 : getInputRowMeta().indexOfValue(sourceObjectField);
-      if (!sourceObjectField.isBlank() && data.sourceObjectFieldIndex < 0) {
-        throw new HopException(
-            "Source object field <" + sourceObjectField + "> not found in the input");
-      }
-
-      String operationField =
-          resolve(meta.getOperationField() == null ? "" : meta.getOperationField());
-      data.operationFieldIndex =
-          operationField.isBlank() ? -1 : getInputRowMeta().indexOfValue(operationField);
-      if (!operationField.isBlank() && data.operationFieldIndex < 0) {
-        throw new HopException("Operation field <" + operationField + "> not found in the input");
-      }
 
       data.writer =
           XtfTransferWriter.open(

@@ -8,16 +8,12 @@ import org.apache.hop.pipeline.transform.BaseTransformData;
 
 /** Runtime state of the {@link InterlisRowToObject} transform. */
 public class InterlisRowToObjectData extends BaseTransformData {
-  public int sourceObjectIndex = -1;
-  public int operationIndex = -1;
-  public int[] basketMetadataIndexes;
+  InterlisRowToObjectBindings bindings;
 
   boolean initialized;
   InterlisProjectionResult projection;
   InterlisRowMappingPlan plan;
   RowToIomMapper mapper;
-  int[] inputIndexes;
-  int basketIdFieldIndex;
   IRowMeta outputRowMeta;
   java.util.Iterator<Object[]> pendingRows;
   long rowsMapped;

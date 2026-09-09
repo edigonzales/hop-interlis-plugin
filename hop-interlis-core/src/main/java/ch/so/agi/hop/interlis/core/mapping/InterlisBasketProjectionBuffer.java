@@ -51,12 +51,29 @@ public final class InterlisBasketProjectionBuffer<T> {
     links = new HashMap<>();
     bid = null;
     started = false;
+    var resolvedRoles = plan.linkResolvedRoles();
     return new Batch<>(
         batchRows,
         (tid, role) -> {
-          var association = plan.linkResolvedRoles().get(role);
+          var association = resolvedRoles.get(role);
           return association == null ? null : batchLinks.get(key(tid, association.scopedName()));
         });
+  }
+
+  /** Discard the current basket and its allocated capacity without emitting rows. */
+  public void clear() {
+    rows = new ArrayList<>();
+    links = new HashMap<>();
+    bid = null;
+    started = false;
+  }
+
+  int bufferedRowCount() {
+    return rows.size();
+  }
+
+  int bufferedLinkCount() {
+    return links.size();
   }
 
   private static String key(String tid, String association) {

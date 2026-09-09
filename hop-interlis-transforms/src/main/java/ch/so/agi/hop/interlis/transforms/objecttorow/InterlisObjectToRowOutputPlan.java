@@ -21,7 +21,9 @@ public record InterlisObjectToRowOutputPlan(
         targets[i] = i;
         continue;
       }
-      int existing = output.indexOfValue(value.getName());
+      int existing =
+          ch.so.agi.hop.interlis.transforms.mapping.InterlisFieldBinding.find(
+              output, value.getName(), "INTERLIS Object to Row append");
       if (existing >= 0) {
         boolean identity =
             switch (field.source()) {

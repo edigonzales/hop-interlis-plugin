@@ -49,6 +49,8 @@ public class InterlisObjectToRow
         return true;
       }
 
+      data.pendingOutput = null;
+
       Object[] row = getRow();
       if (row == null) {
         if (data.initialized) {
@@ -57,6 +59,7 @@ public class InterlisObjectToRow
             continue;
           }
         }
+        clearBufferedRows();
         setOutputDone();
         if (isBasic()) {
           logBasic("Finished mapping " + data.rowsMapped + " rows of " + meta.getClassName());
@@ -167,5 +170,17 @@ public class InterlisObjectToRow
       return List.of();
     }
     return InterlisModelSourceSupport.parseModelDirectories(resolved);
+  }
+
+  @Override
+  public void dispose() {
+    clearBufferedRows();
+    super.dispose();
+  }
+
+  private void clearBufferedRows() {
+    if (data.basketBuffer != null) data.basketBuffer.clear();
+    data.basketBuffer = null;
+    data.pendingOutput = null;
   }
 }

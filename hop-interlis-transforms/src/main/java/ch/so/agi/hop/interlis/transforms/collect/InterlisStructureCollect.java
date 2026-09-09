@@ -61,7 +61,7 @@ public class InterlisStructureCollect
       }
       data.pendingParentRow = parentRow;
       bindParentRowMeta();
-      String parentKey = key(data.pendingParentRow[data.parentKeyFieldIndex]);
+      String parentKey = key(data.parentBindings.key().read(data.pendingParentRow));
       if (data.lastParentKey != null && parentKey.compareTo(data.lastParentKey) < 0) {
         throw new HopException(
             "Parent stream of INTERLIS Structure Collect must be sorted by parent key <"
@@ -76,9 +76,9 @@ public class InterlisStructureCollect
 
     try {
       List<StructureChild> children =
-          collectChildrenFor(key(data.pendingParentRow[data.parentKeyFieldIndex]));
+          collectChildrenFor(key(data.parentBindings.key().read(data.pendingParentRow)));
 
-      Object carrier = data.pendingParentRow[data.sourceObjectFieldIndex];
+      Object carrier = data.parentBindings.carrier().read(data.pendingParentRow);
       if (carrier == null) {
         throw new HopException(
             "Source object field <"
@@ -100,9 +100,9 @@ public class InterlisStructureCollect
           data.collector.collect(carrierObject, children, data.plan, collectOptions());
 
       Object[] outputRow = data.pendingParentRow.clone();
-      outputRow[data.sourceObjectFieldIndex] = updated;
+      outputRow[data.parentBindings.carrier().sourceIndex()] = updated;
       data.pendingParentRow = null;
-      putRow(data.parentRowSet.getRowMeta(), outputRow);
+      putRow(data.outputRowMeta, outputRow);
       return true;
     } catch (HopException e) {
       throw e;
@@ -144,7 +144,7 @@ public class InterlisStructureCollect
       }
       bindChildRowMeta();
 
-      String childKey = key(childRow[data.childParentKeyFieldIndex]);
+      String childKey = key(data.childBindings.key().read(childRow));
       int comparison = childKey.compareTo(parentKey);
       if (comparison < 0) {
         // The child's parent never appeared (streams are sorted ascending).
@@ -190,7 +190,7 @@ public class InterlisStructureCollect
       // BAG: the index is purely technical; use the stream position.
       return 0;
     }
-    Object indexValue = childRow[data.childIndexFieldIndex];
+    Object indexValue = data.childBindings.index().read(childRow);
     if (indexValue == null) {
       throw new HopException(
           "Child row for parent "
@@ -209,13 +209,8 @@ public class InterlisStructureCollect
     return number.longValue();
   }
 
-  private Object[] childValues(Object[] childRow) {
-    Object[] values = new Object[data.plan.childFields().size()];
-    for (int i = 0; i < data.childFieldIndexes.length; i++) {
-      int inputIndex = data.childFieldIndexes[i];
-      values[i] = inputIndex >= 0 ? childRow[inputIndex] : null;
-    }
-    return values;
+  private Object[] childValues(Object[] childRow) throws HopException {
+    return data.childBindings.values().values(childRow);
   }
 
   private void handleRemainingChildren() throws HopException {
@@ -228,7 +223,7 @@ public class InterlisStructureCollect
     long skipped = 0;
     while (childRow != null && !isStopped()) {
       bindChildRowMeta();
-      String childKey = key(childRow[data.childParentKeyFieldIndex]);
+      String childKey = key(data.childBindings.key().read(childRow));
       if (meta.isFailOnChildWithoutParent()) {
         throw new HopException(
             "Child row with parent key "
@@ -262,20 +257,8 @@ public class InterlisStructureCollect
     if (parentRowMeta == null) {
       throw new HopException("Parent stream of INTERLIS Structure Collect has no row metadata");
     }
-    data.parentKeyFieldIndex = parentRowMeta.indexOfValue(res(meta.getParentKeyField()));
-    if (data.parentKeyFieldIndex < 0) {
-      throw new HopException(
-          "Parent key field <"
-              + res(meta.getParentKeyField())
-              + "> not found in the parent stream");
-    }
-    data.sourceObjectFieldIndex = parentRowMeta.indexOfValue(res(meta.getSourceObjectField()));
-    if (data.sourceObjectFieldIndex < 0) {
-      throw new HopException(
-          "Source object field <"
-              + res(meta.getSourceObjectField())
-              + "> not found in the parent stream");
-    }
+    data.parentBindings = InterlisStructureCollectBindings.parent(parentRowMeta, meta, this);
+    data.outputRowMeta = data.parentBindings.output();
     data.parentBound = true;
   }
 
@@ -291,33 +274,8 @@ public class InterlisStructureCollect
     if (childRowMeta == null) {
       throw new HopException("Child stream of INTERLIS Structure Collect has no row metadata");
     }
-    data.childParentKeyFieldIndex = childRowMeta.indexOfValue(res(meta.getChildParentKeyField()));
-    if (data.childParentKeyFieldIndex < 0) {
-      throw new HopException(
-          "Child parent key field <"
-              + res(meta.getChildParentKeyField())
-              + "> not found in the child stream");
-    }
-    data.childIndexFieldIndex = childRowMeta.indexOfValue(res(meta.getChildIndexField()));
-    if (data.plan.ordered() && data.childIndexFieldIndex < 0) {
-      throw new HopException(
-          "Child index field <"
-              + res(meta.getChildIndexField())
-              + "> not found in the child stream");
-    }
-
-    data.childFieldIndexes = new int[data.plan.childFields().size()];
-    for (int i = 0; i < data.plan.childFields().size(); i++) {
-      String fieldName = data.plan.childFields().get(i).hopFieldName();
-      data.childFieldIndexes[i] = childRowMeta.indexOfValue(fieldName);
-      if (data.childFieldIndexes[i] < 0) {
-        throw new HopException(
-            "Child stream is missing field <"
-                + fieldName
-                + "> of structure "
-                + data.plan.structure().scopedName());
-      }
-    }
+    data.childBindings =
+        InterlisStructureCollectBindings.child(childRowMeta, data.plan, meta, this);
     data.childBound = true;
   }
 

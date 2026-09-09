@@ -165,6 +165,10 @@ run_pipeline "$PROJECT_DIR/e2e/pipelines/25-p2-header-reordered.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/26-p2-carrier.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/27-p2-incomplete-event.hpl" 1 "END_TRANSFER required"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/28-p2-invalid-operation.hpl" 1 "Invalid _ili_operation"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/29-binding-structures.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/30-binding-join.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/31-binding-missing-field.hpl" 1 "missing_parent_field"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/32-binding-key-type.hpl" 1 "expected String, actual Integer"
 if [[ "$RUN_GPKG" == "true" ]]; then
   run_pipeline "$PROJECT_DIR/e2e/pipelines/04-interlis-to-gpkg.hpl"
 fi

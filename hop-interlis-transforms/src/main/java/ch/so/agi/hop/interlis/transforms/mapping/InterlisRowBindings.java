@@ -1,51 +1,43 @@
 package ch.so.agi.hop.interlis.transforms.mapping;
 
-import ch.so.agi.hop.interlis.core.mapping.InterlisFieldPlan;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowMappingPlan;
+import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hop.core.exception.HopTransformException;
 import org.apache.hop.core.row.IRowMeta;
 
-/**
- * Binds an incoming Hop row to the field order of a {@link InterlisRowMappingPlan}.
- *
- * <p>The binding is computed once per transform initialization; the runtime mapper then works with
- * plan-ordered value arrays without any per-row name lookups.
- */
+/** A plan-ordered collection of immutable field bindings. No per-row schema lookups. */
 public final class InterlisRowBindings {
+  private final List<InterlisFieldBinding> fields;
 
-  private InterlisRowBindings() {}
-
-  /**
-   * Computes the input index for every plan field.
-   *
-   * @param inputRowMeta incoming row structure
-   * @param plan the projection the values are mapped back with
-   * @return input index per plan field, in plan field order
-   * @throws HopTransformException if a required plan field is missing from the input
-   */
-  public static int[] bind(IRowMeta inputRowMeta, InterlisRowMappingPlan plan)
-      throws HopTransformException {
-    int[] inputIndexes = new int[plan.fieldCount()];
-    for (InterlisFieldPlan field : plan.fields()) {
-      int index = inputRowMeta.indexOfValue(field.hopFieldName());
-      if (index < 0) {
-        throw new HopTransformException(
-            "Incoming row is missing field <"
-                + field.hopFieldName()
-                + "> required by "
-                + plan.root().scopedName());
-      }
-      inputIndexes[field.outputIndex()] = index;
-    }
-    return inputIndexes;
+  public InterlisRowBindings(List<InterlisFieldBinding> fields) {
+    this.fields = List.copyOf(fields);
+    for (int i = 0; i < fields.size(); i++)
+      if (fields.get(i).targetIndex() != i)
+        throw new IllegalArgumentException("Bindings must be in target order");
   }
 
-  /** Converts an incoming row to plan-ordered values. */
-  public static Object[] values(Object[] row, int[] inputIndexes) {
-    Object[] values = new Object[inputIndexes.length];
-    for (int i = 0; i < inputIndexes.length; i++) {
-      values[i] = inputIndexes[i] < 0 ? null : row[inputIndexes[i]];
-    }
+  public static InterlisRowBindings bind(IRowMeta input, InterlisRowMappingPlan plan)
+      throws HopTransformException {
+    var fields = new ArrayList<InterlisFieldBinding>();
+    var factory = new HopRowSchemaFactory();
+    for (var field : plan.fields())
+      fields.add(
+          InterlisFieldBinding.bind(
+              input,
+              plan.root().scopedName(),
+              field.hopFieldName(),
+              field.hopFieldName(),
+              field.outputIndex(),
+              factory.createValueMeta(field),
+              true));
+    return new InterlisRowBindings(fields);
+  }
+
+  public Object[] values(Object[] row) throws HopTransformException {
+    Object[] values = new Object[fields.size()];
+    for (var field : fields) values[field.targetIndex()] = field.read(row);
     return values;
   }
 }

@@ -1754,3 +1754,22 @@ Paket-E2E 25–28 prüfen umgeordnete Envelope-Felder mit Header-Erhalt, Rückpr
 mit Carrier/BAG/XYZ, fehlendes END_TRANSFER und eine ungültige Operation. Die
 Fehlerfälle müssen Exit-Code 1 und die erwartete konkrete Diagnose liefern.
 Die P1-E2E-Prüfungen bleiben Bestandteil der Suite.
+
+## Feldbindungs- und Pufferspeichertests
+
+Gemeinsame Bindungsregressionen prüfen falsche Typen, doppelte Namen, konfigurierte
+Namen/Variablen, fehlende Felder, Konstanten, null sowie Lazy Conversion und
+indexierte Werte. Pipeline-Tests vergleichen Designzeit-/Runtime-Schemata und
+Werte von Explode, Collect und Role Join. Die früher akzeptierten numerischen
+Schlüssel werden ausdrücklich als Fehler geprüft.
+
+Deterministische Pufferprüfungen decken Link-only-Baskets, unabhängige Batches,
+Kontextobjekte, grosse Baskets und Wiederverwendung nach `clear()` ab. Ein separater
+Java-Prozess verarbeitet mindestens 512 MiB Nutzdaten unter `-Xmx128m`, mit rund
+2 MiB Nutzdaten pro Basket; Anzahl und Prüfsumme müssen stimmen. Der Test verwendet
+keine GC-Timing-Assertions. Pipeline-Tests mit kleinen Rowsets und langsamem
+Verbraucher prüfen Erfolg, Mappingfehler, Abbruch und idempotentes Aufräumen.
+
+Paket-E2E 29–32 prüfen umgeordnete Explode-/Collect- und Join-Streams sowie fehlende
+konfigurierte Felder und falsche Schlüsseltypen. Die Fehlerfälle verlangen Exit 1
+und eine konkrete Bindungsdiagnose. Alle bisherigen Paket-Pipelines bleiben aktiv.

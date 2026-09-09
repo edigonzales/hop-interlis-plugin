@@ -2,7 +2,6 @@ package ch.so.agi.hop.interlis.transforms.rolejoin;
 
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.util.LinkedHashMap;
-import java.util.List;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.core.row.RowMeta;
@@ -14,8 +13,8 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 /**
  * INTERLIS Role Join: appends the fields of a role's target class to the main stream.
  *
- * <p>Both streams are read through explicit input rowsets. The lookup stream is loaded into
- * memory once (bounded by {@code maxLookupRows}); the join itself is a plain TID lookup on the
+ * <p>Both streams are read through explicit input rowsets. The lookup stream is loaded into memory
+ * once (bounded by {@code maxLookupRows}); the join itself is a plain TID lookup on the
  * model-derived reference field. Missing targets are null fields or an error for mandatory roles,
  * depending on {@code failOnMissingMandatoryReference}.
  */
@@ -53,15 +52,8 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
     bindMainRowMeta();
     bindLookupRowMeta();
 
-    String reference = null;
-    if (data.mainReferenceFieldIndex >= 0) {
-      Object referenceValue = mainRow[data.mainReferenceFieldIndex];
-      reference = referenceValue == null ? null : referenceValue.toString().trim();
-      if (reference != null && reference.isEmpty()) {
-        reference = null;
-      }
-    }
-
+    Object referenceValue = data.mainBindings.reference().read(mainRow);
+    String reference = referenceValue == null ? null : referenceValue.toString().trim();
 
     Object[] lookupRow = reference == null ? null : data.lookupByTid.get(reference);
 
@@ -84,11 +76,8 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
 
     Object[] outputRow = new Object[data.outputRowMeta.size()];
     System.arraycopy(mainRow, 0, outputRow, 0, mainRow.length);
-    for (int i = 0; i < data.lookupFieldIndexes.length; i++) {
-      int inputIndex = data.lookupFieldIndexes[i];
-      outputRow[mainRow.length + i] = lookupRow == null || inputIndex < 0 ? null : lookupRow[inputIndex];
-    }
-
+    if (lookupRow != null)
+      System.arraycopy(lookupRow, 0, outputRow, mainRow.length, lookupRow.length);
 
     putRow(data.outputRowMeta, outputRow);
     if (checkFeedback(getLinesWritten()) && isBasic()) {
@@ -159,15 +148,17 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
         if (!data.lookupBound) {
           bindLookupRowMeta();
         }
-        Object tidValue = lookupRow[data.lookupTidFieldIndex];
+        Object tidValue = data.lookupBindings.tid().read(lookupRow);
         String tid = tidValue == null ? null : tidValue.toString().trim();
         if (tid != null && !tid.isEmpty()) {
           if (data.lookupByTid.containsKey(tid) && meta.isFailOnDuplicateTid()) {
             throw new HopException(
-                "Duplicate lookup TID <" + tid + "> in the lookup stream of role "
+                "Duplicate lookup TID <"
+                    + tid
+                    + "> in the lookup stream of role "
                     + data.probe.role().name());
           }
-          data.lookupByTid.putIfAbsent(tid, lookupRow);
+          data.lookupByTid.putIfAbsent(tid, data.lookupBindings.fields().values(lookupRow));
         }
         count++;
       }
@@ -186,31 +177,8 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
     if (mainRowMeta == null) {
       throw new HopException("Main stream of INTERLIS Role Join has no row metadata");
     }
-    data.outputRowMeta = new RowMeta();
-    data.outputRowMeta.addRowMeta(mainRowMeta);
-    String referenceField = meta.resolvedMainReferenceField(data.probe);
-    data.mainReferenceFieldIndex = mainRowMeta.indexOfValue(referenceField);
-    if (data.mainReferenceFieldIndex < 0) {
-      throw new HopException(
-          "Main reference field <" + referenceField + "> not found in the main stream");
-    }
-    for (String lookupField : meta.effectiveLookupFields(data.probe)) {
-      var valueMeta =
-          new ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory()
-              .createValueMeta(
-                  new ch.so.agi.hop.interlis.core.mapping.InterlisFieldPlan(
-                      0,
-                      meta.resolvedPrefix(data.probe) + lookupField,
-                      ch.so.agi.hop.interlis.core.mapping.InterlisFieldSource.PRIMITIVE_ATTRIBUTE,
-                      ch.so.agi.hop.interlis.core.mapping.InterlisPropertyPath.root(lookupField),
-                      data.probe.target().attributes().stream()
-                          .filter(a -> a.name().equals(lookupField))
-                          .findFirst()
-                          .orElse(null),
-                      null,
-                      null));
-      data.outputRowMeta.addValueMeta(valueMeta);
-    }
+    data.mainBindings = InterlisRoleJoinBindings.main(mainRowMeta, data.probe, meta, this);
+    data.outputRowMeta = data.mainBindings.output();
     data.mainBound = true;
   }
 
@@ -222,19 +190,7 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
     if (lookupRowMeta == null) {
       throw new HopException("Lookup stream of INTERLIS Role Join has no row metadata");
     }
-    data.lookupTidFieldIndex = lookupRowMeta.indexOfValue(resolve(meta.getLookupTidField()));
-    if (data.lookupTidFieldIndex < 0) {
-      throw new HopException(
-          "Lookup TID field <"
-              + resolve(meta.getLookupTidField())
-              + "> not found in the lookup stream");
-    }
-    List<String> fields = meta.effectiveLookupFields(data.probe);
-    data.lookupFieldNames = fields.toArray(new String[0]);
-    data.lookupFieldIndexes = new int[fields.size()];
-    for (int i = 0; i < fields.size(); i++) {
-      data.lookupFieldIndexes[i] = lookupRowMeta.indexOfValue(fields.get(i));
-    }
+    data.lookupBindings = InterlisRoleJoinBindings.lookup(lookupRowMeta, data.probe, meta, this);
     data.lookupBound = true;
   }
 

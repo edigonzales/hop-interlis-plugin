@@ -4,13 +4,11 @@ import ch.interlis.iom.IomObject;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureExploder;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionService;
-import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
-import org.apache.hop.core.row.IRowMeta;
-import org.apache.hop.core.row.RowMeta;
 import org.apache.hop.pipeline.Pipeline;
 import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.pipeline.transform.BaseTransform;
@@ -20,9 +18,9 @@ import org.apache.hop.pipeline.transform.TransformMeta;
  * INTERLIS Structure Explode: emits one child row per element of a multi-valued structure
  * attribute.
  *
- * <p>The structure content is read from the technical source-object carrier field kept by
- * INTERLIS Input. Each parent row produces 0..n child rows; a pending iterator in the data keeps
- * the transform streaming (one row per {@code processRow()} call).
+ * <p>The structure content is read from the technical source-object carrier field kept by INTERLIS
+ * Input. Each parent row produces 0..n child rows; a pending iterator in the data keeps the
+ * transform streaming (one row per {@code processRow()} call).
  */
 public class InterlisStructureExplode
     extends BaseTransform<InterlisStructureExplodeMeta, InterlisStructureExplodeData> {
@@ -68,14 +66,15 @@ public class InterlisStructureExplode
   }
 
   private List<Object[]> explode(Object[] parentRow) throws HopException {
-    Object carrier = parentRow[data.sourceObjectFieldIndex];
+    Object carrier = data.bindings.carrier().read(parentRow);
     if (carrier == null) {
       throw new HopException(
           "Source object field <"
               + res(meta.getSourceObjectField())
               + "> is null for parent row "
               + parentKey(parentRow)
-              + "; INTERLIS Input must be configured with \"Keep source object for Structure Explode\"");
+              + "; INTERLIS Input must be configured with \"Keep source object for Structure"
+              + " Explode\"");
     }
     if (!(carrier instanceof IomObject sourceObject)) {
       throw new HopException(
@@ -108,12 +107,12 @@ public class InterlisStructureExplode
     return rows;
   }
 
-  private Object[] buildChildRow(
-      Object[] parentRow, InterlisStructureExploder.ExplodedChild child) {
+  private Object[] buildChildRow(Object[] parentRow, InterlisStructureExploder.ExplodedChild child)
+      throws HopException {
     List<Object> values = new ArrayList<>();
-    values.add(parentRow[data.parentTidFieldIndex]);
+    values.add(data.bindings.tid().read(parentRow));
     if (meta.isEmitParentBid()) {
-      values.add(data.parentBidFieldIndex >= 0 ? parentRow[data.parentBidFieldIndex] : null);
+      values.add(data.bindings.bid().read(parentRow));
     }
     if (data.plan.ordered() || meta.isEmitIndexForBag()) {
       values.add((long) child.index());
@@ -121,14 +120,14 @@ public class InterlisStructureExplode
     for (Object childValue : child.values()) {
       values.add(childValue);
     }
-    for (int parentFieldIndex : data.parentFieldIndexes) {
-      values.add(parentRow[parentFieldIndex]);
+    for (var field : data.bindings.parentFields()) {
+      values.add(parentRow[field.sourceIndex()]);
     }
     return values.toArray();
   }
 
-  private String parentKey(Object[] parentRow) {
-    Object key = parentRow[data.parentTidFieldIndex];
+  private String parentKey(Object[] parentRow) throws HopException {
+    Object key = data.bindings.tid().read(parentRow);
     return key == null ? "<null>" : key.toString();
   }
 
@@ -139,49 +138,16 @@ public class InterlisStructureExplode
       data.projection =
           new InterlisStructureProjectionService()
               .project(
-                  new InterlisModelRequest(
-                      null, resolveModelNames(), resolveModelDirectories()),
+                  new InterlisModelRequest(null, resolveModelNames(), resolveModelDirectories()),
                   res(meta.getClassName()),
                   res(meta.getStructureAttributePath()),
                   meta.projectionOptions());
       data.plan = data.projection.plan();
       data.exploder = new InterlisStructureExploder();
 
-      IRowMeta inputRowMeta = getInputRowMeta();
-      data.sourceObjectFieldIndex =
-          inputRowMeta.indexOfValue(res(meta.getSourceObjectField()));
-      if (data.sourceObjectFieldIndex < 0) {
-        throw new HopException(
-            "Source object field <"
-                + res(meta.getSourceObjectField())
-                + "> not found in the input row");
-      }
-      data.parentTidFieldIndex = inputRowMeta.indexOfValue(res(meta.getParentTidField()));
-      if (data.parentTidFieldIndex < 0) {
-        throw new HopException(
-            "Parent TID field <" + res(meta.getParentTidField()) + "> not found in the input row");
-      }
-      if (meta.isEmitParentBid()) {
-        String parentBidField = res(meta.getParentBidField());
-        data.parentBidFieldIndex =
-            parentBidField.isBlank() ? -1 : inputRowMeta.indexOfValue(parentBidField);
-      } else {
-        data.parentBidFieldIndex = -1;
-      }
-
-      List<Integer> parentFieldIndexes = new ArrayList<>();
-      for (String parentFieldName : meta.getIncludeParentFields() == null
-          ? List.<String>of()
-          : meta.getIncludeParentFields()) {
-        int index = inputRowMeta.indexOfValue(res(parentFieldName));
-        if (index >= 0) {
-          parentFieldIndexes.add(index);
-        }
-      }
-      data.parentFieldIndexes =
-          parentFieldIndexes.stream().mapToInt(Integer::intValue).toArray();
-
-      data.outputRowMeta = buildOutputRowMeta(inputRowMeta);
+      data.bindings =
+          InterlisStructureExplodeBindings.bind(getInputRowMeta(), data.plan, meta, this);
+      data.outputRowMeta = data.bindings.output();
 
       if (isBasic()) {
         logBasic(
@@ -199,35 +165,9 @@ public class InterlisStructureExplode
     } catch (HopException e) {
       throw e;
     } catch (Exception e) {
-      throw new HopException("Failed to initialize INTERLIS Structure Explode: " + e.getMessage(), e);
+      throw new HopException(
+          "Failed to initialize INTERLIS Structure Explode: " + e.getMessage(), e);
     }
-  }
-
-  private IRowMeta buildOutputRowMeta(IRowMeta inputRowMeta) throws Exception {
-    RowMeta outputRowMeta = new RowMeta();
-    outputRowMeta.addValueMeta(
-        new org.apache.hop.core.row.value.ValueMetaString(meta.resolvedParentKeyFieldName()));
-    if (meta.isEmitParentBid()) {
-      outputRowMeta.addValueMeta(
-          new org.apache.hop.core.row.value.ValueMetaString(meta.resolvedParentBidKeyFieldName()));
-    }
-    if (data.plan.ordered() || meta.isEmitIndexForBag()) {
-      outputRowMeta.addValueMeta(
-          new org.apache.hop.core.row.value.ValueMetaInteger(meta.resolvedIndexFieldName()));
-    }
-    var schemaFactory = new ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory();
-    for (var field : data.plan.childFields()) {
-      outputRowMeta.addValueMeta(schemaFactory.createValueMeta(field));
-    }
-    for (String parentFieldName : meta.getIncludeParentFields() == null
-        ? List.<String>of()
-        : meta.getIncludeParentFields()) {
-      var parentField = inputRowMeta.searchValueMeta(res(parentFieldName));
-      if (parentField != null) {
-        outputRowMeta.addValueMeta(parentField.clone());
-      }
-    }
-    return outputRowMeta;
   }
 
   private List<String> resolveModelNames() {

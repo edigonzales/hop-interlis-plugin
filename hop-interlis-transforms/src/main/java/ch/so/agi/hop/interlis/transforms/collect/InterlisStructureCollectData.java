@@ -8,7 +8,10 @@ import org.apache.hop.pipeline.transform.BaseTransformData;
 
 /** Runtime state of the {@link InterlisStructureCollect} transform. */
 public class InterlisStructureCollectData extends BaseTransformData {
+  InterlisStructureCollectBindings.Parent parentBindings;
+  InterlisStructureCollectBindings.Child childBindings;
 
+  org.apache.hop.core.row.IRowMeta outputRowMeta;
   boolean initialized;
   boolean parentBound;
   boolean childBound;
@@ -19,11 +22,6 @@ public class InterlisStructureCollectData extends BaseTransformData {
   IRowSet childRowSet;
   Object[] pendingParentRow;
   Object[] pendingChildRow;
-  int parentKeyFieldIndex;
-  int sourceObjectFieldIndex;
-  int childParentKeyFieldIndex;
-  int childIndexFieldIndex;
-  int[] childFieldIndexes;
   boolean childStreamExhausted;
   String lastParentKey;
 }

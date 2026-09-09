@@ -339,3 +339,14 @@ for attribute in ["Location", "Axis", "Face", "Axes", "Faces"]:
              for c in carrier.findall(f"m:{attribute}//g:coord", ns)]
     assert before == after, f"P2 carrier changed XYZ in {attribute}"
 print("  P2: reordered envelope, header semantics, carrier BAG/XYZ and expected technical failures verified")
+
+# Shared bindings: reordered structure streams and model-typed join output.
+with (output_dir / "binding-structures.csv").open(newline="", encoding="utf-8") as f:
+    rows = [[value.strip() for value in row] for row in csv.reader(f, delimiter=";")]
+assert rows == [["_ili_parent_tid", "Code", "Name"], ["i0", "keep-child", "before0"]], rows
+with (output_dir / "binding-join.csv").open(newline="", encoding="utf-8") as f:
+    rows = [[value.strip() for value in row] for row in csv.reader(f, delimiter=";")]
+assert rows == [["Name", "reference", "_ili_tid", "Address_Street"],
+                ["Meier", "a1", "p1", "Main Street"],
+                ["Mueller", "", "p2", ""], ["Keller", "", "p3", ""]], rows
+print("  Bindings: reordered Explode/Collect and Role Join values plus expected binding failures verified")

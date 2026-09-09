@@ -16,8 +16,8 @@ import org.apache.hop.pipeline.transform.BaseTransformMeta;
 import org.apache.hop.pipeline.transform.TransformMeta;
 
 /**
- * Metadata of the INTERLIS Role Join transform: joins the fields of a role's target class onto
- * the main stream, driven by the model (role, target class, key fields).
+ * Metadata of the INTERLIS Role Join transform: joins the fields of a role's target class onto the
+ * main stream, driven by the model (role, target class, key fields).
  */
 @Transform(
     id = "INTERLIS_ROLE_JOIN",
@@ -108,7 +108,10 @@ public class InterlisRoleJoinMeta
             .orElseThrow(
                 () ->
                     new InterlisMappingException(
-                        "Role " + role + " not found on class " + mainClass
+                        "Role "
+                            + role
+                            + " not found on class "
+                            + mainClass
                             + "; available roles: "
                             + classDescriptor.roles().stream()
                                 .map(InterlisRoleDescriptor::name)
@@ -119,8 +122,12 @@ public class InterlisRoleJoinMeta
             .orElseThrow(
                 () ->
                     new InterlisModelException(
-                        "Target class " + roleDescriptor.targetClassScopedName()
-                            + " of role " + role + " was not found in models " + modelNames));
+                        "Target class "
+                            + roleDescriptor.targetClassScopedName()
+                            + " of role "
+                            + role
+                            + " was not found in models "
+                            + modelNames));
     return new InterlisRoleJoinProbeResult(model, schema, classDescriptor, roleDescriptor, target);
   }
 
@@ -137,33 +144,9 @@ public class InterlisRoleJoinMeta
     try {
       ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport.initialize();
       InterlisRoleJoinProbeResult result = probeRole(variables);
-      String resolvedPrefix = resolvedPrefix(result);
-      for (String lookupField : effectiveLookupFields(result)) {
-        var field =
-            result.target().attributes().stream()
-                .filter(a -> a.name().equals(lookupField))
-                .findFirst()
-                .orElse(null);
-        if (field == null) {
-          continue;
-        }
-        var valueMeta =
-            new ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory()
-                .createValueMeta(
-                    new ch.so.agi.hop.interlis.core.mapping.InterlisFieldPlan(
-                        0,
-                        resolvedPrefix + field.name(),
-                        field.kind().isGeometry()
-                            ? ch.so.agi.hop.interlis.core.mapping.InterlisFieldSource
-                                .GEOMETRY_ATTRIBUTE
-                            : ch.so.agi.hop.interlis.core.mapping.InterlisFieldSource
-                                .PRIMITIVE_ATTRIBUTE,
-                        ch.so.agi.hop.interlis.core.mapping.InterlisPropertyPath.root(field.name()),
-                        field,
-                        null,
-                        null));
-        rowMeta.addValueMeta(valueMeta);
-      }
+      var output = InterlisRoleJoinBindings.output(rowMeta, result, this, variables);
+      rowMeta.clear();
+      rowMeta.addRowMeta(output);
     } catch (Exception e) {
       if (isDebug()) {
         logDebug("Unable to probe INTERLIS role for design-time metadata: " + e.getMessage());
@@ -200,6 +183,24 @@ public class InterlisRoleJoinMeta
     }
     try {
       InterlisRoleJoinProbeResult result = probeRole(variables);
+      var main =
+          ch.so.agi.hop.interlis.transforms.mapping.InterlisInputSchemaSupport.available(
+              pipelineMeta,
+              mainInputTransform,
+              variables,
+              "Role Join main",
+              remarks,
+              transformMeta);
+      var lookup =
+          ch.so.agi.hop.interlis.transforms.mapping.InterlisInputSchemaSupport.available(
+              pipelineMeta,
+              lookupInputTransform,
+              variables,
+              "Role Join lookup",
+              remarks,
+              transformMeta);
+      if (main != null) InterlisRoleJoinBindings.main(main, result, this, variables);
+      if (lookup != null) InterlisRoleJoinBindings.lookup(lookup, result, this, variables);
       remarks.add(
           new org.apache.hop.core.CheckResult(
               org.apache.hop.core.ICheckResult.TYPE_RESULT_OK,
@@ -225,9 +226,7 @@ public class InterlisRoleJoinMeta
     if (lookupFields != null && !lookupFields.isEmpty()) {
       return List.copyOf(lookupFields);
     }
-    return result.target().attributes().stream()
-        .map(a -> a.name())
-        .toList();
+    return result.target().attributes().stream().map(a -> a.name()).toList();
   }
 
   public String resolvedPrefix(InterlisRoleJoinProbeResult result) {

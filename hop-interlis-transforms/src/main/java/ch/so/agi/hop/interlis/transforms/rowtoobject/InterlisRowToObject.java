@@ -10,7 +10,6 @@ import ch.so.agi.hop.interlis.core.mapping.RowWriteOptions;
 import ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
-import ch.so.agi.hop.interlis.transforms.mapping.InterlisRowBindings;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.pipeline.Pipeline;
@@ -60,10 +59,9 @@ public class InterlisRowToObject
     }
 
     try {
-      Object[] values = InterlisRowBindings.values(row, data.inputIndexes);
-      IomObject carrier =
-          data.sourceObjectIndex < 0 ? null : (IomObject) row[data.sourceObjectIndex];
-      Object operationValue = data.operationIndex < 0 ? null : row[data.operationIndex];
+      Object[] values = data.bindings.values().values(row);
+      IomObject carrier = (IomObject) data.bindings.source().read(row);
+      Object operationValue = data.bindings.operation().read(row);
       InterlisObjectOperation operation;
       try {
         operation =
@@ -77,14 +75,12 @@ public class InterlisRowToObject
       }
       var writeOptions = new RowWriteOptions(true, null, operation);
       RowToIomMapper.InterlisWriteResult result =
-          data.sourceObjectIndex < 0
+          !data.bindings.source().present()
               ? data.mapper.mapAll(values, data.plan, writeOptions)
               : data.mapper.mapAll(carrier, values, data.plan, writeOptions);
 
-      String basketId =
-          data.basketIdFieldIndex >= 0 && row[data.basketIdFieldIndex] != null
-              ? row[data.basketIdFieldIndex].toString().trim()
-              : null;
+      Object basketValue = data.bindings.basket().read(row);
+      String basketId = basketValue == null ? null : basketValue.toString().trim();
       if (basketId != null && basketId.isEmpty()) {
         basketId = null;
       }
@@ -148,12 +144,7 @@ public class InterlisRowToObject
                   meta.projectionOptions());
       data.plan = data.projection.plan();
       data.mapper = new RowToIomMapper();
-      var bindings = InterlisRowToObjectBindings.bind(getInputRowMeta(), data.plan, meta, this);
-      data.inputIndexes = bindings.values();
-      data.basketIdFieldIndex = bindings.basket();
-      data.sourceObjectIndex = bindings.source();
-      data.operationIndex = bindings.operation();
-      data.basketMetadataIndexes = bindings.basketMetadata();
+      data.bindings = InterlisRowToObjectBindings.bind(getInputRowMeta(), data.plan, meta, this);
       data.outputRowMeta = InterlisEnvelopeSchemaFactory.createRowMeta();
       if (isBasic()) {
         logBasic("Mapping rows of " + data.plan.root().scopedName() + " to envelope rows");
@@ -166,9 +157,9 @@ public class InterlisRowToObject
     }
   }
 
-  private String metadataValue(Object[] row, int field) {
-    int index = data.basketMetadataIndexes[field];
-    return index < 0 || row[index] == null ? null : row[index].toString();
+  private String metadataValue(Object[] row, int field) throws HopException {
+    Object value = data.bindings.basketMetadata().get(field).read(row);
+    return value == null ? null : value.toString();
   }
 
   private List<String> resolveModelNames() {

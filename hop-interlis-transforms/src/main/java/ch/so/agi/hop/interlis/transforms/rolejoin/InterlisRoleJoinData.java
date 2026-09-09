@@ -7,6 +7,8 @@ import org.apache.hop.pipeline.transform.BaseTransformData;
 
 /** Runtime state of the {@link InterlisRoleJoin} transform. */
 public class InterlisRoleJoinData extends BaseTransformData {
+  InterlisRoleJoinBindings.Main mainBindings;
+  InterlisRoleJoinBindings.Lookup lookupBindings;
 
   boolean initialized;
   boolean mainBound;
@@ -15,9 +17,5 @@ public class InterlisRoleJoinData extends BaseTransformData {
   IRowSet mainRowSet;
   IRowSet lookupRowSet;
   Map<String, Object[]> lookupByTid;
-  int mainReferenceFieldIndex;
-  int lookupTidFieldIndex;
-  int[] lookupFieldIndexes;
-  String[] lookupFieldNames;
   IRowMeta outputRowMeta;
 }

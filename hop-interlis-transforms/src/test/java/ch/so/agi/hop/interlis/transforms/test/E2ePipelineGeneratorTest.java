@@ -411,6 +411,157 @@ class E2ePipelineGeneratorTest {
         chain("28-p2-invalid-operation", transfer, invalid, invalidOutput));
   }
 
+  @Test
+  void generateBindingPipelines() throws Exception {
+    Path out = outputDirectory();
+    Files.createDirectories(out);
+    String dirs = PARAMETERIZED ? "${E2E_INPUT_DIR}" : TestDataDirectory();
+    var input = new InterlisInputMeta();
+    input.setDefault();
+    input.setFileName(inputFile(inputDirectory(), "p1-3d.xtf"));
+    input.setModelNames("HopIli_P1_V1");
+    input.setModelDirectories(dirs);
+    input.setClassName("HopIli_P1_V1.Data.Item");
+    input.setKeepSourceObject(true);
+    input.setSourceObjectFieldName("carrier");
+    var reordered =
+        selectFields(
+            List.of(
+                selectField("Name", "Name"),
+                selectField("carrier", "carrier"),
+                selectField("_ili_bid", "basket_key"),
+                selectField("_ili_tid", "parent_key")));
+    var explode = new ch.so.agi.hop.interlis.transforms.explode.InterlisStructureExplodeMeta();
+    explode.setDefault();
+    explode.setModelNames("HopIli_P1_V1");
+    explode.setModelDirectories(dirs);
+    explode.setClassName("HopIli_P1_V1.Data.Item");
+    explode.setStructureAttributePath("Children");
+    explode.setSourceObjectField("carrier");
+    explode.setParentTidField("parent_key");
+    explode.setParentBidField("basket_key");
+    explode.setIncludeParentFields(List.of("Name"));
+    var csvFields =
+        selectFields(
+            List.of(
+                selectField("_ili_parent_tid", "_ili_parent_tid"),
+                selectField("Code", "Code"),
+                selectField("Name", "Name")));
+    var structures = chain("29-binding-structures", input, reordered, explode);
+    structures.findTransform("step1").setDistributes(false);
+    var childFields =
+        selectFields(
+            List.of(
+                    "Name",
+                    "Location",
+                    "Note",
+                    "Code",
+                    "_ili_index",
+                    "_ili_parent_bid",
+                    "_ili_parent_tid")
+                .stream()
+                .map(n -> selectField(n, n))
+                .toList());
+    var children = new TransformMeta("children", childFields);
+    structures.addTransform(children);
+    structures.addPipelineHop(new PipelineHopMeta(structures.findTransform("step2"), children));
+    var collect = new ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta();
+    collect.setDefault();
+    collect.setModelNames("HopIli_P1_V1");
+    collect.setModelDirectories(dirs);
+    collect.setClassName("HopIli_P1_V1.Data.Item");
+    collect.setStructureAttributePath("Children");
+    collect.setSourceObjectField("carrier");
+    collect.setParentKeyField("parent_key");
+    collect.setParentInputTransform("step1");
+    collect.setChildInputTransform("children");
+    var collector = new TransformMeta("collect", collect);
+    structures.addTransform(collector);
+    structures.addPipelineHop(new PipelineHopMeta(structures.findTransform("step1"), collector));
+    structures.addPipelineHop(new PipelineHopMeta(children, collector));
+    var expanded = new TransformMeta("expand again", (ITransformMeta) explode.clone());
+    structures.addTransform(expanded);
+    structures.addPipelineHop(new PipelineHopMeta(collector, expanded));
+    var select = new TransformMeta("csv fields", csvFields);
+    structures.addTransform(select);
+    structures.addPipelineHop(new PipelineHopMeta(expanded, select));
+    var csv = new TransformMeta("csv", csvOutput(outputFile(out, "binding-structures")));
+    structures.addTransform(csv);
+    structures.addPipelineHop(new PipelineHopMeta(select, csv));
+    write(out.resolve("29-binding-structures.hpl"), structures);
+
+    var person = new InterlisInputMeta();
+    person.setDefault();
+    person.setModelNames("HopIli_Associations_V1");
+    person.setModelDirectories(dirs);
+    person.setFileName(inputFile(inputDirectory(), "HopIli_Associations_V1_mapping.xtf"));
+    person.setClassName("HopIli_Associations_V1.Data.Person");
+    var mainFields =
+        selectFields(
+            List.of(
+                selectField("Name", "Name"),
+                selectField("Address_ref", "reference"),
+                selectField("_ili_tid", "_ili_tid")));
+    var join = new ch.so.agi.hop.interlis.transforms.rolejoin.InterlisRoleJoinMeta();
+    join.setDefault();
+    join.setMainInputTransform("step1");
+    join.setLookupInputTransform("lookup fields");
+    join.setMainReferenceField("reference");
+    join.setLookupTidField("key");
+    join.setLookupFields(List.of("Street"));
+    join.setModelNames("HopIli_Associations_V1");
+    join.setModelDirectories(dirs);
+    join.setMainClassName("HopIli_Associations_V1.Data.Person");
+    join.setRoleName("Address");
+    join.setFailOnMissingMandatoryReference(false);
+    var joined =
+        chain(
+            "30-binding-join",
+            person,
+            mainFields,
+            join,
+            csvOutput(outputFile(out, "binding-join")));
+    addBindingLookup(joined, person, "step2");
+    write(out.resolve("30-binding-join.hpl"), joined);
+
+    var missing =
+        (ch.so.agi.hop.interlis.transforms.explode.InterlisStructureExplodeMeta) explode.clone();
+    missing.setIncludeParentFields(List.of("missing_parent_field"));
+    write(
+        out.resolve("31-binding-missing-field.hpl"),
+        chain("31-binding-missing-field", input, reordered, missing));
+    var numeric = (ch.so.agi.hop.interlis.transforms.rolejoin.InterlisRoleJoinMeta) join.clone();
+    numeric.setMainInputTransform("step2");
+    numeric.setMainReferenceField("_ili_index");
+    var invalid = chain("32-binding-key-type", input, reordered, explode, numeric);
+    addBindingLookup(invalid, person, "step3");
+    write(out.resolve("32-binding-key-type.hpl"), invalid);
+  }
+
+  private static void addBindingLookup(
+      PipelineMeta pipeline, InterlisInputMeta person, String target) {
+    var address = (InterlisInputMeta) person.clone();
+    address.setClassName("HopIli_Associations_V1.Data.Address");
+    var source = new TransformMeta("lookup", address);
+    pipeline.addTransform(source);
+    var fields =
+        new TransformMeta(
+            "lookup fields",
+            selectFields(List.of(selectField("Street", "Street"), selectField("_ili_tid", "key"))));
+    pipeline.addTransform(fields);
+    pipeline.addPipelineHop(new PipelineHopMeta(source, fields));
+    pipeline.addPipelineHop(new PipelineHopMeta(fields, pipeline.findTransform(target)));
+  }
+
+  private static org.apache.hop.pipeline.transforms.selectvalues.SelectValuesMeta selectFields(
+      List<org.apache.hop.pipeline.transforms.selectvalues.SelectField> fields) {
+    var meta = new org.apache.hop.pipeline.transforms.selectvalues.SelectValuesMeta();
+    var options = new org.apache.hop.pipeline.transforms.selectvalues.SelectOptions();
+    options.setSelectFields(fields);
+    meta.setSelectOption(options);
+    return meta;
+  }
+
   private static org.apache.hop.pipeline.transforms.selectvalues.SelectField selectField(
       String name, String rename) {
     var field = new org.apache.hop.pipeline.transforms.selectvalues.SelectField();
