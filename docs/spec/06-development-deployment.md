@@ -1459,3 +1459,26 @@ Header-JSON verwendet `json-simple` 1.1.1 mit Scope `provided`, bereits in Hop c
 vorhanden. Kein zusätzlicher JSON-Parser wird gebündelt. Filter Rows ist ausschliesslich
 Testabhängigkeit für den E2E-Generator. Der E2E-Runner akzeptiert vorgebaute ZIPs über
 `HOP_GEOMETRY_TYPE_ZIP` und `HOP_GEOTOOLS_ZIP`.
+
+## Veröffentlichte Geometry-Abhängigkeit in CI
+
+CI und Release beziehen `ch.so.agi:hop-geometry-type:0.2.0-SNAPSHOT` aus
+`https://jars.interlis.guru/snapshots/`. Ein vorgeschalteter Job löst mit
+`scripts/resolve-geometry-snapshot.py` die Maven-Metadaten genau einmal auf.
+Parent-POM, Core-JAR/POM und Plugin-ZIP/POM müssen zum selben Timestamp und
+Build gehören und verfügbar sein; unvollständige Veröffentlichungen führen
+zu einer konkreten Fehlermeldung, ohne Rückfall auf einen Quellcode-Build.
+
+Die konkrete Timestamp-Version wird über Job-Outputs an alle sechs
+OS-/JDK-Builds und den GeoTools-E2E-Build weitergegeben und im Log ausgegeben.
+Das zugehörige veröffentlichte ZIP wird einmal heruntergeladen und als
+Workflow-Artefakt `geometry-runtime` in der isolierten Hop-Installation benutzt.
+Damit können neuere Snapshot-Veröffentlichungen während eines CI-Laufs nicht
+JAR und Laufzeit-ZIP auseinanderziehen. Der gepinnte GeoTools-Quellcode-Build
+bleibt bestehen und erhält dieselbe Geometry-Version sowie Repository-Zugriff
+über temporäre Maven-Settings. Lokale Dev-Sync-Skripte können weiterhin die
+benachbarten Geometry- und GeoTools-Quellcode-Repositories bauen.
+
+Die Geometry-Publikation muss vor der Aktivierung dieses Workflows erfolgreich
+sein. Die Python-Regressionstests laufen ohne externe Repositories mit lokalen
+XML-Fixtures und einem lokalen HTTP-Testserver.

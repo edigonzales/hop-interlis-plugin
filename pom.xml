@@ -127,6 +127,12 @@
       <url>https://repo1.maven.org/maven2/</url>
     </repository>
     <repository>
+      <id>geometry-snapshots</id>
+      <url>https://jars.interlis.guru/snapshots/</url>
+      <releases><enabled>false</enabled></releases>
+      <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+    <repository>
       <id>jars-interlis</id>
       <name>INTERLIS jars</name>
       <url>https://jars.interlis.ch/</url>

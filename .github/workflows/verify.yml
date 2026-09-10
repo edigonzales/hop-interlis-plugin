@@ -6,7 +6,28 @@ permissions:
   contents: read
 
 jobs:
+  geometry:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.snapshot.outputs.version }}
+      zip_name: ${{ steps.snapshot.outputs.zip_name }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test snapshot resolution
+        run: python3 -B -m unittest discover -s scripts/tests -v
+      - name: Resolve published geometry snapshot
+        id: snapshot
+        run: python3 scripts/resolve-geometry-snapshot.py --github-output "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: geometry-runtime
+          path: .ci/geometry-dist/*.zip
+          if-no-files-found: error
+
   build:
+    needs: geometry
+    env:
+      GEOMETRY_VERSION: ${{ needs.geometry.outputs.version }}
     strategy:
       fail-fast: false
       matrix:
@@ -22,30 +43,23 @@ jobs:
         with:
           distribution: temurin
           java-version: ${{ matrix.jdk }}
-      - uses: actions/checkout@v4
-        with:
-          repository: edigonzales/hop-geometry-type-plugin
-          ref: dd20a01ea68d85a3602b2edf2db810b42506aa4d
-          path: .ci/geometry
-      - name: Build tested geometry dependency
-        run: mvn -B -ntp -f .ci/geometry/pom.xml clean install
       - name: Build and verify
-        run: ./mvnw -B -ntp clean verify
+        run: |
+          echo "Building with published Geometry $GEOMETRY_VERSION"
+          ./mvnw -B -ntp -Dhop.geometry.type.version="$GEOMETRY_VERSION" clean verify
       - name: Check distribution
         run: python scripts/check-distribution.py
       - uses: actions/upload-artifact@v4
         with:
           name: hop-interlis-plugin-${{ matrix.os }}-jdk${{ matrix.jdk }}
           path: assemblies/assemblies-hop-interlis/target/hop-interlis-plugin-*.zip
-      - uses: actions/upload-artifact@v4
-        if: matrix.os == 'ubuntu-latest' && matrix.jdk == '21'
-        with:
-          name: geometry-runtime
-          path: .ci/geometry/assemblies/assemblies-hop-geometry-type/target/hop-geometry-type-plugin-*.zip
 
   packaged-e2e:
-    needs: build
+    needs: [geometry, build]
     runs-on: ubuntu-latest
+    env:
+      GEOMETRY_VERSION: ${{ needs.geometry.outputs.version }}
+      GEOMETRY_ZIP_NAME: ${{ needs.geometry.outputs.zip_name }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -62,23 +76,34 @@ jobs:
           path: .ci/geometry-dist
       - uses: actions/checkout@v4
         with:
-          repository: edigonzales/hop-geometry-type-plugin
-          ref: dd20a01ea68d85a3602b2edf2db810b42506aa4d
-          path: .ci/geometry
-      - uses: actions/checkout@v4
-        with:
           repository: edigonzales/hop-geotools-plugin
           ref: 578cacc6eb6e34657d1823f5f88036e7f8751144
           path: .ci/geotools
       - name: Build compatible GeoTools test dependency
         run: |
-          mvn -B -ntp -f .ci/geometry/pom.xml clean install
-          mvn -B -ntp -f .ci/geotools/pom.xml -Dhop.version=2.18.1 -Dhop.geometry.type.version=0.2.0-SNAPSHOT clean verify
+          echo "Building GeoTools and running E2E with published Geometry $GEOMETRY_VERSION"
+          # The third-party GeoTools POM also needs access to the public snapshot repository.
+          cat > "$RUNNER_TEMP/geometry-maven-settings.xml" <<'XML'
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+            <profiles><profile><id>geometry</id><repositories><repository>
+              <id>geometry-snapshots</id><url>https://jars.interlis.guru/snapshots/</url>
+              <releases><enabled>false</enabled></releases>
+              <snapshots><enabled>true</enabled></snapshots>
+            </repository></repositories></profile></profiles>
+            <activeProfiles><activeProfile>geometry</activeProfile></activeProfiles>
+          </settings>
+          XML
+          ./mvnw -B -ntp -s "$RUNNER_TEMP/geometry-maven-settings.xml" \
+            -Dhop.geometry.type.version="$GEOMETRY_VERSION" \
+            org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get \
+            -Dartifact="ch.so.agi:hop-geometry-type:$GEOMETRY_VERSION"
+          mvn -B -ntp -s "$RUNNER_TEMP/geometry-maven-settings.xml" -f .ci/geotools/pom.xml \
+            -Dhop.version=2.18.1 -Dhop.geometry.type.version="$GEOMETRY_VERSION" clean verify
       - name: Install isolated Hop 2.18.1 and run packaged suite
         run: |
           curl --fail --location --retry 3 https://archive.apache.org/dist/hop/2.18.1/apache-hop-client-2.18.1.zip -o "$RUNNER_TEMP/hop.zip"
           unzip -q "$RUNNER_TEMP/hop.zip" -d "$RUNNER_TEMP/isolated-hop"
-          export HOP_GEOMETRY_TYPE_ZIP="$PWD/.ci/geometry-dist/hop-geometry-type-plugin-0.2.0-SNAPSHOT.zip"
+          export HOP_GEOMETRY_TYPE_ZIP="$PWD/.ci/geometry-dist/$GEOMETRY_ZIP_NAME"
           export HOP_GEOTOOLS_ZIP="$PWD/.ci/geotools/assemblies/assemblies-hop-geotools/target/hop-geotools-plugin-0.1.0-SNAPSHOT.zip"
           export REQUIRE_GEOTOOLS_E2E=true
           bash scripts/run-e2e.sh "$RUNNER_TEMP/isolated-hop/hop"

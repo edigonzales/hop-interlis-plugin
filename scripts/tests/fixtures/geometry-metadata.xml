@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata modelVersion="1.1.0">
+  <groupId>ch.so.agi</groupId>
+  <artifactId>hop-geometry-type</artifactId>
+  <version>0.2.0-SNAPSHOT</version>
+  <versioning>
+    <snapshot><timestamp>20260910.120000</timestamp><buildNumber>1</buildNumber></snapshot>
+    <snapshotVersions>
+      <snapshotVersion><extension>pom</extension><value>0.2.0-20260910.120000-1</value></snapshotVersion>
+      <snapshotVersion><extension>jar</extension><value>0.2.0-20260910.120000-1</value></snapshotVersion>
+    </snapshotVersions>
+  </versioning>
+</metadata>

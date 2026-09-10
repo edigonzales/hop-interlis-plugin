@@ -39,3 +39,7 @@ docs/biblios/**/*.pdf
 docs/biblios/.thoth/
 .thoth/
 docs/biblios/biblios.local.yml
+
+# CI dependency downloads and Python test caches
+.ci/
+__pycache__/
