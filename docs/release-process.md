@@ -49,7 +49,7 @@ Tag-Konvention: `v<version>`, z. B. `v1.0.0`.
 
 ## Kompatibilität
 
-- Minimale unterstützte Hop-Version: 2.18.1 (Property `hop.version` im
+- Minimale unterstützte Hop-Version: 2.19.0 (Property `hop.version` im
   Parent-POM); Java ≥ 21 (Compiler-Release 21).
 - CI-Matrix: OS (Linux/macOS/Windows) × JDK (21, 25) – siehe
   `.github/workflows/ci.yml`. Neue Hop-Releases werden durch Erweiterung der

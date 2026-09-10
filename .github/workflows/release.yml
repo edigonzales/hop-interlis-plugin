@@ -9,14 +9,14 @@ jobs:
     uses: ./.github/workflows/verify.yml
   publish:
     needs: verify
-    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-publish.yml@661af245b23538192b467758e337216a9f96459e
+    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-publish.yml@5426b1aa9ad67f5e799822abaafb89e29f47b469
     with:
-      ci-ref: 661af245b23538192b467758e337216a9f96459e
+      ci-ref: 5426b1aa9ad67f5e799822abaafb89e29f47b469
       repository-kind: release
-      verified-artifact-name: hop-interlis-plugin-ubuntu-latest-jdk21
+      verified-artifact-name: hop-interlis-plugin-canonical
       pom-file: assemblies/assemblies-hop-interlis/pom.xml
       artifact-id: hop-interlis-plugin
       plugin-root: plugins/transforms/interlis
     secrets:
-      MAVEN_USERNAME: ${{ secrets.INTERLIS_MAVEN_USERNAME }}
-      MAVEN_PASSWORD: ${{ secrets.INTERLIS_MAVEN_TOKEN }}
+      MAVEN_USERNAME: ${{ secrets.MAVEN_USERNAME }}
+      MAVEN_PASSWORD: ${{ secrets.MAVEN_PASSWORD }}

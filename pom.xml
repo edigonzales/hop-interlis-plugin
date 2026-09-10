@@ -33,7 +33,7 @@
     <!-- Baseline versions are managed here and nowhere else.
          The INTERLIS libraries form a matching pair: ili2c 5.6.8 belongs to
          iox-ili 1.24.4 (iox-api 1.0.3, ehibasics 1.4.1). Keep them in sync. -->
-    <hop.version>2.18.1</hop.version>
+    <hop.version>2.19.0</hop.version>
     <iox.ili.version>1.24.4</iox.ili.version>
     <ili2c.version>5.6.8</ili2c.version>
     <iox.api.version>1.0.3</iox.api.version>

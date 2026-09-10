@@ -129,7 +129,7 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
 
 Phase 0 (project foundation) is implemented as well:
 
-- multi-module Maven build (Java 21, Apache Hop 2.18.1, iox-ili 1.24.4, ili2c 5.6.8);
+- multi-module Maven build (Java 21, Apache Hop 2.19.0, iox-ili 1.24.4, ili2c 5.6.8);
 - INTERLIS model compilation and schema extraction (`TransferDescription` → descriptors);
 - streaming XTF reader on top of iox-ili;
 - INTERLIS ↔ Hop geometry bridge via SQL/MM WKB;
@@ -184,7 +184,7 @@ bash scripts/run-e2e.sh "$HOP_HOME"
 
 - Java 21 (a local `.sdkmanrc` pins the SDKMAN identifier used for development; Apache Hop 2.18 requires Java 21)
 - Maven 3.x or the included Maven wrapper
-- an Apache Hop 2.18.x installation for local testing (`HOP_HOME`)
+- an Apache Hop 2.19.x installation for local testing (`HOP_HOME`)
 - a checkout of `hop-geometry-type-plugin` next to this repository
 - a checkout of `hop-vector-raster-plugin` next to this repository (only for the GeoPackage E2E)
 

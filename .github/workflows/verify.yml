@@ -10,15 +10,28 @@ jobs:
   geometry:
     runs-on: ubuntu-latest
     outputs:
-      version: ${{ steps.snapshot.outputs.version }}
+      resolved_version: ${{ steps.snapshot.outputs.resolved_version }}
       zip_name: ${{ steps.snapshot.outputs.zip_name }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: edigonzales/hop-plugin-ci
+          ref: 5426b1aa9ad67f5e799822abaafb89e29f47b469
+          path: .ci/hop-plugin-ci
+          persist-credentials: false
       - name: Test snapshot resolution
-        run: python3 -B -m unittest discover -s scripts/tests -v
+        run: python3 -B -m unittest discover -s .ci/hop-plugin-ci/tests -v
       - name: Resolve published geometry snapshot
         id: snapshot
-        run: python3 scripts/resolve-geometry-snapshot.py --github-output "$GITHUB_OUTPUT"
+        run: |
+          mkdir -p .ci/geometry-dist
+          python3 .ci/hop-plugin-ci/scripts/resolve_maven_snapshot.py \
+            --group ch.so.agi \
+            --artifact hop-geometry-type-plugin \
+            --version 0.2.0-SNAPSHOT \
+            --output .ci/geometry-dist/hop-geometry-type-plugin-0.2.0-SNAPSHOT.zip \
+            --github-output "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         with:
           name: geometry-runtime
@@ -27,14 +40,22 @@ jobs:
 
   build:
     needs: geometry
-    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@661af245b23538192b467758e337216a9f96459e
+    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@5426b1aa9ad67f5e799822abaafb89e29f47b469
     with:
-      ci-ref: 661af245b23538192b467758e337216a9f96459e
+      ci-ref: 5426b1aa9ad67f5e799822abaafb89e29f47b469
       java-versions: '["21", "25"]'
-      runner-os: '["ubuntu-latest", "macos-latest", "windows-latest"]'
+      runner-os: '["ubuntu-latest", "macos-15", "windows-latest"]'
+      canonical-runner-os: ubuntu-latest
+      canonical-java-version: '21'
       maven-working-directory: .
-      maven-options: -B -ntp
-      maven-extra-args: -Dhop.geometry.type.version=${{ needs.geometry.outputs.version }}
+      maven-options: -U -B -ntp
+      compatibility-goals: test
+      maven-extra-args: -Dhop.geometry.type.version=${{ needs.geometry.outputs.resolved_version }}
+      dependency-install: true
+      dependency-group-id: ch.so.agi
+      dependency-artifact-id: hop-geometry-type
+      dependency-version: ${{ needs.geometry.outputs.resolved_version }}
+      dependency-jar-glob: plugins/misc/hop-geometry-type/*.jar
       maven-goals: clean verify
       pom-file: assemblies/assemblies-hop-interlis/pom.xml
       zip-glob: assemblies/assemblies-hop-interlis/target/hop-interlis-plugin-*.zip
@@ -44,69 +65,56 @@ jobs:
       artifact-name-prefix: hop-interlis-plugin
       group-id: ch.so.agi
       artifact-id: hop-interlis-plugin
-      hop-version: 2.18.1
+      hop-version: 2.19.0
       plugin-root: plugins/transforms/interlis
 
-  packaged-e2e:
+  installed-e2e:
     needs: [geometry, build]
     runs-on: ubuntu-latest
     env:
-      GEOMETRY_VERSION: ${{ needs.geometry.outputs.version }}
+      GEOMETRY_VERSION: ${{ needs.geometry.outputs.resolved_version }}
       GEOMETRY_ZIP_NAME: ${{ needs.geometry.outputs.zip_name }}
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: edigonzales/hop-plugin-ci
+          ref: 5426b1aa9ad67f5e799822abaafb89e29f47b469
+          path: .ci/hop-plugin-ci
+          persist-credentials: false
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
       - uses: actions/download-artifact@v4
         with:
-          name: hop-interlis-plugin-ubuntu-latest-jdk21
+          name: hop-interlis-plugin-canonical
           path: assemblies/assemblies-hop-interlis/target
       - uses: actions/download-artifact@v4
         with:
           name: geometry-runtime
           path: .ci/geometry-dist
-      - uses: actions/checkout@v4
-        with:
-          repository: edigonzales/hop-vector-raster-plugin
-          # Keep this on the migrated Vector/Raster line until the pilot changes
-          # are merged; pin the resulting commit in the release hardening change.
-          ref: main
-          path: .ci/vector-raster
-      - name: Build compatible Vector/Raster test dependency
+      - name: Resolve compatible Vector/Raster snapshot
         run: |
-          echo "Building Vector/Raster and running E2E with published Geometry $GEOMETRY_VERSION"
-          cat > "$RUNNER_TEMP/geometry-maven-settings.xml" <<'XML'
-          <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
-            <profiles><profile><id>geometry</id><repositories><repository>
-              <id>geometry-snapshots</id><url>https://jars.interlis.guru/snapshots/</url>
-              <releases><enabled>false</enabled></releases>
-              <snapshots><enabled>true</enabled></snapshots>
-            </repository></repositories></profile></profiles>
-            <activeProfiles><activeProfile>geometry</activeProfile></activeProfiles>
-          </settings>
-          XML
-          ./mvnw -B -ntp -s "$RUNNER_TEMP/geometry-maven-settings.xml" \
-            -Dhop.geometry.type.version="$GEOMETRY_VERSION" \
-            org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get \
-            -Dartifact="ch.so.agi:hop-geometry-type:$GEOMETRY_VERSION"
-          mvn -B -ntp -s "$RUNNER_TEMP/geometry-maven-settings.xml" \
-            -f .ci/vector-raster/pom.xml \
-            -Dhop.version=2.18.1 -Dhop.geometry.type.version="$GEOMETRY_VERSION" clean verify
-      - name: Download isolated Hop 2.18.1
+          mkdir -p .ci/vector-raster-dist
+          python3 .ci/hop-plugin-ci/scripts/resolve_maven_snapshot.py \
+            --group ch.so.agi \
+            --artifact hop-vector-raster-plugin \
+            --version 0.1.0-SNAPSHOT \
+            --output .ci/vector-raster-dist/hop-vector-raster-plugin-0.1.0-SNAPSHOT.zip
+      - name: Download isolated Hop 2.19.0
         run: |
           if ! curl --fail --location --retry 3 --connect-timeout 20 --max-time 600 \
-            https://downloads.apache.org/hop/2.18.1/apache-hop-client-2.18.1.zip -o "$RUNNER_TEMP/hop.zip"; then
+            https://downloads.apache.org/hop/2.19.0/apache-hop-client-2.19.0.zip -o "$RUNNER_TEMP/hop.zip"; then
             curl --fail --location --retry 3 --connect-timeout 20 --max-time 600 \
-              https://archive.apache.org/dist/hop/2.18.1/apache-hop-client-2.18.1.zip -o "$RUNNER_TEMP/hop.zip"
+              https://archive.apache.org/dist/hop/2.19.0/apache-hop-client-2.19.0.zip -o "$RUNNER_TEMP/hop.zip"
           fi
-          echo "4a06c0cdc9970ba62a94fda01e8e78232838d82b77e1651c7152faa292bb735d9d3075b4d42a2b080fe3b7323b0f92002db5eee182ed066d6550a677b0efc977  $RUNNER_TEMP/hop.zip" | sha512sum -c -
-      - name: Install isolated Hop 2.18.1 and run packaged suite
+          echo "eb227ffe3386480f5ecb59e1d9fdbb16ace15b9ebd9e02da16cdca2c3cadc869f92275b0f607952fb2c5122986839a5b09b2c5762401dad128d8de6b0394643c  $RUNNER_TEMP/hop.zip" | sha512sum -c -
+      - name: Install isolated Hop 2.19.0 and run suite
         run: |
           unzip -q "$RUNNER_TEMP/hop.zip" -d "$RUNNER_TEMP/isolated-hop"
           export HOP_GEOMETRY_TYPE_ZIP="$PWD/.ci/geometry-dist/$GEOMETRY_ZIP_NAME"
-          vector_raster_zip="$(find "$PWD/.ci/vector-raster/assemblies/assemblies-hop-vector-raster/target" -maxdepth 1 -name 'hop-vector-raster-plugin-*.zip' -print | head -n 1)"
+          vector_raster_zip="$(find "$PWD/.ci/vector-raster-dist" -maxdepth 1 -name 'hop-vector-raster-plugin-*.zip' -print | head -n 1)"
           export HOP_VECTOR_RASTER_ZIP="$vector_raster_zip"
           export REQUIRE_VECTOR_RASTER_E2E=true
           bash scripts/run-e2e.sh "$RUNNER_TEMP/isolated-hop/hop"
