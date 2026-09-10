@@ -4,7 +4,7 @@ set -euo pipefail
 # Runs the packaged-plugin E2E suite against an Apache Hop installation:
 #
 #   1. installs hop-geometry-type-plugin and hop-interlis-plugin into HOP_HOME
-#   2. optionally builds/installs hop-geotools-plugin (for the GeoPackage pipeline)
+#   2. optionally builds/installs hop-vector-raster-plugin (for the GeoPackage pipeline)
 #   3. copies test fixtures into a temp work dir
 #   4. executes the e2e/pipelines/*.hpl files via hop-run (variables: E2E_INPUT_DIR, E2E_OUTPUT_DIR)
 #   5. asserts the produced output values
@@ -12,9 +12,9 @@ set -euo pipefail
 # Usage: run-e2e.sh <HOP_HOME>
 #
 # Environment:
-#   HOP_GEOTOOLS_REPO  checkout of hop-geotools-plugin (default: ../hop-geotools-plugin);
-#                      when absent the GeoPackage pipeline is skipped.
-#   HOP_GEOTOOLS_ZIP   prebuilt compatible GeoTools plugin ZIP (avoids rebuilding that repository).
+#   HOP_VECTOR_RASTER_REPO  checkout of hop-vector-raster-plugin (default: ../hop-vector-raster-plugin);
+#                           when absent the GeoPackage pipeline is skipped.
+#   HOP_VECTOR_RASTER_ZIP   prebuilt compatible Vector/Raster plugin ZIP.
 
 if [[ $# -ne 1 ]]; then
   echo "Usage: $0 <HOP_HOME>"
@@ -84,30 +84,30 @@ unzip -q -o "$GEOMETRY_ZIP" -d "$HOP_HOME"
 rm -rf "$HOP_HOME/plugins/transforms/interlis"
 unzip -q -o "$INTERLIS_ZIP" -d "$HOP_HOME"
 
-GEOTOOLS_REPO="${HOP_GEOTOOLS_REPO:-$PROJECT_DIR/../hop-geotools-plugin}"
-if [[ -n "${HOP_GEOTOOLS_ZIP:-}" ]]; then
-  GEOTOOLS_ZIP="$HOP_GEOTOOLS_ZIP"
-elif [[ -f "$GEOTOOLS_REPO/pom.xml" ]]; then
-  echo "==> Building hop-geotools-plugin"
-  if [[ -x "$GEOTOOLS_REPO/mvnw" ]]; then
-    (cd "$GEOTOOLS_REPO" && ./mvnw -B -ntp clean verify)
+VECTOR_RASTER_REPO="${HOP_VECTOR_RASTER_REPO:-$PROJECT_DIR/../hop-vector-raster-plugin}"
+if [[ -n "${HOP_VECTOR_RASTER_ZIP:-}" ]]; then
+  VECTOR_RASTER_ZIP="$HOP_VECTOR_RASTER_ZIP"
+elif [[ -f "$VECTOR_RASTER_REPO/pom.xml" ]]; then
+  echo "==> Building hop-vector-raster-plugin"
+  if [[ -x "$VECTOR_RASTER_REPO/mvnw" ]]; then
+    (cd "$VECTOR_RASTER_REPO" && ./mvnw -B -ntp clean verify)
   else
-    mvn -f "$GEOTOOLS_REPO/pom.xml" -B -ntp clean verify
+    mvn -f "$VECTOR_RASTER_REPO/pom.xml" -B -ntp clean verify
   fi
-  GEOTOOLS_ZIP="$(find "$GEOTOOLS_REPO/assemblies/assemblies-hop-geotools/target" \
-    -maxdepth 1 -name 'hop-geotools-plugin-*.zip' -print | head -n 1)"
+  VECTOR_RASTER_ZIP="$(find "$VECTOR_RASTER_REPO/assemblies/assemblies-hop-vector-raster/target" \
+    -maxdepth 1 -name 'hop-vector-raster-plugin-*.zip' -print | head -n 1)"
 else
-  GEOTOOLS_ZIP=""
+  VECTOR_RASTER_ZIP=""
 fi
-if [[ -n "$GEOTOOLS_ZIP" && -f "$GEOTOOLS_ZIP" ]]; then
-  echo "==> Installing GeoTools plugin from $GEOTOOLS_ZIP"
-  rm -rf "$HOP_HOME/plugins/transforms/geotools-vector"
-  unzip -q -o "$GEOTOOLS_ZIP" -d "$HOP_HOME"
+if [[ -n "$VECTOR_RASTER_ZIP" && -f "$VECTOR_RASTER_ZIP" ]]; then
+  echo "==> Installing Vector/Raster plugin from $VECTOR_RASTER_ZIP"
+  rm -rf "$HOP_HOME/plugins/transforms/vector-raster"
+  unzip -q -o "$VECTOR_RASTER_ZIP" -d "$HOP_HOME"
   RUN_GPKG=true
 else
-  echo "==> No compatible GeoTools ZIP; skipping optional GeoPackage pipeline"
-  if [[ "${REQUIRE_GEOTOOLS_E2E:-false}" == "true" ]]; then
-    echo "Required GeoPackage E2E dependency is missing" >&2
+  echo "==> No compatible Vector/Raster ZIP; skipping optional GeoPackage pipeline"
+  if [[ "${REQUIRE_VECTOR_RASTER_E2E:-false}" == "true" ]]; then
+    echo "Required Vector/Raster E2E dependency is missing" >&2
     exit 1
   fi
   RUN_GPKG=false

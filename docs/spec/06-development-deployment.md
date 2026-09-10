@@ -11,7 +11,7 @@ Die lokale Entwicklung muss so einfach sein, dass ein Entwickler nach einer Code
 5. Hop GUI neu startet,
 6. sofort manuell testen kann.
 
-Das bestehende `hop-geotools-plugin` verwendet bereits genau dieses Muster. `hop-interlis-plugin` soll denselben Arbeitsstil übernehmen und möglichst die gleichen Konventionen verwenden.
+Das bestehende `hop-vector-raster-plugin` verwendet bereits genau dieses Muster. `hop-interlis-plugin` soll denselben Arbeitsstil übernehmen und möglichst die gleichen Konventionen verwenden.
 
 ---
 
@@ -20,7 +20,7 @@ Das bestehende `hop-geotools-plugin` verwendet bereits genau dieses Muster. `hop
 ```text
 sources/
 ├── hop-geometry-type-plugin/
-├── hop-geotools-plugin/
+├── hop-vector-raster-plugin/
 └── hop-interlis-plugin/
 ```
 
@@ -34,10 +34,10 @@ hop-geometry-type-plugin
          |
          +-----------------------+
          |                       |
-hop-geotools-plugin      hop-interlis-plugin
+hop-vector-raster-plugin  hop-interlis-plugin
 ```
 
-GeoTools und INTERLIS teilen sich damit dieselbe Hop-Geometrieklasse.
+Vector/Raster und INTERLIS teilen sich damit dieselbe Hop-Geometrieklasse.
 
 ---
 
@@ -141,7 +141,7 @@ jts-core
 
 Grund:
 
-`hop-geotools-plugin` und `hop-interlis-plugin` müssen dieselbe `org.locationtech.jts.geom.Geometry`-Klasse sehen.
+`hop-vector-raster-plugin` und `hop-interlis-plugin` müssen dieselbe `org.locationtech.jts.geom.Geometry`-Klasse sehen.
 
 Doppelte JTS-JARs sind zu vermeiden.
 
@@ -173,7 +173,7 @@ Für alle Transform-Plugins mit Geometry:
     classLoaderGroup = "sogeo-geometry")
 ```
 
-Der Name muss exakt mit dem Geometry Type Plugin und dem GeoTools Plugin übereinstimmen.
+Der Name muss exakt mit dem Geometry Type Plugin und dem Vector/Raster Plugin übereinstimmen.
 
 Für einen `ValueMetaInterlisObject` muss entschieden werden, ob er ebenfalls in derselben Group registriert wird. Empfehlung:
 
@@ -895,13 +895,15 @@ check distribution
 fresh-Hop E2E
        |
        v
-create GitHub Release
+publish verified ZIP to Maven
        |
        v
-upload hop-interlis-plugin-X.Y.Z.zip
+deploy ch.so.agi:hop-interlis-plugin:X.Y.Z
 ```
 
-Snapshots auf `main` können analog zum bestehenden Plugin als automatisierte Releases publiziert werden, wenn dies zur bestehenden Distributionstrategie passt.
+Snapshots auf `main` werden analog dazu in das Maven-Snapshot-Repository
+publiziert; sie sind keine Releases und dürfen nicht in das Release-Repository
+gelangen.
 
 ---
 
@@ -1432,9 +1434,9 @@ https://github.com/edigonzales/hop-geometry-type-plugin
 
 Bestehendes GeoTools Plugin:
 
-https://github.com/edigonzales/hop-geotools-plugin
+https://github.com/edigonzales/hop-vector-raster-plugin
 
-Das GeoTools-Projekt besitzt bereits einen `dev-sync-hop-plugin.sh`-/`dev-install-and-run.sh`-Workflow, der Geometry Plugin und GeoTools Plugin baut, installiert und Hop GUI neu startet. Dieses Muster soll für `hop-interlis-plugin` konsistent weitergeführt werden.
+Das Vector/Raster-Projekt besitzt bereits einen `dev-install-and-run.sh`-Workflow, der Geometry Plugin und Vector/Raster Plugin baut, installiert und Hop GUI neu startet. Dieses Muster soll für `hop-interlis-plugin` konsistent weitergeführt werden.
 
 Apache Hop Developer Documentation:
 
@@ -1458,7 +1460,7 @@ Die vier INTERLIS-Bibliotheksversionen bleiben unverändert.
 Header-JSON verwendet `json-simple` 1.1.1 mit Scope `provided`, bereits in Hop core
 vorhanden. Kein zusätzlicher JSON-Parser wird gebündelt. Filter Rows ist ausschliesslich
 Testabhängigkeit für den E2E-Generator. Der E2E-Runner akzeptiert vorgebaute ZIPs über
-`HOP_GEOMETRY_TYPE_ZIP` und `HOP_GEOTOOLS_ZIP`.
+`HOP_GEOMETRY_TYPE_ZIP` und `HOP_VECTOR_RASTER_ZIP`.
 
 ## Veröffentlichte Geometry-Abhängigkeit in CI
 

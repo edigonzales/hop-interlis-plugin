@@ -21,8 +21,8 @@ is complete except for Phase 7, which was deliberately skipped (see below):
 - `http(s)://` INTERLIS model repositories work as model directories
   (local cache, timeouts, offline diagnostics, local overrides);
 - the CI compatibility matrix covers OS × JDK and the Hop version is a
-  single Maven property; a release workflow attaches the plugin ZIP to
-  GitHub releases; runnable parameterized example pipelines live in
+  single Maven property; the release workflow publishes the verified plugin
+  ZIP as a Maven artifact; runnable parameterized example pipelines live in
   `examples/`.
 
 **Phase 7 (ITF/INTERLIS 1) is intentionally not supported:** `.itf` files are
@@ -121,7 +121,7 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
   with model directories, `%XTF_DIR` resolution and `http(s)://` model repositories
   (cached, with offline diagnostics and local overrides);
 - **circular arcs survive as SQL/MM curves** (verified in unit, pipeline and `hop-run` E2E
-  tests, including a GeoPackage round trip via the GeoTools plugin with a registered
+  tests, including a GeoPackage round trip via the Vector/Raster plugin with a registered
   `COMPOUNDCURVE` column);
 - dialog with model source, class browser and live schema preview; probing failures never
   make the dialog unusable;
@@ -174,7 +174,7 @@ python3 scripts/check-distribution.py
 ```
 
 Run the packaged-plugin E2E suite against a Hop installation (optionally builds and
-installs `hop-geotools-plugin` for the GeoPackage pipeline):
+installs `hop-vector-raster-plugin` for the GeoPackage pipeline):
 
 ```bash
 bash scripts/run-e2e.sh "$HOP_HOME"
@@ -186,7 +186,7 @@ bash scripts/run-e2e.sh "$HOP_HOME"
 - Maven 3.x or the included Maven wrapper
 - an Apache Hop 2.18.x installation for local testing (`HOP_HOME`)
 - a checkout of `hop-geometry-type-plugin` next to this repository
-- a checkout of `hop-geotools-plugin` next to this repository (only for the GeoPackage E2E)
+- a checkout of `hop-vector-raster-plugin` next to this repository (only for the GeoPackage E2E)
 
 ## Modules
 

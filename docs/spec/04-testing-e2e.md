@@ -985,7 +985,7 @@ Assertions:
 - SRID korrekt, soweit bekannt.
 - Arc-Geometrie bleibt bei GeoPackage als Curve erhalten, sofern der gewählte GeoPackage-Pfad dies unterstützt.
 
-Dieser Test integriert bewusst `hop-interlis-plugin` und `hop-geotools-plugin`.
+Dieser Test integriert bewusst `hop-interlis-plugin` und `hop-vector-raster-plugin`.
 
 ---
 
@@ -1721,7 +1721,7 @@ Das ist klein genug für einen frühen Stand, zeigt aber bereits die eigentliche
 - bestehendes Geometry Type Plugin:
   https://github.com/edigonzales/hop-geometry-type-plugin
 - bestehendes GeoTools Plugin:
-  https://github.com/edigonzales/hop-geotools-plugin
+  https://github.com/edigonzales/hop-vector-raster-plugin
 
 
 ## P1-Regressionen und Paketabnahme (2026-09-09)
@@ -1742,7 +1742,8 @@ Paketpipelines 21–24 prüfen geändertes Quellobjekt, konfigurierten TID, kons
 Basket, alle XYZ-Koordinaten, Append und vollständige Diagnoseausgabe bei erwartetem
 Exit-Code 1 (unbegrenzt sowie Limit 2). Der E2E-Runner erzeugt isolierte Hop-Metadaten,
 prüft jeden Exit-Code explizit und führt auch die bisherigen Pipelines aus.
-`HOP_GEOTOOLS_ZIP` kann ein kompatibles vorgebautes GeoTools-Paket für den optionalen
+`HOP_VECTOR_RASTER_ZIP` kann ein kompatibles vorgebautes Vector/Raster-Paket für den
+optionalen
 GeoPackage-Test liefern. Ohne diese Option erfolgt der Build mit Tests.
 
 ## P2-Regressionspaket

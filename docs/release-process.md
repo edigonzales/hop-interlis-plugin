@@ -35,13 +35,16 @@ Tag-Konvention: `v<version>`, z. B. `v1.0.0`.
    git push origin main --tags
    ```
 
-5. **GitHub Release:** der Workflow `.github/workflows/release.yml` baut auf
-   den Tag automatisch die Distribution, prüft sie mit
-   `check-distribution.py` und hängt das Plugin-ZIP
-   (`hop-interlis-plugin-<version>.zip`) an das Release.
+5. **Maven-Publikation:** der Workflow `.github/workflows/release.yml` baut auf
+   dem Tag automatisch die Distribution, prüft sie mit
+   `check-distribution.py` und veröffentlicht exakt das verifizierte ZIP als
+   `ch.so.agi:hop-interlis-plugin:<version>` auf
+   `https://jars.interlis.guru/releases/`. Ein `-SNAPSHOT` darf nie in diesem
+   Release-Repository landen.
 
-6. **Installation** beim Endanwender: ZIP nach `hop/plugins/hop-interlis-plugin`
-   entpacken (Hop-GUI/`hop-run` neu starten); das Plugin benötigt
+6. **Installation** beim Endanwender: das ZIP aus dem Maven-Repository nach
+   `$HOP_HOME/plugins/transforms/interlis` entpacken (Hop-GUI/`hop-run` neu
+   starten); das Plugin benötigt
    `hop-geometry-type-plugin` in derselben Installation.
 
 ## Kompatibilität

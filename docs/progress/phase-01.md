@@ -120,7 +120,7 @@ E2E (echte Hop-2.18.1-Distribution, `scripts/run-e2e.sh`):
 ## Manual verification
 
 - `scripts/run-e2e.sh <HOP_HOME>` gegen frische Apache-Hop-2.18.1-Distribution: alle
-  drei Pipelines grün, Assertions grün (inkl. GeoPackage via hop-geotools-plugin).
+  drei Pipelines grün, Assertions grün (inkl. GeoPackage via hop-vector-raster-plugin).
 - `scripts/dev-sync-hop-plugin.sh` installiert das Plugin und startet Hop GUI
   (Desktop-Verifikation durch den Entwickler; der Dialog wird in Hop GUI aus der
   Geospatial-Kategorie geöffnet).

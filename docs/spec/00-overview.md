@@ -75,9 +75,9 @@ Diese Funktionen sind jedoch in der Zielarchitektur vorgesehen, sodass ihre spä
 Die Spezifikation orientiert sich an den bereits vorhandenen Plugins:
 
 - `edigonzales/hop-geometry-type-plugin`
-- `edigonzales/hop-geotools-plugin`
+- `edigonzales/hop-vector-raster-plugin`
 
-Der aktuelle GeoTools-Plugin-Parent verwendet:
+Der aktuelle Vector/Raster-Plugin-Parent verwendet:
 
 ```text
 Java             17
@@ -364,5 +364,4 @@ Technische Basis der Spezifikation:
 - ili2c: https://github.com/claeis/ili2c
 - ilivalidator: https://github.com/claeis/ilivalidator
 - hop-geometry-type-plugin: https://github.com/edigonzales/hop-geometry-type-plugin
-- hop-geotools-plugin: https://github.com/edigonzales/hop-geotools-plugin
-
+- hop-vector-raster-plugin: https://github.com/edigonzales/hop-vector-raster-plugin

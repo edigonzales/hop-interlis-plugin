@@ -58,7 +58,7 @@ Runner isoliert seine Hop-Konfiguration und prüft auch erwartete Fehlerläufe.
   korrekte gemeinsame/provided Geometry-/Hop-Abhängigkeiten und gepinnte INTERLIS-Libraries.
 - `bash scripts/run-e2e.sh "$HOP_HOME"`: **erfolgreich**, 23 Paketpipelines auf einer
   frisch entpackten isolierten Hop-2.18.1-Installation. Für den optionalen
-  GeoPackage-Test wurde über `HOP_GEOTOOLS_ZIP` ein vorgebautes kompatibles
+  GeoPackage-Test wurde über `HOP_VECTOR_RASTER_ZIP` ein vorgebautes kompatibles
   GeoTools-Paket eingesetzt; das aktuelle benachbarte Repository verwendet bereits
   andere Plugin-IDs.
 - Beide erwarteten Fehlerläufe liefern Exit-Code 1. Alle 10 Fehlerdiagnosen des

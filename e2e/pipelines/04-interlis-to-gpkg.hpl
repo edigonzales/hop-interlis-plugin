@@ -48,7 +48,7 @@
     </GUI>
   </transform>
   <transform>
-    <type>GEOTOOLS_VECTOR_WRITER</type>
+    <type>SOGIS_VECTOR_WRITER</type>
     <name>Vector Writer</name>
     <description/>
     <distribute>Y</distribute>

@@ -84,8 +84,9 @@ siehe `phase-07.md`).
   `associations/`, `validation/`, `advanced-envelope/` – plus
   `examples/README.md`. `itf/` entfällt bewusst (Phase 7 übersprungen).
 - **Releaseprozess automatisiert:** `.github/workflows/release.yml` baut
-  auf Version-Tags (`v*`) die Distribution und hängt das Plugin-ZIP an das
-  GitHub Release; zusätzlich `docs/release-process.md`.
+  auf Version-Tags (`v*`) die Distribution und veröffentlicht exakt das
+  verifizierte Plugin-ZIP als Maven-Artefakt; zusätzlich
+  `docs/release-process.md`.
 
 ## Tests
 

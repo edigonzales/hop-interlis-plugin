@@ -1,4 +1,5 @@
 name: Verify plugin
+
 on:
   workflow_call:
 
@@ -26,33 +27,25 @@ jobs:
 
   build:
     needs: geometry
-    env:
-      GEOMETRY_VERSION: ${{ needs.geometry.outputs.version }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        jdk: ['21', '25']
-    runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        shell: bash
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: ${{ matrix.jdk }}
-      - name: Build and verify
-        run: |
-          echo "Building with published Geometry $GEOMETRY_VERSION"
-          ./mvnw -B -ntp -Dhop.geometry.type.version="$GEOMETRY_VERSION" clean verify
-      - name: Check distribution
-        run: python scripts/check-distribution.py
-      - uses: actions/upload-artifact@v4
-        with:
-          name: hop-interlis-plugin-${{ matrix.os }}-jdk${{ matrix.jdk }}
-          path: assemblies/assemblies-hop-interlis/target/hop-interlis-plugin-*.zip
+    uses: edigonzales/hop-plugin-ci/.github/workflows/plugin-verify.yml@main
+    with:
+      ci-ref: main
+      java-versions: '["21", "25"]'
+      runner-os: '["ubuntu-latest", "macos-latest", "windows-latest"]'
+      maven-working-directory: .
+      maven-options: -B -ntp
+      maven-extra-args: -Dhop.geometry.type.version=${{ needs.geometry.outputs.version }}
+      maven-goals: clean verify
+      pom-file: assemblies/assemblies-hop-interlis/pom.xml
+      zip-glob: assemblies/assemblies-hop-interlis/target/hop-interlis-plugin-*.zip
+      validation-commands: '["python scripts/check-distribution.py"]'
+      dependency-artifact-name: geometry-runtime
+      dependency-artifact-path: .ci/geometry-dist
+      artifact-name-prefix: hop-interlis-plugin
+      group-id: ch.so.agi
+      artifact-id: hop-interlis-plugin
+      hop-version: 2.18.1
+      plugin-root: plugins/transforms/interlis
 
   packaged-e2e:
     needs: [geometry, build]
@@ -76,13 +69,14 @@ jobs:
           path: .ci/geometry-dist
       - uses: actions/checkout@v4
         with:
-          repository: edigonzales/hop-geotools-plugin
-          ref: 578cacc6eb6e34657d1823f5f88036e7f8751144
-          path: .ci/geotools
-      - name: Build compatible GeoTools test dependency
+          repository: edigonzales/hop-vector-raster-plugin
+          # Keep this on the migrated Vector/Raster line until the pilot changes
+          # are merged; pin the resulting commit in the release hardening change.
+          ref: main
+          path: .ci/vector-raster
+      - name: Build compatible Vector/Raster test dependency
         run: |
-          echo "Building GeoTools and running E2E with published Geometry $GEOMETRY_VERSION"
-          # The third-party GeoTools POM also needs access to the public snapshot repository.
+          echo "Building Vector/Raster and running E2E with published Geometry $GEOMETRY_VERSION"
           cat > "$RUNNER_TEMP/geometry-maven-settings.xml" <<'XML'
           <settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
             <profiles><profile><id>geometry</id><repositories><repository>
@@ -97,7 +91,8 @@ jobs:
             -Dhop.geometry.type.version="$GEOMETRY_VERSION" \
             org.apache.maven.plugins:maven-dependency-plugin:3.8.1:get \
             -Dartifact="ch.so.agi:hop-geometry-type:$GEOMETRY_VERSION"
-          mvn -B -ntp -s "$RUNNER_TEMP/geometry-maven-settings.xml" -f .ci/geotools/pom.xml \
+          mvn -B -ntp -s "$RUNNER_TEMP/geometry-maven-settings.xml" \
+            -f .ci/vector-raster/pom.xml \
             -Dhop.version=2.18.1 -Dhop.geometry.type.version="$GEOMETRY_VERSION" clean verify
       - name: Download isolated Hop 2.18.1
         run: |
@@ -106,12 +101,12 @@ jobs:
             curl --fail --location --retry 3 --connect-timeout 20 --max-time 600 \
               https://archive.apache.org/dist/hop/2.18.1/apache-hop-client-2.18.1.zip -o "$RUNNER_TEMP/hop.zip"
           fi
-          # Apache's published SHA-512 for this exact release, shared by both locations.
           echo "4a06c0cdc9970ba62a94fda01e8e78232838d82b77e1651c7152faa292bb735d9d3075b4d42a2b080fe3b7323b0f92002db5eee182ed066d6550a677b0efc977  $RUNNER_TEMP/hop.zip" | sha512sum -c -
       - name: Install isolated Hop 2.18.1 and run packaged suite
         run: |
           unzip -q "$RUNNER_TEMP/hop.zip" -d "$RUNNER_TEMP/isolated-hop"
           export HOP_GEOMETRY_TYPE_ZIP="$PWD/.ci/geometry-dist/$GEOMETRY_ZIP_NAME"
-          export HOP_GEOTOOLS_ZIP="$PWD/.ci/geotools/assemblies/assemblies-hop-geotools/target/hop-geotools-plugin-0.1.0-SNAPSHOT.zip"
-          export REQUIRE_GEOTOOLS_E2E=true
+          vector_raster_zip="$(find "$PWD/.ci/vector-raster/assemblies/assemblies-hop-vector-raster/target" -maxdepth 1 -name 'hop-vector-raster-plugin-*.zip' -print | head -n 1)"
+          export HOP_VECTOR_RASTER_ZIP="$vector_raster_zip"
+          export REQUIRE_VECTOR_RASTER_E2E=true
           bash scripts/run-e2e.sh "$RUNNER_TEMP/isolated-hop/hop"

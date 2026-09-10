@@ -32,10 +32,12 @@ Das INTERLIS-Plugin benötigt das `hop-geometry-type-plugin` als Voraussetzung, 
 
 Das Plugin wird als installierbare ZIP-Datei (`hop-interlis-plugin-<version>.zip`) ausgeliefert.
 
-==== Option A: Release herunterladen
+==== Option A: Maven-Artefakt herunterladen
 
-1. Gehen Sie zu den https://github.com/edigonzales/hop-interlis-plugin/releases[GitHub Releases^].
-2. Laden Sie die neueste ZIP-Datei herunter.
+1. Öffnen Sie das
+   https://jars.interlis.guru/releases/ch/so/agi/hop-interlis-plugin/[Maven-Repository].
+2. Wählen Sie die gewünschte unveränderliche Version und laden Sie
+   `hop-interlis-plugin-<version>.zip` herunter.
 3. Entpacken Sie die ZIP-Datei in ein temporäres Verzeichnis.
 
 ==== Option B: Aus Quellen bauen
@@ -63,21 +65,24 @@ assemblies/assemblies-hop-interlis/target/hop-interlis-plugin-<version>.zip
 
 1. **Hop beenden**: Schliessen Sie die Hop-GUI und stellen Sie sicher, dass keine Hop-Prozesse laufen.
 
-2. **ZIP entpacken**: Entpacken Sie das Plugin-ZIP in das `plugins/`-Verzeichnis Ihrer Hop-Installation. Die Struktur sollte wie folgt aussehen:
+2. **ZIP entpacken**: Entpacken Sie das Plugin-ZIP direkt im Hauptverzeichnis Ihrer Hop-Installation. Die Struktur sollte wie folgt aussehen:
 +
 [source,text]
 ----
 $HOP_HOME/
   plugins/
-    hop-interlis-plugin/
-      hop-interlis-core-<version>.jar
-      hop-interlis-transforms-<version>.jar
-      ... (weitere JARs und Konfigurationsdateien)
+    transforms/
+      interlis/
+        hop-interlis-core-<version>.jar
+        hop-interlis-transforms-<version>.jar
+        ... (weitere JARs und Konfigurationsdateien)
 ----
 +
 [IMPORTANT]
 ====
-Erstellen Sie ein neues Verzeichnis `hop-interlis-plugin/` unter `plugins/`, falls es noch nicht existiert. Entpacken Sie den Inhalt des ZIPs dort hinein, nicht direkt in `plugins/`.
+Das ZIP legt das Verzeichnis `plugins/transforms/interlis/` an. Entfernen Sie
+vor einem Versionswechsel die bisherige Installation vollständig, damit keine
+alten JARs zurückbleiben.
 ====
 
 3. **hop-geometry-type-plugin prüfen**: Stellen Sie sicher, dass das `hop-geometry-type-plugin` ebenfalls unter `plugins/` installiert ist:
@@ -86,7 +91,8 @@ Erstellen Sie ein neues Verzeichnis `hop-interlis-plugin/` unter `plugins/`, fal
 ----
 $HOP_HOME/
   plugins/
-    hop-geometry-type-plugin/
+    misc/
+      hop-geometry-type/
       ...
 ----
 
