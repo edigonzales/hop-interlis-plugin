@@ -1482,3 +1482,8 @@ benachbarten Geometry- und GeoTools-Quellcode-Repositories bauen.
 Die Geometry-Publikation muss vor der Aktivierung dieses Workflows erfolgreich
 sein. Die Python-Regressionstests laufen ohne externe Repositories mit lokalen
 XML-Fixtures und einem lokalen HTTP-Testserver.
+
+Der Hop-Download ist ein eigener CI-Schritt: zuerst `downloads.apache.org`,
+bei Downloadfehlern das Apache-Archiv. Beide Quellen liefern unverändert
+Hop 2.18.1; die veröffentlichte SHA-512-Prüfsumme ist im Workflow festgehalten.
+Verbindungs- und Transfer-Timeouts verhindern unbegrenzt wartende Downloads.

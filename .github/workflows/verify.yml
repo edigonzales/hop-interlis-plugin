@@ -99,9 +99,17 @@ jobs:
             -Dartifact="ch.so.agi:hop-geometry-type:$GEOMETRY_VERSION"
           mvn -B -ntp -s "$RUNNER_TEMP/geometry-maven-settings.xml" -f .ci/geotools/pom.xml \
             -Dhop.version=2.18.1 -Dhop.geometry.type.version="$GEOMETRY_VERSION" clean verify
+      - name: Download isolated Hop 2.18.1
+        run: |
+          if ! curl --fail --location --retry 3 --connect-timeout 20 --max-time 600 \
+            https://downloads.apache.org/hop/2.18.1/apache-hop-client-2.18.1.zip -o "$RUNNER_TEMP/hop.zip"; then
+            curl --fail --location --retry 3 --connect-timeout 20 --max-time 600 \
+              https://archive.apache.org/dist/hop/2.18.1/apache-hop-client-2.18.1.zip -o "$RUNNER_TEMP/hop.zip"
+          fi
+          # Apache's published SHA-512 for this exact release, shared by both locations.
+          echo "4a06c0cdc9970ba62a94fda01e8e78232838d82b77e1651c7152faa292bb735d9d3075b4d42a2b080fe3b7323b0f92002db5eee182ed066d6550a677b0efc977  $RUNNER_TEMP/hop.zip" | sha512sum -c -
       - name: Install isolated Hop 2.18.1 and run packaged suite
         run: |
-          curl --fail --location --retry 3 https://archive.apache.org/dist/hop/2.18.1/apache-hop-client-2.18.1.zip -o "$RUNNER_TEMP/hop.zip"
           unzip -q "$RUNNER_TEMP/hop.zip" -d "$RUNNER_TEMP/isolated-hop"
           export HOP_GEOMETRY_TYPE_ZIP="$PWD/.ci/geometry-dist/$GEOMETRY_ZIP_NAME"
           export HOP_GEOTOOLS_ZIP="$PWD/.ci/geotools/assemblies/assemblies-hop-geotools/target/hop-geotools-plugin-0.1.0-SNAPSHOT.zip"
