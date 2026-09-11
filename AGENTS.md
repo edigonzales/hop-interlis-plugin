@@ -380,3 +380,59 @@ Before reporting a coding task as complete:
 6. summarize implemented changes, tests executed, remaining limitations and the next roadmap phase if relevant.
 
 Never claim that tests passed unless they were actually executed.
+
+## CI and tests
+
+Before changing pipelines or test setup, read the
+[shared CI contract](https://github.com/edigonzales/hop-plugin-ci/blob/main/docs/ci-contract.md).
+The documentation follows `main`; use the interfaces at this repo's actual
+workflow/helper revisions and preserve existing pins and `ci-ref` values.
+
+Run the commands below from this repository root in Bash, using Python 3, Maven
+and JDK 21 (`JAVA_HOME` and `PATH` pointing to that JDK). Compatibility jobs also
+use JDK 25. For headless Linux SWT tests, run Maven under `xvfb-run -a`.
+Set `HOP_CI_DIR` to an absolute checkout of `hop-plugin-ci` at the helper revision
+used by this repo's workflow, then prepare the same Maven repositories as CI:
+
+```bash
+CI_TEST_TMP="$(mktemp -d)"
+export MAVEN_SETTINGS="$CI_TEST_TMP/maven-settings.xml"
+python3 "$HOP_CI_DIR/scripts/write_maven_settings.py" --output "$MAVEN_SETTINGS"
+```
+
+### Build and distribution
+
+See [.github/workflows/verify.yml](.github/workflows/verify.yml). Keep the existing
+Maven Wrapper preference for local commands; CI uses installed Maven.
+
+```bash
+./mvnw -s "$MAVEN_SETTINGS" -U -B -ntp -Dhop.geometry.type.version=0.2.0-SNAPSHOT clean verify
+python3 scripts/check-distribution.py
+```
+
+The compatibility command uses the same settings and Geometry property with
+`test` instead of `clean verify`.
+
+### Installed Hop E2E
+
+Use a disposable Apache Hop 2.19.0 installation with `hop-run.sh`, Bash and
+`unzip`. Set `HOP_HOME` to its absolute path. Set `HOP_GEOMETRY_TYPE_ZIP` to the
+absolute path of the Geometry 0.2.0-SNAPSHOT ZIP and `HOP_VECTOR_RASTER_ZIP` to
+the Vector/Raster 0.1.0-SNAPSHOT ZIP, matching the workflow. Resolve them with
+`download_maven_artifact.py` and the generated settings as shown in the workflow.
+Both coordinates use group `ch.so.agi`, extension `zip`, and artifact IDs
+`hop-geometry-type-plugin` and `hop-vector-raster-plugin` respectively.
+
+```bash
+export HOP_GEOMETRY_TYPE_ZIP HOP_VECTOR_RASTER_ZIP
+export REQUIRE_VECTOR_RASTER_E2E=true
+bash scripts/run-e2e.sh "$HOP_HOME"
+```
+
+The script installs into the supplied Hop tree and reads the INTERLIS ZIP from
+`assemblies/assemblies-hop-interlis/target`. For CI candidate testing, that
+directory receives the downloaded canonical artifact; do not rebuild it.
+Provide the prebuilt Vector/Raster ZIP to avoid the script's sibling-repo build
+fallback. Requiring Vector/Raster matches CI and prevents silently skipping its
+GeoPackage path. Optional `KEEP_E2E_WORKDIR=true` retains diagnostic output.
+Snapshot and release publication depend on this complete verify workflow.
