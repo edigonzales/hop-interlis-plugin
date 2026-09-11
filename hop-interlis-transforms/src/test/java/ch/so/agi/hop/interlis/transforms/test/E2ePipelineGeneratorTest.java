@@ -1,5 +1,6 @@
 package ch.so.agi.hop.interlis.transforms.test;
 
+import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
 import ch.so.agi.hop.interlis.transforms.output.InterlisOutputMeta;
 import java.nio.file.Files;
@@ -624,11 +625,7 @@ class E2ePipelineGeneratorTest {
       return Path.of(configured).toAbsolutePath();
     }
     // Default: test resources data directory of this module.
-    Path data =
-        Path.of(
-            E2ePipelineGeneratorTest.class
-                .getResource("/data/HopIli_Geometry_V1_valid.xtf")
-                .toURI());
+    Path data = TestData.path("/data/HopIli_Geometry_V1_valid.xtf");
     return data.getParent().toAbsolutePath();
   }
 
@@ -1204,10 +1201,7 @@ class E2ePipelineGeneratorTest {
       return "${E2E_INPUT_DIR}";
     }
     try {
-      return Path.of(
-              E2ePipelineGeneratorTest.class.getResource("/models/HopIli_Enums_V1.ili").toURI())
-          .getParent()
-          .toString();
+      return TestData.path("/models").toString();
     } catch (Exception e) {
       throw new IllegalStateException(e);
     }

@@ -1,36 +1,37 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
-  <HEADERSECTION SENDER="hop-interlis-plugin-doc" VERSION="2.3">
-    <MODELS>
-      <MODEL NAME="DemoStruktur" VERSION="2024-01-01" URI="https://github.com/edigonzales/hop-interlis-plugin"/>
-    </MODELS>
-  </HEADERSECTION>
-  <DATASECTION>
-    <DemoStruktur.Personen BID="b1">
-      <DemoStruktur.Personen.Person TID="p1">
-        <Name>Meier</Name>
-        <Vorname>Hans</Vorname>
-        <Adresse>
-          <DemoStruktur.Personen.Adresse>
-            <Strasse>Hauptstrasse</Strasse>
-            <Hausnummer>42</Hausnummer>
-            <PLZ>4500</PLZ>
-            <Ort>Solothurn</Ort>
-          </DemoStruktur.Personen.Adresse>
-        </Adresse>
-      </DemoStruktur.Personen.Person>
-      <DemoStruktur.Personen.Person TID="p2">
-        <Name>Mueller</Name>
-        <Vorname>Anna</Vorname>
-        <Adresse>
-          <DemoStruktur.Personen.Adresse>
-            <Strasse>Bahnhofstrasse</Strasse>
-            <Hausnummer>1</Hausnummer>
-            <PLZ>4500</PLZ>
-            <Ort>Solothurn</Ort>
-          </DemoStruktur.Personen.Adresse>
-        </Adresse>
-      </DemoStruktur.Personen.Person>
-    </DemoStruktur.Personen>
-  </DATASECTION>
-</TRANSFER>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:geom="http://www.interlis.ch/geometry/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:DemoStruktur="http://www.interlis.ch/xtf/2.4/DemoStruktur">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>DemoStruktur</ili:model>
+    </ili:models>
+    <ili:sender>hop-interlis-plugin-doc</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+    <DemoStruktur:Personen ili:bid="b1">
+      <DemoStruktur:Person ili:tid="p1">
+        <DemoStruktur:Name>Meier</DemoStruktur:Name>
+        <DemoStruktur:Vorname>Hans</DemoStruktur:Vorname>
+        <DemoStruktur:Adresse>
+          <DemoStruktur:Adresse>
+            <DemoStruktur:Strasse>Hauptstrasse</DemoStruktur:Strasse>
+            <DemoStruktur:Hausnummer>42</DemoStruktur:Hausnummer>
+            <DemoStruktur:PLZ>4500</DemoStruktur:PLZ>
+            <DemoStruktur:Ort>Solothurn</DemoStruktur:Ort>
+          </DemoStruktur:Adresse>
+        </DemoStruktur:Adresse>
+      </DemoStruktur:Person>
+      <DemoStruktur:Person ili:tid="p2">
+        <DemoStruktur:Name>Mueller</DemoStruktur:Name>
+        <DemoStruktur:Vorname>Anna</DemoStruktur:Vorname>
+        <DemoStruktur:Adresse>
+          <DemoStruktur:Adresse>
+            <DemoStruktur:Strasse>Bahnhofstrasse</DemoStruktur:Strasse>
+            <DemoStruktur:Hausnummer>1</DemoStruktur:Hausnummer>
+            <DemoStruktur:PLZ>4500</DemoStruktur:PLZ>
+            <DemoStruktur:Ort>Solothurn</DemoStruktur:Ort>
+          </DemoStruktur:Adresse>
+        </DemoStruktur:Adresse>
+      </DemoStruktur:Person>
+    </DemoStruktur:Personen>
+  </ili:datasection>
+</ili:transfer>

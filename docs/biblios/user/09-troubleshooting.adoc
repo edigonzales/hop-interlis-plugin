@@ -148,7 +148,7 @@ So prüfen Sie, ob die Bögen erhalten geblieben sind:
 
 1. Lesen Sie die originale XTF und die Output-XTF mit `INTERLIS Input`
 2. Vergleichen Sie die Geometrie-Felder (z. B. mit `Stream lookup` oder `Merge join`)
-3. Alternativ: Öffnen Sie beide XTF-Dateien in einem Texteditor und suchen Sie nach `<ARC>`-Elementen
+3. Alternativ: Öffnen Sie beide XTF-Dateien in einem Texteditor und suchen Sie nach `<geom:arc>`-Elementen
 ====
 
 === Problem: DELETE-Objekte werden als normale Rows ausgegeben

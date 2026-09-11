@@ -1,22 +1,23 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
-  <HEADERSECTION SENDER="hop-interlis-plugin-doc" VERSION="2.3">
-    <MODELS>
-      <MODEL NAME="DemoValidierung" VERSION="2024-01-01" URI="https://github.com/edigonzales/hop-interlis-plugin"/>
-    </MODELS>
-  </HEADERSECTION>
-  <DATASECTION>
-    <DemoValidierung.Daten BID="b1">
-      <DemoValidierung.Daten.Messung TID="m1">
-        <Standort>Station A</Standort>
-        <Wert>23.5</Wert>
-        <Einheit>Grad_Celsius</Einheit>
-      </DemoValidierung.Daten.Messung>
-      <DemoValidierung.Daten.Messung TID="m2">
-        <Standort>Station B</Standort>
-        <Wert>85.0</Wert>
-        <Einheit>Grad_Celsius</Einheit>
-      </DemoValidierung.Daten.Messung>
-    </DemoValidierung.Daten>
-  </DATASECTION>
-</TRANSFER>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:geom="http://www.interlis.ch/geometry/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:DemoValidierung="http://www.interlis.ch/xtf/2.4/DemoValidierung">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>DemoValidierung</ili:model>
+    </ili:models>
+    <ili:sender>hop-interlis-plugin-doc</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+    <DemoValidierung:Daten ili:bid="b1">
+      <DemoValidierung:Messung ili:tid="m1">
+        <DemoValidierung:Standort>Station A</DemoValidierung:Standort>
+        <DemoValidierung:Wert>23.5</DemoValidierung:Wert>
+        <DemoValidierung:Einheit>Grad_Celsius</DemoValidierung:Einheit>
+      </DemoValidierung:Messung>
+      <DemoValidierung:Messung ili:tid="m2">
+        <DemoValidierung:Standort>Station B</DemoValidierung:Standort>
+        <DemoValidierung:Wert>85.0</DemoValidierung:Wert>
+        <DemoValidierung:Einheit>Grad_Celsius</DemoValidierung:Einheit>
+      </DemoValidierung:Messung>
+    </DemoValidierung:Daten>
+  </ili:datasection>
+</ili:transfer>

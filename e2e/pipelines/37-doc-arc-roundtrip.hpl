@@ -1,0 +1,90 @@
+<pipeline>
+  <info>
+    <capture_transform_performance>N</capture_transform_performance>
+    <transform_performance_capturing_delay>1000</transform_performance_capturing_delay>
+    <transform_performance_capturing_size_limit>100</transform_performance_capturing_size_limit>
+    <pipeline_type>Normal</pipeline_type>
+    <pipeline_status>-1</pipeline_status>
+    <parameters/>
+    <name>37-doc-arc-roundtrip</name>
+    <name_sync_with_filename>Y</name_sync_with_filename>
+  </info>
+  <transform>
+    <type>INTERLIS_INPUT</type>
+    <name>Input</name>
+    <fileName>${E2E_INPUT_DIR}/bogen-transfer.xtf</fileName>
+    <modelNames>DemoBogen</modelNames>
+    <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
+    <className>DemoBogen.Verkehr.Strassenachse</className>
+    <includeTid>Y</includeTid>
+    <includeBid>Y</includeBid>
+    <includeClassName>N</includeClassName>
+    <includeTopicName>N</includeTopicName>
+    <distribute>N</distribute>
+    <copies>1</copies>
+    <GUI><xloc>100</xloc><yloc>100</yloc></GUI>
+    <partitioning><method>none</method><schema_name/></partitioning>
+    <attributes/>
+  </transform>
+  <transform>
+    <type>INTERLIS_OUTPUT</type>
+    <name>INTERLIS Output</name>
+    <fileName>${E2E_OUTPUT_DIR}/doc-bogen-roundtrip.xtf</fileName>
+    <modelNames>DemoBogen</modelNames>
+    <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
+    <className>DemoBogen.Verkehr.Strassenachse</className>
+    <objectIdField>_ili_tid</objectIdField>
+    <basketIdField>_ili_bid</basketIdField>
+    <basketId>b1</basketId>
+    <overwrite>Y</overwrite>
+    <distribute>N</distribute>
+    <copies>1</copies>
+    <GUI><xloc>350</xloc><yloc>100</yloc></GUI>
+    <partitioning><method>none</method><schema_name/></partitioning>
+    <attributes/>
+  </transform>
+  <transform>
+    <type>TextFileOutput</type>
+    <name>Text file output</name>
+    <compression>None</compression>
+    <create_parent_folder>Y</create_parent_folder>
+    <separator>;</separator>
+    <enclosure/>
+    <enclosure_forced>N</enclosure_forced>
+    <enclosure_fix_disabled>N</enclosure_fix_disabled>
+    <header>Y</header>
+    <footer>N</footer>
+    <format>DOS</format>
+    <fileNameInField>N</fileNameInField>
+    <ignore_fields>N</ignore_fields>
+    <file><name>${E2E_OUTPUT_DIR}/doc-bogen</name><do_not_open_new_file_init>Y</do_not_open_new_file_init><extension>csv</extension><append>N</append><split>N</split><haspartno>N</haspartno><add_date>N</add_date><add_time>N</add_time><SpecifyFormat>N</SpecifyFormat><add_to_result_filenames>Y</add_to_result_filenames><pad>N</pad><fast_dump>N</fast_dump></file>
+    <fields/>
+    <distribute>N</distribute>
+    <copies>1</copies>
+    <GUI><xloc>850</xloc><yloc>100</yloc></GUI>
+    <partitioning><method>none</method><schema_name/></partitioning>
+    <attributes/>
+  </transform>
+  <transform>
+    <type>SelectValues</type>
+    <name>Geometry as text</name>
+    <fields>
+      <select_unspecified>N</select_unspecified>
+      <meta><name>_ili_tid</name><type>String</type><length>-1</length><precision>-1</precision></meta>
+      <meta><name>_ili_bid</name><type>String</type><length>-1</length><precision>-1</precision></meta>
+      <meta><name>Name</name><type>String</type><length>-1</length><precision>-1</precision></meta>
+      <meta><name>Geometrie</name><type>String</type><length>-1</length><precision>-1</precision></meta>
+    </fields>
+    <distribute>N</distribute><copies>1</copies>
+    <GUI><xloc>850</xloc><yloc>100</yloc></GUI>
+    <partitioning><method>none</method><schema_name/></partitioning><attributes/>
+  </transform>
+  <order>
+    <hop><from>Input</from><to>INTERLIS Output</to><enabled>Y</enabled></hop>
+    <hop><from>Input</from><to>Geometry as text</to><enabled>Y</enabled></hop>
+    <hop><from>Geometry as text</from><to>Text file output</to><enabled>Y</enabled></hop>
+  </order>
+  <notepads/>
+  <attributes/>
+  <transform_error_handling/>
+</pipeline>

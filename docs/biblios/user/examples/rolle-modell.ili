@@ -1,4 +1,4 @@
-INTERLIS 2.3;
+INTERLIS 2.4;
 
 /** Beispielmodell mit einfacher Rolle (Gebäude → Gemeinde).
     Zeigt die Abbildung von Rollen als Referenzfelder.
@@ -29,8 +29,8 @@ VERSION "2024-01-01" =
     END Gebaeude;
 
     ASSOCIATION GebaeudeGemeinde =
-      GebaeudeRef -- {0..*} Gebaeude;
-      Zugehoerigkeit -- {0..*} Gemeinde;
+      Gemeinde -- {1} Gemeinde;
+      Gebaeude -- {0..*} Gebaeude;
     END GebaeudeGemeinde;
 
   END Verwaltung;

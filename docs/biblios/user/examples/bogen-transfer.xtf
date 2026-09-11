@@ -1,33 +1,34 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
-  <HEADERSECTION SENDER="hop-interlis-plugin-doc" VERSION="2.3">
-    <MODELS>
-      <MODEL NAME="DemoBogen" VERSION="2024-01-01" URI="https://github.com/edigonzales/hop-interlis-plugin"/>
-    </MODELS>
-  </HEADERSECTION>
-  <DATASECTION>
-    <DemoBogen.Verkehr BID="b1">
-      <DemoBogen.Verkehr.Strassenachse TID="s1">
-        <Name>Hauptstrasse</Name>
-        <Geometrie>
-          <POLYLINE>
-            <COORD>
-              <C1>2600000.0</C1>
-              <C2>1200000.0</C2>
-            </COORD>
-            <ARC>
-              <C1>2600050.0</C1>
-              <C2>1200050.0</C2>
-              <A1>2600100.0</A1>
-              <A2>1200000.0</A2>
-            </ARC>
-            <COORD>
-              <C1>2600100.0</C1>
-              <C2>1200000.0</C2>
-            </COORD>
-          </POLYLINE>
-        </Geometrie>
-      </DemoBogen.Verkehr.Strassenachse>
-    </DemoBogen.Verkehr>
-  </DATASECTION>
-</TRANSFER>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:geom="http://www.interlis.ch/geometry/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:DemoBogen="http://www.interlis.ch/xtf/2.4/DemoBogen">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>DemoBogen</ili:model>
+    </ili:models>
+    <ili:sender>hop-interlis-plugin-doc</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+    <DemoBogen:Verkehr ili:bid="b1">
+      <DemoBogen:Strassenachse ili:tid="s1">
+        <DemoBogen:Name>Hauptstrasse</DemoBogen:Name>
+        <DemoBogen:Geometrie>
+          <geom:polyline>
+            <geom:coord>
+              <geom:c1>2600000.0</geom:c1>
+              <geom:c2>1200000.0</geom:c2>
+            </geom:coord>
+            <geom:arc>
+              <geom:a1>2600050.0</geom:a1>
+              <geom:a2>1200050.0</geom:a2>
+              <geom:c1>2600100.0</geom:c1>
+              <geom:c2>1200000.0</geom:c2>
+            </geom:arc>
+            <geom:coord>
+              <geom:c1>2600100.0</geom:c1>
+              <geom:c2>1200000.0</geom:c2>
+            </geom:coord>
+          </geom:polyline>
+        </DemoBogen:Geometrie>
+      </DemoBogen:Strassenachse>
+    </DemoBogen:Verkehr>
+  </ili:datasection>
+</ili:transfer>

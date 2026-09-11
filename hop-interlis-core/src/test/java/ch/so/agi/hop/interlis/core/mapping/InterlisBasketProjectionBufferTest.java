@@ -3,6 +3,7 @@ package ch.so.agi.hop.interlis.core.mapping;
 import static org.assertj.core.api.Assertions.*;
 
 import ch.interlis.iom_j.Iom_jObject;
+import ch.so.agi.hop.interlis.core.TestResources;
 import ch.so.agi.hop.interlis.core.io.*;
 import java.nio.file.*;
 import java.util.*;
@@ -14,11 +15,7 @@ class InterlisBasketProjectionBufferTest {
   static final String TOPIC = "HopIli_Associations_V1.Data";
 
   static InterlisRowMappingPlan plan() throws Exception {
-    var model =
-        Path.of(
-            InterlisBasketProjectionBufferTest.class
-                .getResource("/models/HopIli_Associations_V1.ili")
-                .toURI());
+    var model = TestResources.path("/models/HopIli_Associations_V1.ili");
     return new InterlisProjectionService()
         .project(
             new InterlisModelRequest(

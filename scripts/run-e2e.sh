@@ -115,8 +115,12 @@ fi
 
 echo "==> Preparing test data in $WORK_DIR"
 mkdir -p "$WORK_DIR/input" "$WORK_DIR/output"
-cp "$PROJECT_DIR/hop-interlis-core/src/test/resources/data/"*.xtf "$WORK_DIR/input/"
-cp "$PROJECT_DIR/hop-interlis-core/src/test/resources/models/"*.ili "$WORK_DIR/input/"
+cp "$PROJECT_DIR/hop-interlis-core/src/test/resources/fixtures/data/2.3/"*.xtf "$WORK_DIR/input/"
+cp "$PROJECT_DIR/hop-interlis-core/src/test/resources/fixtures/data/2.4/"*.xtf "$WORK_DIR/input/"
+cp "$PROJECT_DIR/hop-interlis-core/src/test/resources/fixtures/models/2.3/"*.ili "$WORK_DIR/input/"
+cp "$PROJECT_DIR/hop-interlis-core/src/test/resources/fixtures/models/2.4/"*.ili "$WORK_DIR/input/"
+cp "$PROJECT_DIR/docs/biblios/user/examples/"*.ili "$WORK_DIR/input/"
+cp "$PROJECT_DIR/docs/biblios/user/examples/"*.xtf "$WORK_DIR/input/"
 cp "$PROJECT_DIR/e2e/fixtures/"*.xtf "$WORK_DIR/input/"
 
 run_pipeline() {
@@ -169,6 +173,12 @@ run_pipeline "$PROJECT_DIR/e2e/pipelines/29-binding-structures.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/30-binding-join.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/31-binding-missing-field.hpl" 1 "missing_parent_field"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/32-binding-key-type.hpl" 1 "expected String, actual Integer"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/33-doc-demo-input.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/34-doc-structure-flatten.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/35-doc-list-explode-collect.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/36-doc-role-join.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/37-doc-arc-roundtrip.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/38-doc-validation.hpl"
 if [[ "$RUN_GPKG" == "true" ]]; then
   run_pipeline "$PROJECT_DIR/e2e/pipelines/04-interlis-to-gpkg.hpl"
 fi
@@ -179,5 +189,6 @@ if [[ "$RUN_GPKG" == "true" ]]; then
 else
   python3 "$PROJECT_DIR/scripts/check-e2e-output.py" "$WORK_DIR/output"
 fi
+python3 "$PROJECT_DIR/scripts/check-doc-examples-output.py" "$WORK_DIR/output"
 
 echo "E2E OK"

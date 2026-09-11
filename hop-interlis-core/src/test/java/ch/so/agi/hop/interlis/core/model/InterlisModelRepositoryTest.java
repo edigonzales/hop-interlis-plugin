@@ -3,6 +3,7 @@ package ch.so.agi.hop.interlis.core.model;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import ch.so.agi.hop.interlis.core.TestResources;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import com.sun.net.httpserver.HttpServer;
@@ -44,8 +45,8 @@ class InterlisModelRepositoryTest {
               content = emptyModelIndex().getBytes(java.nio.charset.StandardCharsets.UTF_8);
             } else {
               String resourcePath = path.startsWith("/site-child/")
-                  ? "/models/repo/" + path.substring("/site-child/".length())
-                  : "/models/repo/" + path.substring(1);
+                  ? "/fixtures/models/repository/" + path.substring("/site-child/".length())
+                  : "/fixtures/models/repository/" + path.substring(1);
               java.net.URL url =
                   InterlisModelRepositoryTest.class.getResource(resourcePath);
               if (url == null) {
@@ -124,8 +125,7 @@ class InterlisModelRepositoryTest {
 
   @Test
   void local_directories_override_the_repository() throws Exception {
-    Path localDir = Path.of(InterlisModelRepositoryTest.class.getResource("/models").toURI());
-    String localBase = localDir.resolve("HopIli_Associations_V1.ili").getParent().toString();
+    String localBase = TestResources.path("/models").toString();
 
     CompiledInterlisModel model =
         service()

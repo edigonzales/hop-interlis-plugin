@@ -1,4 +1,4 @@
-INTERLIS 2.3;
+INTERLIS 2.4;
 
 /** Beispielmodell mit einfachem Constraint für Validierung.
     Zeigt die Validierung von INTERLIS-Daten.
@@ -18,6 +18,8 @@ VERSION "2024-01-01" =
         Grad_Celsius,
         Meter
       );
+      MANDATORY CONSTRAINT Temperaturbereich :
+        Einheit != #Grad_Celsius OR Wert <= 50.0;
     END Messung;
 
   END Daten;

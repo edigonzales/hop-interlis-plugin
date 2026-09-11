@@ -1,49 +1,77 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<TRANSFER xmlns="http://www.interlis.ch/INTERLIS2.3">
-  <HEADERSECTION SENDER="hop-interlis-plugin-doc" VERSION="2.3">
-    <MODELS>
-      <MODEL NAME="DemoRolle" VERSION="2024-01-01" URI="https://github.com/edigonzales/hop-interlis-plugin"/>
-    </MODELS>
-  </HEADERSECTION>
-  <DATASECTION>
-    <DemoRolle.Verwaltung BID="b1">
-      <DemoRolle.Verwaltung.Gemeinde TID="gem1">
-        <Name>Solothurn</Name>
-        <BFS_Nummer>2549</BFS_Nummer>
-        <Geometrie>
-          <SURFACE>
-            <BOUNDARY>
-              <POLYLINE>
-                <COORD><C1>2600000.0</C1><C2>1200000.0</C2></COORD>
-                <COORD><C1>2600500.0</C1><C2>1200000.0</C2></COORD>
-                <COORD><C1>2600500.0</C1><C2>1200500.0</C2></COORD>
-                <COORD><C1>2600000.0</C1><C2>1200500.0</C2></COORD>
-                <COORD><C1>2600000.0</C1><C2>1200000.0</C2></COORD>
-              </POLYLINE>
-            </BOUNDARY>
-          </SURFACE>
-        </Geometrie>
-      </DemoRolle.Verwaltung.Gemeinde>
-      <DemoRolle.Verwaltung.Gebaeude TID="g1">
-        <Name>Rathaus</Name>
-        <Geometrie>
-          <SURFACE>
-            <BOUNDARY>
-              <POLYLINE>
-                <COORD><C1>2600100.0</C1><C2>1200100.0</C2></COORD>
-                <COORD><C1>2600200.0</C1><C2>1200100.0</C2></COORD>
-                <COORD><C1>2600200.0</C1><C2>1200200.0</C2></COORD>
-                <COORD><C1>2600100.0</C1><C2>1200200.0</C2></COORD>
-                <COORD><C1>2600100.0</C1><C2>1200100.0</C2></COORD>
-              </POLYLINE>
-            </BOUNDARY>
-          </SURFACE>
-        </Geometrie>
-      </DemoRolle.Verwaltung.Gebaeude>
-      <DemoRolle.Verwaltung.GebaeudeGemeinde>
-        <GebaeudeRef REF="g1"></GebaeudeRef>
-        <Zugehoerigkeit REF="gem1"></Zugehoerigkeit>
-      </DemoRolle.Verwaltung.GebaeudeGemeinde>
-    </DemoRolle.Verwaltung>
-  </DATASECTION>
-</TRANSFER>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:geom="http://www.interlis.ch/geometry/1.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:DemoRolle="http://www.interlis.ch/xtf/2.4/DemoRolle">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>DemoRolle</ili:model>
+    </ili:models>
+    <ili:sender>hop-interlis-plugin-doc</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+    <DemoRolle:Verwaltung ili:bid="b1">
+      <DemoRolle:Gemeinde ili:tid="gem1">
+        <DemoRolle:Name>Solothurn</DemoRolle:Name>
+        <DemoRolle:BFS_Nummer>2549</DemoRolle:BFS_Nummer>
+        <DemoRolle:Geometrie>
+          <geom:surface>
+            <geom:exterior>
+              <geom:polyline>
+                <geom:coord>
+                  <geom:c1>2600000.0</geom:c1>
+                  <geom:c2>1200000.0</geom:c2>
+                </geom:coord>
+                <geom:coord>
+                  <geom:c1>2600500.0</geom:c1>
+                  <geom:c2>1200000.0</geom:c2>
+                </geom:coord>
+                <geom:coord>
+                  <geom:c1>2600500.0</geom:c1>
+                  <geom:c2>1200500.0</geom:c2>
+                </geom:coord>
+                <geom:coord>
+                  <geom:c1>2600000.0</geom:c1>
+                  <geom:c2>1200500.0</geom:c2>
+                </geom:coord>
+                <geom:coord>
+                  <geom:c1>2600000.0</geom:c1>
+                  <geom:c2>1200000.0</geom:c2>
+                </geom:coord>
+              </geom:polyline>
+            </geom:exterior>
+          </geom:surface>
+        </DemoRolle:Geometrie>
+      </DemoRolle:Gemeinde>
+      <DemoRolle:Gebaeude ili:tid="g1">
+        <DemoRolle:Name>Rathaus</DemoRolle:Name>
+        <DemoRolle:Geometrie>
+          <geom:surface>
+            <geom:exterior>
+              <geom:polyline>
+                <geom:coord>
+                  <geom:c1>2600100.0</geom:c1>
+                  <geom:c2>1200100.0</geom:c2>
+                </geom:coord>
+                <geom:coord>
+                  <geom:c1>2600200.0</geom:c1>
+                  <geom:c2>1200100.0</geom:c2>
+                </geom:coord>
+                <geom:coord>
+                  <geom:c1>2600200.0</geom:c1>
+                  <geom:c2>1200200.0</geom:c2>
+                </geom:coord>
+                <geom:coord>
+                  <geom:c1>2600100.0</geom:c1>
+                  <geom:c2>1200200.0</geom:c2>
+                </geom:coord>
+                <geom:coord>
+                  <geom:c1>2600100.0</geom:c1>
+                  <geom:c2>1200100.0</geom:c2>
+                </geom:coord>
+              </geom:polyline>
+            </geom:exterior>
+          </geom:surface>
+        </DemoRolle:Geometrie>
+        <DemoRolle:Gemeinde ili:ref="gem1"/>
+      </DemoRolle:Gebaeude>
+    </DemoRolle:Verwaltung>
+  </ili:datasection>
+</ili:transfer>

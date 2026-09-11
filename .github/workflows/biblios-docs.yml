@@ -35,6 +35,9 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: Verify INTERLIS documentation examples
+        run: ./mvnw -B -ntp -pl hop-interlis-transforms -am -Dtest=DocsExamplesTest -Dsurefire.failIfNoSpecifiedTests=false test
+
       - name: Resolve latest thoth-biblios snapshot
         id: snapshot
         env:

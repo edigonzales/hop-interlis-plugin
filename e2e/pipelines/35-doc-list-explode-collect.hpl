@@ -1,0 +1,138 @@
+<pipeline>
+  <info>
+    <capture_transform_performance>N</capture_transform_performance>
+    <transform_performance_capturing_delay>1000</transform_performance_capturing_delay>
+    <transform_performance_capturing_size_limit>100</transform_performance_capturing_size_limit>
+    <pipeline_type>Normal</pipeline_type>
+    <pipeline_status>-1</pipeline_status>
+    <parameters/>
+    <name>35-doc-list-explode-collect</name>
+    <name_sync_with_filename>Y</name_sync_with_filename>
+  </info>
+  <transform>
+    <type>INTERLIS_INPUT</type>
+    <name>Parent input</name>
+    <fileName>${E2E_INPUT_DIR}/liste-transfer.xtf</fileName>
+    <modelNames>DemoListe</modelNames>
+    <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
+    <className>DemoListe.Gebaeude.Gebaeude</className>
+    <includeTid>Y</includeTid>
+    <includeBid>Y</includeBid>
+    <includeClassName>N</includeClassName>
+    <includeTopicName>N</includeTopicName>
+    <keepSourceObject>Y</keepSourceObject>
+    <sourceObjectFieldName>_ili_source_object</sourceObjectFieldName>
+    <distribute>N</distribute>
+    <copies>1</copies>
+    <GUI><xloc>100</xloc><yloc>100</yloc></GUI>
+    <partitioning><method>none</method><schema_name/></partitioning>
+    <attributes/>
+  </transform>
+  <transform>
+    <type>INTERLIS_STRUCTURE_EXPLODE</type>
+    <name>INTERLIS Structure Explode</name>
+    <modelNames>DemoListe</modelNames>
+    <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
+    <className>DemoListe.Gebaeude.Gebaeude</className>
+    <sourceObjectField>_ili_source_object</sourceObjectField>
+    <parentTidField>_ili_tid</parentTidField>
+    <parentBidField>_ili_bid</parentBidField>
+    <emitParentBid>Y</emitParentBid>
+    <structureAttributePath>Qualitaeten</structureAttributePath>
+    <parentKeyFieldName>_ili_parent_tid</parentKeyFieldName>
+    <parentBidKeyFieldName>_ili_parent_bid</parentBidKeyFieldName>
+    <indexFieldName>_ili_index</indexFieldName>
+    <emitIndexForBag>Y</emitIndexForBag>
+    <distribute>Y</distribute>
+    <copies>1</copies>
+    <GUI><xloc>350</xloc><yloc>100</yloc></GUI>
+    <partitioning><method>none</method><schema_name/></partitioning>
+    <attributes/>
+  </transform>
+  <transform>
+    <type>INTERLIS_STRUCTURE_COLLECT</type>
+    <name>INTERLIS Structure Collect</name>
+    <parentInputTransform>Parent input</parentInputTransform>
+    <childInputTransform>INTERLIS Structure Explode</childInputTransform>
+    <parentKeyField>_ili_tid</parentKeyField>
+    <childParentKeyField>_ili_parent_tid</childParentKeyField>
+    <childIndexField>_ili_index</childIndexField>
+    <modelNames>DemoListe</modelNames>
+    <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
+    <className>DemoListe.Gebaeude.Gebaeude</className>
+    <structureAttributePath>Qualitaeten</structureAttributePath>
+    <sourceObjectField>_ili_source_object</sourceObjectField>
+    <strictOrdering>Y</strictOrdering>
+    <failOnDuplicateIndex>Y</failOnDuplicateIndex>
+    <failOnChildWithoutParent>Y</failOnChildWithoutParent>
+    <distribute>N</distribute>
+    <copies>1</copies>
+    <GUI><xloc>600</xloc><yloc>100</yloc></GUI>
+    <partitioning><method>none</method><schema_name/></partitioning>
+    <attributes/>
+  </transform>
+  <transform>
+    <type>INTERLIS_OUTPUT</type>
+    <name>INTERLIS Output</name>
+    <fileName>${E2E_OUTPUT_DIR}/doc-liste-roundtrip.xtf</fileName>
+    <modelNames>DemoListe</modelNames>
+    <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
+    <className>DemoListe.Gebaeude.Gebaeude</className>
+    <objectIdField>_ili_tid</objectIdField>
+    <basketIdField>_ili_bid</basketIdField>
+    <basketId>b1</basketId>
+    <sourceObjectField>_ili_source_object</sourceObjectField>
+    <overwrite>Y</overwrite>
+    <distribute>N</distribute>
+    <copies>1</copies>
+    <GUI><xloc>850</xloc><yloc>100</yloc></GUI>
+    <partitioning><method>none</method><schema_name/></partitioning>
+    <attributes/>
+  </transform>
+  <transform>
+    <type>SelectValues</type>
+    <name>Parent result</name>
+    <fields>
+      <select_unspecified>N</select_unspecified>
+      <meta><name>_ili_tid</name><type>String</type><length>-1</length><precision>-1</precision></meta>
+      <meta><name>_ili_bid</name><type>String</type><length>-1</length><precision>-1</precision></meta>
+      <meta><name>Name</name><type>String</type><length>-1</length><precision>-1</precision></meta>
+    </fields>
+    <distribute>N</distribute><copies>1</copies>
+    <GUI><xloc>1100</xloc><yloc>100</yloc></GUI>
+    <partitioning><method>none</method><schema_name/></partitioning><attributes/>
+  </transform>
+  <transform>
+    <type>TextFileOutput</type>
+    <name>Text file output</name>
+    <compression>None</compression>
+    <create_parent_folder>Y</create_parent_folder>
+    <separator>;</separator>
+    <enclosure/>
+    <enclosure_forced>N</enclosure_forced>
+    <enclosure_fix_disabled>N</enclosure_fix_disabled>
+    <header>Y</header>
+    <footer>N</footer>
+    <format>DOS</format>
+    <fileNameInField>N</fileNameInField>
+    <ignore_fields>N</ignore_fields>
+    <file><name>${E2E_OUTPUT_DIR}/doc-liste</name><do_not_open_new_file_init>Y</do_not_open_new_file_init><extension>csv</extension><append>N</append><split>N</split><haspartno>N</haspartno><add_date>N</add_date><add_time>N</add_time><SpecifyFormat>N</SpecifyFormat><add_to_result_filenames>Y</add_to_result_filenames><pad>N</pad><fast_dump>N</fast_dump></file>
+    <fields/>
+    <distribute>N</distribute>
+    <copies>1</copies>
+    <GUI><xloc>1350</xloc><yloc>100</yloc></GUI>
+    <partitioning><method>none</method><schema_name/></partitioning>
+    <attributes/>
+  </transform>
+  <order>
+    <hop><from>Parent input</from><to>INTERLIS Structure Explode</to><enabled>Y</enabled></hop>
+    <hop><from>Parent input</from><to>INTERLIS Structure Collect</to><enabled>Y</enabled></hop>
+    <hop><from>INTERLIS Structure Explode</from><to>INTERLIS Structure Collect</to><enabled>Y</enabled></hop>
+    <hop><from>INTERLIS Structure Collect</from><to>INTERLIS Output</to><enabled>Y</enabled></hop>
+    <hop><from>INTERLIS Structure Collect</from><to>Parent result</to><enabled>Y</enabled></hop>
+    <hop><from>Parent result</from><to>Text file output</to><enabled>Y</enabled></hop>
+  </order>
+  <notepads/>
+  <attributes/>
+  <transform_error_handling/>
+</pipeline>

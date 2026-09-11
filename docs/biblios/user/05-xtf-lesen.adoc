@@ -410,7 +410,9 @@ Bei inkrementellen Transfers können Objekte DELETE- oder UPDATE-Markierungen tr
 
 [source,text]
 ----
-<Demo.Topic.Class TID="g1" OPERATION="DELETE">
+<Demo:Class xmlns:Demo="http://www.interlis.ch/xtf/2.4/Demo"
+            xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS"
+            ili:tid="g1" ili:operation="DELETE"/>
 ----
 
 Optionen im Dialog:

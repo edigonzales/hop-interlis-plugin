@@ -7,6 +7,9 @@ Dieses Kapitel enthält sechs vollständige Mini-Tutorials. Jedes Tutorial beste
 - Einer Pipeline-Beschreibung
 - Dem erwarteten Ergebnis
 
+Die mitgelieferten Modelle und Transfers sind die kanonischen INTERLIS-2.4-Beispiele. Die
+allgemeine Plugin-Unterstützung für XTF 2.3 und XTF 2.4 bleibt davon unberührt.
+
 [TIP]
 ====
 Alle `.ili`- und `.xtf`-Dateien aus diesem Kapitel liegen unter `docs/biblios/user/examples/` und können per `include::` direkt in die Dokumentation eingebunden werden.
@@ -164,6 +167,9 @@ include::examples/rolle-transfer.xtf[]
    - Felder hinzufügen: `Name`, `BFS_Nummer`
    - Präfix: `Gemeinde_`
 
+Im 2.4-Transfer ist die einfache Rolle als eingebettete Referenz am Gebäude codiert. Der
+Role-Join verbirgt diese XTF-Darstellung und verwendet stattdessen das Feld `Gemeinde_ref`.
+
 ==== Ergebnis
 
 [source,text]
@@ -207,20 +213,18 @@ include::examples/bogen-transfer.xtf[]
 
 [source,bash]
 ----
-# Originale Geometrie:
-<COORD><C1>2600000.0</C1><C2>1200000.0</C2></COORD>
-<ARC><C1>2600050.0</C1><C2>1200050.0</C2><A1>2600100.0</A1><A2>1200000.0</A2></ARC>
-<COORD><C1>2600100.0</C1><C2>1200000.0</C2></COORD>
-
-# Nach Roundtrip (muss identisch sein):
-<COORD><C1>2600000.0</C1><C2>1200000.0</C2></COORD>
-<ARC><C1>2600050.0</C1><C2>1200050.0</C2><A1>2600100.0</A1><A2>1200000.0</A2></ARC>
-<COORD><C1>2600100.0</C1><C2>1200000.0</C2></COORD>
+# 2.4-Ausgabe des Writers (gekürzt):
+<geom:coord><geom:c1>2600000.0</geom:c1><geom:c2>1200000.0</geom:c2></geom:coord>
+<geom:arc><geom:a1>2600050.0</geom:a1><geom:a2>1200050.0</geom:a2>
+  <geom:c1>2600100.0</geom:c1><geom:c2>1200000.0</geom:c2></geom:arc>
+<geom:coord><geom:c1>2600100.0</geom:c1><geom:c2>1200000.0</geom:c2></geom:coord>
 ----
 
 [IMPORTANT]
 ====
-Wenn Bögen linearisiert würden, erschiene statt `<ARC>` eine Serie von `<COORD>`-Punkten. Der Roundtrip mit `<ARC>` beweist, dass die SQL/MM-WKB-Umwandlung Bögen verlustfrei erhält.
+Wenn Bögen linearisiert würden, erschiene statt <geom:arc> eine Serie von <geom:coord>-Punkten.
+Geprüft werden deshalb Namespace, ARC-Typ und die drei Kontrollpunkte; XML-Präfixe und
+Elementreihenfolge sind nicht Teil der Semantik.
 ====
 
 === Beispiel F: Validierung
@@ -250,12 +254,12 @@ include::examples/validierung-transfer.xtf[]
 
 [source,text]
 ----
-_ili_severity | _ili_message                          | _ili_source_file | _ili_line | _ili_class | _ili_tid | _ili_attribute_path
---------------|---------------------------------------|------------------|-----------|------------|----------|--------------------
-"Error"       | "Wert zu hoch für Grad Celsius"       | "validierung-transfer.xtf" | 15 | "DemoValidierung.Daten.Messung" | "m2" | "Wert"
+_ili_severity | _ili_message                 | _ili_line   | _ili_class                       | _ili_tid
+--------------|-----------------------------|-------------|----------------------------------|----------
+"ERROR"       | *enthält Temperaturbereich* | *vorhanden* | "DemoValidierung.Daten.Messung" | "m2"
 ----
 
 [NOTE]
 ====
-Der `INTERLIS Validate`-Transform benötigt keinen vorherigen Transform. Er validiert direkt eine XTF-Datei und gibt Fehler als Rows aus, die Sie weiterverarbeiten können (z. B. in eine Datenbanktabelle für ein Fehlerprotokoll schreiben).
+Der `INTERLIS Validate`-Transform benötigt keinen vorherigen Transform. Er validiert direkt eine XTF-Datei und gibt Fehler als Rows aus, die Sie weiterverarbeiten können (z. B. in eine Datenbanktabelle für ein Fehlerprotokoll schreiben). Die Zeilennummer und die genaue Meldungsform hängen vom Validator-Input und der Spracheinstellung ab; bei einem Klassen-Constraint steht der fachliche Constraint-Name in der Meldung, während `_ili_attribute_path` leer bleibt.
 ====

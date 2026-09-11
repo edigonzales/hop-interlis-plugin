@@ -104,8 +104,11 @@ Pull Requests wird lediglich geprüft, ob der Build durchläuft.
 | INTERLIS-Fachbegriffe
 
 | `examples/`
-| INTERLIS-Modelle und -Transfers für die Beispiele
+| Kanonische INTERLIS-2.4-Modelle und -Transfers für die Beispiele
 |===
+
+Die Rückwärtskompatibilität zu XTF 2.3 wird separat im versionierten Test-Fixture-Bereich
+des Quellcodes geprüft.
 
 == Sprache
 
