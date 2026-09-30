@@ -13,10 +13,12 @@ public record InterlisTransferMetadata(
     String xtfVersion,
     List<ModelEntry> models,
     List<OidSpace> oidSpaces,
-    List<String> unsupportedHeaders) {
-  public record ModelEntry(String name, String uri, String version) {}
+    List<String> unsupportedHeaders)
+    implements java.io.Serializable {
+  public record ModelEntry(String name, String uri, String version)
+      implements java.io.Serializable {}
 
-  public record OidSpace(String name, String domain) {}
+  public record OidSpace(String name, String domain) implements java.io.Serializable {}
 
   public InterlisTransferMetadata {
     models = models == null ? List.of() : List.copyOf(models);

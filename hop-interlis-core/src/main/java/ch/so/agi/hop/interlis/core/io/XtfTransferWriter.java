@@ -24,14 +24,26 @@ import java.util.List;
 public final class XtfTransferWriter implements InterlisTransferWriter {
 
   private final Path file;
-  private final ch.interlis.iom_j.xtf.XtfWriterBase writer;
+  private final ch.interlis.iox.IoxWriter writer;
   private final String xtfVersion;
   private boolean transferEnded;
   private boolean transferStarted;
   private boolean basketOpen;
   private boolean closed;
+  private final ch.so.agi.hop.interlis.core.buffer.SpillStore<String> basketIds =
+      new ch.so.agi.hop.interlis.core.buffer.SpillStore<>(
+          new ch.so.agi.hop.interlis.core.buffer.JavaRecordCodec<>(),
+          ch.so.agi.hop.interlis.core.buffer.SpillOptions.defaults());
 
-  XtfTransferWriter(Path file, ch.interlis.iom_j.xtf.XtfWriterBase writer, String xtfVersion) {
+  private void registerBasket(String bid) throws InterlisWriteException {
+    if (bid == null || bid.isBlank())
+      throw new InterlisWriteException("Basket ID is empty: " + file);
+    if (!basketIds.putIfAbsent(bid, bid))
+      throw new InterlisWriteException(
+          "Basket <" + bid + "> was already completed; group rows by BID: " + file);
+  }
+
+  XtfTransferWriter(Path file, ch.interlis.iox.IoxWriter writer, String xtfVersion) {
     this.file = file;
     this.writer = writer;
     this.xtfVersion = xtfVersion;
@@ -41,14 +53,22 @@ public final class XtfTransferWriter implements InterlisTransferWriter {
       Path file, TransferDescription transferDescription, List<String> modelNames)
       throws InterlisWriteException {
     try {
-      XtfWriter writer = new XtfWriter(file.toFile(), transferDescription);
-      writer.setModels(extractModels(transferDescription, modelNames));
+      ch.interlis.iox.IoxWriter writer =
+          "2.4".equals(transferDescription.getLastModel().getIliVersion())
+              ? new ReferencePreservingXtf24Writer(file, transferDescription)
+              : new XtfWriter(file.toFile(), transferDescription);
+      setModels(writer, extractModels(transferDescription, modelNames));
       return new XtfTransferWriter(
           file, writer, transferDescription.getLastModel().getIliVersion());
     } catch (Exception e) {
       throw new InterlisWriteException(
           "Failed to open XTF writer for " + file + ": " + e.getMessage(), e);
     }
+  }
+
+  private static void setModels(ch.interlis.iox.IoxWriter writer, XtfModel[] models) {
+    if (writer instanceof ReferencePreservingXtf24Writer preserving) preserving.setModels(models);
+    else ((ch.interlis.iom_j.xtf.XtfWriterBase) writer).setModels(models);
   }
 
   private static XtfModel[] extractModels(
@@ -101,7 +121,8 @@ public final class XtfTransferWriter implements InterlisTransferWriter {
     if ("2.4".equals(xtfVersion) && !metadata.oidSpaces().isEmpty())
       throw new InterlisWriteException("XTF 2.4 writer cannot preserve OID spaces");
     if (!metadata.models().isEmpty())
-      writer.setModels(
+      setModels(
+          writer,
           metadata.models().stream()
               .map(m -> new XtfModel(m.name(), m.uri(), m.version()))
               .toArray(XtfModel[]::new));
@@ -127,6 +148,7 @@ public final class XtfTransferWriter implements InterlisTransferWriter {
     if (basketOpen) {
       throw new InterlisWriteException("A basket is already open for " + file);
     }
+    registerBasket(bid);
     write(new StartBasketEvent(topicScopedName, bid));
     basketOpen = true;
   }
@@ -156,6 +178,7 @@ public final class XtfTransferWriter implements InterlisTransferWriter {
                 + topicScopedName);
       }
     }
+    registerBasket(bid);
     StartBasketEvent event = new StartBasketEvent(topicScopedName, bid);
     if (metadata != null) {
       if (metadata.consistency() != null) {
@@ -239,6 +262,12 @@ public final class XtfTransferWriter implements InterlisTransferWriter {
       else failure.addSuppressed(e);
     } finally {
       closed = true;
+      try {
+        basketIds.close();
+      } catch (Exception e) {
+        if (failure == null) failure = e;
+        else failure.addSuppressed(e);
+      }
     }
     if (failure != null)
       throw new InterlisWriteException(

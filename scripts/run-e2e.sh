@@ -123,6 +123,26 @@ cp "$PROJECT_DIR/docs/biblios/user/examples/"*.ili "$WORK_DIR/input/"
 cp "$PROJECT_DIR/docs/biblios/user/examples/"*.xtf "$WORK_DIR/input/"
 cp "$PROJECT_DIR/e2e/fixtures/"*.xtf "$WORK_DIR/input/"
 
+# Derive a large child collection from the minimal committed fixture. Carrier payloads
+# exceed the configured 1 MiB Collect budget, proving JDBC/H2 loading in the packaged plugin.
+python3 - "$WORK_DIR/input" <<'PYDATA'
+import copy
+import sys
+from pathlib import Path
+import xml.etree.ElementTree as ET
+root_dir=Path(sys.argv[1]); model_ns="http://www.interlis.ch/xtf/2.4/HopIli_Collections_V1"
+ili_ns="http://www.interlis.ch/xtf/2.4/INTERLIS"
+ET.register_namespace("ili",ili_ns); ET.register_namespace("m",model_ns)
+tree=ET.parse(root_dir/"HopIli_Collections_V1_valid.xtf")
+children=tree.find(".//{"+model_ns+"}Item/{"+model_ns+"}Children")
+prototype=copy.deepcopy(children[0]); children.clear()
+for index in range(600):
+    child=copy.deepcopy(prototype); child.find("{"+model_ns+"}Name").text="child"+str(index)
+    ET.SubElement(child,"{"+model_ns+"}Payload").text="payload"*600
+    children.append(child)
+tree.write(root_dir/"collections-spill.xtf",encoding="utf-8",xml_declaration=True)
+PYDATA
+
 run_pipeline() {
   local pipeline="$1"
   local expected_exit="${2:-0}"
@@ -179,6 +199,10 @@ run_pipeline "$PROJECT_DIR/e2e/pipelines/35-doc-list-explode-collect.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/36-doc-role-join.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/37-doc-arc-roundtrip.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/38-doc-validation.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/39-primitive-collections.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/40-child-preserve.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/41-reference-event-roundtrip.hpl"
+run_pipeline "$PROJECT_DIR/e2e/pipelines/42-child-spill.hpl"
 if [[ "$RUN_GPKG" == "true" ]]; then
   run_pipeline "$PROJECT_DIR/e2e/pipelines/04-interlis-to-gpkg.hpl"
 fi

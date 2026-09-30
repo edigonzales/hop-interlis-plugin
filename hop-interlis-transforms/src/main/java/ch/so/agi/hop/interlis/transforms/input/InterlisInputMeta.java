@@ -1,24 +1,19 @@
 package ch.so.agi.hop.interlis.transforms.input;
 
-import ch.so.agi.hop.interlis.core.mapping.InterlisFieldPlan;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelContext;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
-import ch.so.agi.hop.interlis.core.mapping.InterlisRowMappingPlan;
 import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
-import ch.so.agi.hop.interlis.core.model.InterlisModelException;
 import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hop.core.CheckResult;
 import org.apache.hop.core.ICheckResult;
 import org.apache.hop.core.annotations.Transform;
-import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.exception.HopTransformException;
 import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.core.variables.IVariables;
@@ -38,12 +33,49 @@ import org.apache.hop.pipeline.transform.TransformMeta;
     description = "Read one INTERLIS class as typed rows",
     image = "ch/so/agi/hop/interlis/transforms/input/icons/interlis-input.svg",
     categoryDescription = "Geospatial",
+    isIncludeJdbcDrivers = true,
     classLoaderGroup = "sogeo-geometry",
     keywords = {"interlis", "xtf", "ili", "reader"})
 public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, InterlisInputData> {
 
   /** Placeholder used by the GUI for "detect models from the transfer file". */
   public static final String MODELS_FROM_DATA = InterlisModelSourceSupport.MODELS_FROM_DATA;
+
+  @HopMetadataProperty private long bufferMemoryMiB = 64;
+  @HopMetadataProperty private String spillDirectory = "";
+  @HopMetadataProperty private long maxSpillMiB;
+
+  public long getBufferMemoryMiB() {
+    return bufferMemoryMiB;
+  }
+
+  public void setBufferMemoryMiB(long value) {
+    bufferMemoryMiB = value;
+  }
+
+  public String getSpillDirectory() {
+    return spillDirectory;
+  }
+
+  public void setSpillDirectory(String value) {
+    spillDirectory = value;
+  }
+
+  public long getMaxSpillMiB() {
+    return maxSpillMiB;
+  }
+
+  public void setMaxSpillMiB(long value) {
+    maxSpillMiB = value;
+  }
+
+  public ch.so.agi.hop.interlis.core.buffer.SpillOptions spillOptions(IVariables vars) {
+    String dir = spillDirectory == null ? "" : vars.resolve(spillDirectory).trim();
+    return new ch.so.agi.hop.interlis.core.buffer.SpillOptions(
+        Math.multiplyExact(bufferMemoryMiB, 1L << 20),
+        dir.isBlank() ? null : java.nio.file.Path.of(dir),
+        Math.multiplyExact(maxSpillMiB, 1L << 20));
+  }
 
   @HopMetadataProperty private String fileName;
   @HopMetadataProperty private String modelNames;
@@ -67,6 +99,9 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
 
   @Override
   public void setDefault() {
+    bufferMemoryMiB = 64;
+    spillDirectory = "";
+    maxSpillMiB = 0;
     fileName = "";
     modelNames = MODELS_FROM_DATA;
     modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
@@ -98,8 +133,7 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
       if (projection.isEmpty()) {
         return;
       }
-      IRowMeta detected =
-          new HopRowSchemaFactory().createRowMeta(projection.get().plan());
+      IRowMeta detected = new HopRowSchemaFactory().createRowMeta(projection.get().plan());
       for (int i = 0; i < detected.size(); i++) {
         rowMeta.addValueMeta(detected.getValueMeta(i));
       }
@@ -121,9 +155,8 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
   }
 
   /**
-   * Tries to build the projection for the current configuration; returns empty if the
-   * configuration is incomplete (e.g. unresolved variables) and throws if models or the class
-   * cannot be resolved.
+   * Tries to build the projection for the current configuration; returns empty if the configuration
+   * is incomplete (e.g. unresolved variables) and throws if models or the class cannot be resolved.
    */
   public Optional<InterlisProjectionResult> tryProject(IVariables variables)
       throws ch.so.agi.hop.interlis.core.model.InterlisModelException,
@@ -144,8 +177,8 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
   /**
    * Tries to resolve and compile the configured model without requiring a selected class.
    *
-   * <p>This is the design-time path used to populate the class selector. It returns empty only
-   * when the file, model directories or one of their Hop variables is not resolved yet; model and
+   * <p>This is the design-time path used to populate the class selector. It returns empty only when
+   * the file, model directories or one of their Hop variables is not resolved yet; model and
    * repository failures are propagated so the dialog can show their actionable diagnostics.
    */
   public Optional<InterlisModelContext> tryLoadModel(IVariables variables)
@@ -159,8 +192,7 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
       return Optional.empty();
     }
     InterlisModelRequest request =
-        new InterlisModelRequest(
-            Path.of(resolvedFile), resolveModelNames(variables), resolvedDirs);
+        new InterlisModelRequest(Path.of(resolvedFile), resolveModelNames(variables), resolvedDirs);
     return Optional.of(new InterlisProjectionService().loadModel(request));
   }
 
@@ -182,18 +214,23 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
       IHopMetadataProvider metadataProvider) {
     if (fileName == null || fileName.isBlank()) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS transfer file is required", transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS transfer file is required", transformMeta));
       return;
     }
     if (className == null || className.isBlank()) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
       return;
     }
     String resolved = resolve(variables, fileName);
     if (!resolved.contains("${") && !java.nio.file.Files.exists(Path.of(resolved))) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS transfer file does not exist: " + resolved, transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR,
+              "INTERLIS transfer file does not exist: " + resolved,
+              transformMeta));
       return;
     }
     try {
@@ -216,7 +253,10 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
               transformMeta));
     } catch (Exception e) {
       remarks.add(
-          new CheckResult(ICheckResult.TYPE_RESULT_ERROR, "INTERLIS model check failed: " + e.getMessage(), transformMeta));
+          new CheckResult(
+              ICheckResult.TYPE_RESULT_ERROR,
+              "INTERLIS model check failed: " + e.getMessage(),
+              transformMeta));
     }
   }
 

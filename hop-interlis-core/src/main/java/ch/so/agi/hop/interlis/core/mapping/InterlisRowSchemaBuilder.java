@@ -169,29 +169,39 @@ public final class InterlisRowSchemaBuilder {
       ProjectionOptions options,
       String rootScopedName)
       throws InterlisMappingException {
+    if (attribute.kind() == InterlisValueKind.UNSUPPORTED
+        && options.isPropertySelected(dotted(pathSegments, attribute.name())))
+      throw new InterlisMappingException(
+          "Unsupported type "
+              + attribute.typeName()
+              + " for "
+              + attribute.scopedName()
+              + " while projecting "
+              + rootScopedName);
+    if (!attribute.cardinality().isSingleValued()) {
+      warnings.add(
+          "Property "
+              + dotted(pathSegments, attribute.name())
+              + " of "
+              + rootScopedName
+              + " is a multi-valued "
+              + (attribute.kind().isStructure() ? "structure" : "attribute")
+              + " ("
+              + attribute.cardinality()
+              + "); use INTERLIS Structure Explode/Collect");
+      return index;
+    }
     if (attribute.kind() == InterlisValueKind.STRUCTURE) {
-      if (!attribute.cardinality().isSingleValued()) {
-        warnings.add(
-            "Property "
-                + attribute.name()
-                + " of "
-                + rootScopedName
-                + " is a multi-valued structure ("
-                + attribute.cardinality()
-                + "); it is not part of the scalar row schema and must be handled with "
-                + "INTERLIS Structure Explode");
-        return index;
-      }
       Optional<InterlisStructureDescriptor> structure =
           schema.findStructure(attribute.structureScopedName());
       if (structure.isEmpty()) {
-        warnings.add(
+        throw new InterlisMappingException(
             "Structure "
                 + attribute.structureScopedName()
-                + " of attribute "
-                + attribute.name()
-                + " is not part of the compiled model; the attribute is skipped");
-        return index;
+                + " of "
+                + attribute.scopedName()
+                + " is not part of the compiled model while projecting "
+                + rootScopedName);
       }
       List<String> childPath = new ArrayList<>(pathSegments);
       childPath.add(attribute.name());
@@ -215,12 +225,41 @@ public final class InterlisRowSchemaBuilder {
       return index;
     }
 
+    if (attribute.kind() == InterlisValueKind.UNSUPPORTED) {
+      throw new InterlisMappingException(
+          "Unsupported type "
+              + attribute.typeName()
+              + " for "
+              + attribute.scopedName()
+              + " while projecting "
+              + rootScopedName);
+    }
     String hopFieldName =
         pathSegments.isEmpty()
             ? attribute.name()
             : String.join(options.structureSeparator(), pathSegments)
                 + options.structureSeparator()
                 + attribute.name();
+    if (attribute.kind() == InterlisValueKind.REFERENCE) {
+      for (boolean bid : new boolean[] {false, true}) {
+        String name = hopFieldName + (bid ? "_ref_bid" : "_ref");
+        if (!usedNames.add(name))
+          throw new InterlisMappingException("Duplicate output field " + name);
+        fields.add(
+            new InterlisFieldPlan(
+                index++,
+                name,
+                bid
+                    ? InterlisFieldSource.ATTRIBUTE_REFERENCE_BID
+                    : InterlisFieldSource.ATTRIBUTE_REFERENCE,
+                new InterlisPropertyPath(pathSegments, attribute.name()),
+                attribute,
+                null,
+                null,
+                structurePath(schema, rootScopedName, pathSegments)));
+      }
+      return index;
+    }
     if (!usedNames.add(hopFieldName)) {
       throw new InterlisMappingException(
           "Duplicate output field name <" + hopFieldName + "> while projecting " + rootScopedName);

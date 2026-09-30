@@ -1489,3 +1489,12 @@ Der Hop-Download ist ein eigener CI-Schritt: zuerst `downloads.apache.org`,
 bei Downloadfehlern das Apache-Archiv. Beide Quellen liefern unverändert
 Hop 2.18.1; die veröffentlichte SHA-512-Prüfsumme ist im Workflow festgehalten.
 Verbindungs- und Transfer-Timeouts verhindern unbegrenzt wartende Downloads.
+
+## Spill-Laufzeit
+
+H2 2.4.240 wird von Hop 2.19.0 unter `lib/jdbc` bereitgestellt. Beide Module
+verwenden H2 als `provided`; die betroffenen Transform-Plugins binden JDBC-Treiber
+über `isIncludeJdbcDrivers=true` ein. H2 wird nicht ins INTERLIS-ZIP kopiert.
+Die Distributionsprüfung verbietet zusätzliche H2- und ImageN-JARs. ImageN 0.9.2
+ist ausschliesslich eine Testabhängigkeit für den aktuellen Geometry-Snapshot;
+OSGeo liefert dieses Artefakt. Geometry-, Hop-, INTERLIS- und CI-Pins bleiben bestehen.

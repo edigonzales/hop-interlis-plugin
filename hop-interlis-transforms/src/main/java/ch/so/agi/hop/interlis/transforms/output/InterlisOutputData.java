@@ -8,6 +8,8 @@ import org.apache.hop.pipeline.transform.BaseTransformData;
 
 /** Runtime state of the {@link InterlisOutput} transform. */
 public class InterlisOutputData extends BaseTransformData {
+  ch.so.agi.hop.interlis.core.io.PreparedXtfOutput preparedOutput;
+  ch.interlis.ili2c.metamodel.TransferDescription writerModel;
 
   boolean initialized;
   InterlisProjectionResult projection;

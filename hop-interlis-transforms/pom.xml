@@ -15,6 +15,10 @@
   <description>Apache Hop transforms for INTERLIS transfer data.</description>
 
   <dependencies>
+    <!-- Hop 2.19 supplies H2 through lib/jdbc; never bundled into this plugin. -->
+    <dependency>
+      <groupId>com.h2database</groupId><artifactId>h2</artifactId><scope>provided</scope>
+    </dependency>
     <dependency>
       <groupId>org.apache.hop</groupId>
       <artifactId>hop-core</artifactId>
@@ -47,6 +51,12 @@
       <groupId>org.locationtech.jts</groupId>
       <artifactId>jts-core</artifactId>
       <scope>provided</scope>
+    </dependency>
+
+    <!-- Geometry's ImageN bootstrap also runs in HopEnvironment-based tests. -->
+    <dependency>
+      <groupId>org.eclipse.imagen</groupId><artifactId>imagen-core</artifactId>
+      <version>0.9.2</version><scope>test</scope>
     </dependency>
 
     <!-- Test-only: base Hop transforms to run programmatic pipeline tests against. -->

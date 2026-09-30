@@ -64,7 +64,7 @@ public final class InterlisPrimitiveCodec {
         case DECIMAL -> parseDecimal(raw, descriptor);
         case DATE -> parseDate(raw, descriptor);
         case DATETIME -> parseDateTime(raw, descriptor);
-        case GEOMETRY, STRUCTURE ->
+        case GEOMETRY, STRUCTURE, REFERENCE, UNSUPPORTED ->
             throw new InterlisMappingException(
                 "Cannot parse a " + kind + " attribute as primitive: " + descriptor.name());
       };
@@ -116,7 +116,7 @@ public final class InterlisPrimitiveCodec {
         yield DATE_TIME_FORMAT.format(
             LocalDateTime.ofInstant(timestamp.toInstant(), timestampZone));
       }
-      case GEOMETRY, STRUCTURE ->
+      case GEOMETRY, STRUCTURE, REFERENCE, UNSUPPORTED ->
           throw new InterlisMappingException(
               "Cannot format a " + kind + " attribute as primitive: " + descriptor.name());
     };

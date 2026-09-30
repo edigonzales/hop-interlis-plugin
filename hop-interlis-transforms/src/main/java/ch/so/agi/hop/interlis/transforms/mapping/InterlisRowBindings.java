@@ -35,6 +35,18 @@ public final class InterlisRowBindings {
     return new InterlisRowBindings(fields);
   }
 
+  public IRowMeta normalRowMeta() {
+    var meta = new org.apache.hop.core.row.RowMeta();
+    for (var binding : fields) {
+      var value = binding.sourceMeta();
+      value.setStorageType(org.apache.hop.core.row.IValueMeta.STORAGE_TYPE_NORMAL);
+      value.setStorageMetadata(null);
+      value.setIndex(null);
+      meta.addValueMeta(value);
+    }
+    return meta;
+  }
+
   public Object[] values(Object[] row) throws HopTransformException {
     Object[] values = new Object[fields.size()];
     for (var field : fields) values[field.targetIndex()] = field.read(row);

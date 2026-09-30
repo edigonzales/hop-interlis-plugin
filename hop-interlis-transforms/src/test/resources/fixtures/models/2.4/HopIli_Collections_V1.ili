@@ -1,0 +1,39 @@
+INTERLIS 2.4;
+MODEL HopIli_Collections_V1 (en) AT "https://example.org" VERSION "2026-09-30" =
+  DOMAIN
+    Label = TEXT*40;
+    LabelAlias EXTENDS Label = TEXT*40;
+  TOPIC Data =
+    CLASS Target =
+      Name : MANDATORY TEXT*40;
+    END Target;
+    STRUCTURE Detail =
+      Text : MANDATORY TEXT*40;
+    END Detail;
+    STRUCTURE Child =
+      Name : MANDATORY TEXT*40;
+      Hidden : TEXT*40;
+      Payload : MTEXT;
+      Details : LIST {0..*} OF Detail;
+      TargetRef : REFERENCE TO (EXTERNAL) Target;
+    END Child;
+    STRUCTURE SpecialChild EXTENDS Child =
+      Extra : MANDATORY TEXT*40;
+    END SpecialChild;
+    STRUCTURE Holder =
+      TargetRef : REFERENCE TO (EXTERNAL) Target;
+    END Holder;
+    CLASS Item =
+      Texts : LIST {0..*} OF LabelAlias;
+      Numbers : BAG {0..*} OF 0..100;
+      Flags : LIST {0..*} OF BOOLEAN;
+      Choices : LIST {0..*} OF (red, green, blue);
+      Required : LIST {1..2} OF TEXT*40;
+      InternalRef : REFERENCE TO Target;
+      ExternalRef : REFERENCE TO (EXTERNAL) Target;
+      Holder : Holder;
+      Children : LIST {0..*} OF Child;
+      RestrictedChildren : LIST {0..*} OF Child RESTRICTION (SpecialChild);
+    END Item;
+  END Data;
+END HopIli_Collections_V1.

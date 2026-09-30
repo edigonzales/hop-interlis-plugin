@@ -30,7 +30,8 @@ public record InterlisObjectEnvelope(
     InterlisObjectOperation operation,
     IomObject object,
     InterlisBasketMetadata basket,
-    InterlisTransferMetadata transferMetadata) {
+    InterlisTransferMetadata transferMetadata)
+    implements java.io.Serializable {
 
   public InterlisObjectEnvelope(
       InterlisEventType eventType,

@@ -9,7 +9,8 @@ import ch.interlis.iom.IomConstants;
  * means "not set in the transfer". The IOM integer codes are mapped centrally here.
  */
 public record InterlisBasketMetadata(
-    String consistency, String kind, String startState, String endState) {
+    String consistency, String kind, String startState, String endState)
+    implements java.io.Serializable {
 
   public InterlisBasketMetadata {
     consistency = normalize(consistency);

@@ -10,6 +10,13 @@ The authoritative architecture and implementation specification lives in [`docs/
 
 ## Status
 
+**Prio 1/2 hardening:** primitive BAG/LIST through the existing Explode/Collect
+transforms; scalar reference attributes with TID/BID; explicit child PRESERVE/REBUILD
+modes; automatic H2 spill for basket, lookup and child buffers; fair multi-input
+consumption; atomic output publication only after pipeline success, with optional
+full validation. See [the acceptance report](docs/progress/prio-1-2.md) for scope,
+compatibility, metrics and executed checks.
+
 **Phase 8** (hardening, performance, compatibility) is implemented – the roadmap
 is complete except for Phase 7, which was deliberately skipped (see below):
 
@@ -79,7 +86,7 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
   class rows (`<role>_ref`, `<role>_<attribute>`), resolved from the association
   link objects per basket, and written back as regenerated link objects;
 - `INTERLIS Role Join` joins a role's target class fields onto the main stream
-  (model-driven key/field selection, in-memory lookup with limit, hard errors for
+  (model-driven key/field selection, spill-backed lookup with configurable limit, hard errors for
   missing mandatory references and duplicate lookup TIDs, model-aware dialog);
 - reference roles support external basket references (`<role>_ref_bid`) on read.
 

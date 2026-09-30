@@ -33,6 +33,7 @@ public final class XtfTransferReader implements InterlisTransferReader {
   private final Path file;
   private final TransferDescription transferDescription;
   private IoxReader reader;
+  private final IoxReferenceCanonicalizer references;
   private String currentTopic;
   private String currentBasketId;
   private InterlisBasketMetadata currentBasketMetadata;
@@ -42,6 +43,7 @@ public final class XtfTransferReader implements InterlisTransferReader {
   private XtfTransferReader(Path file, TransferDescription transferDescription) {
     this.file = file;
     this.transferDescription = transferDescription;
+    references = new IoxReferenceCanonicalizer(transferDescription);
   }
 
   public static XtfTransferReader open(Path file) throws InterlisReadException {
@@ -144,7 +146,7 @@ public final class XtfTransferReader implements InterlisTransferReader {
             currentBasketMetadata);
       }
       if (event instanceof ObjectEvent objectEvent) {
-        IomObject object = objectEvent.getIomObject();
+        IomObject object = references.repair(objectEvent.getIomObject());
         return new InterlisObjectEnvelope(
             InterlisEventType.OBJECT,
             modelNameOf(currentTopic),

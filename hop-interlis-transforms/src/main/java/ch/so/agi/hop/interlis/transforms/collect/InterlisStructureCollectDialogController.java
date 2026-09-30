@@ -14,8 +14,8 @@ import org.apache.hop.core.variables.IVariables;
 /**
  * SWT-free controller for the INTERLIS Structure Collect dialog.
  *
- * <p>The dialog only renders widgets; all model probing and schema preview formatting lives here
- * so it can be unit-tested without a display.
+ * <p>The dialog only renders widgets; all model probing and schema preview formatting lives here so
+ * it can be unit-tested without a display.
  */
 public final class InterlisStructureCollectDialogController {
 
@@ -55,7 +55,7 @@ public final class InterlisStructureCollectDialogController {
             + plan.attributeName()
             + " : "
             + (plan.ordered() ? "LIST OF " : "BAG OF ")
-            + plan.structure().scopedName(),
+            + plan.childTypeName(),
         "Child fields   " + plan.childFields().stream().map(f -> f.hopFieldName()).toList(),
         "Output         parent rows with updated "
             + InterlisStructureCollectMeta.DEFAULT_SOURCE_OBJECT_FIELD,
@@ -78,18 +78,54 @@ public final class InterlisStructureCollectDialogController {
                     "Parent input",
                     "",
                     (parentTransform == null ? "" : parentTransform)
-                        + " (key " + safe(parentKeyField) + ")"),
+                        + " (key "
+                        + safe(parentKeyField)
+                        + ")"),
                 new InterlisPreviewRow(
                     "Child input",
                     "",
                     (childTransform == null ? "" : childTransform)
-                        + " (parent key " + safe(childParentKeyField) + ")"),
+                        + " (parent key "
+                        + safe(childParentKeyField)
+                        + ")"),
                 new InterlisPreviewRow(
-                    "Structure",
-                    plan.ordered() ? "LIST" : "BAG",
-                    plan.structure().scopedName())));
+                    "Structure", plan.ordered() ? "LIST" : "BAG", plan.childTypeName())));
     return InterlisSchemaPreviewSupport.createFieldPreview(
         prefixRows, plan.childFields(), plan.warnings());
+  }
+
+  public InterlisSchemaPreview createSchemaPreview(
+      InterlisStructurePlan plan,
+      String parent,
+      String child,
+      String parentKey,
+      String childKey,
+      InterlisStructureCollectMeta meta) {
+    var preview = createSchemaPreview(plan, parent, child, parentKey, childKey);
+    var rows = new ArrayList<>(preview.rows());
+    var warnings = new ArrayList<>(preview.warnings());
+    if (!plan.primitive()
+        && meta.getCollectMode() == InterlisStructureCollectMeta.CollectMode.PRESERVE)
+      rows.add(
+          new InterlisPreviewRow(
+              "_ili_child_object",
+              "InterlisObject",
+              "required; copy concrete child and overlay selected fields"));
+    warnings.add(
+        "Collect mode: "
+            + meta.getCollectMode()
+            + ". The child stream replaces the entire selected collection; filtered children are"
+            + " removed.");
+    warnings.add(
+        "Parent identity: "
+            + (safe(meta.getParentBidField()).isBlank()
+                ? safe(parentKey)
+                : "(" + meta.getParentBidField() + ", " + parentKey + ")")
+            + "; child identity: "
+            + (safe(meta.getChildParentBidField()).isBlank()
+                ? safe(childKey)
+                : "(" + meta.getChildParentBidField() + ", " + childKey + ")"));
+    return new InterlisSchemaPreview(rows, warnings, preview.errorMessage());
   }
 
   private static String safe(String value) {

@@ -11,7 +11,11 @@ import org.apache.hop.core.row.value.*;
 import org.apache.hop.core.variables.IVariables;
 
 final class InterlisStructureCollectBindings {
-  record Parent(InterlisFieldBinding key, InterlisFieldBinding carrier, IRowMeta output) {
+  record Parent(
+      InterlisFieldBinding key,
+      InterlisFieldBinding carrier,
+      IRowMeta output,
+      InterlisFieldBinding bid) {
     Parent {
       output = output.clone();
     }
@@ -22,7 +26,25 @@ final class InterlisStructureCollectBindings {
     }
   }
 
-  record Child(InterlisFieldBinding key, InterlisFieldBinding index, InterlisRowBindings values) {}
+  record Child(
+      InterlisFieldBinding key,
+      InterlisFieldBinding index,
+      InterlisRowBindings values,
+      InterlisFieldBinding carrier,
+      InterlisFieldBinding bid) {}
+
+  private static InterlisFieldBinding bid(IRowMeta input, String configured, IVariables vars)
+      throws HopTransformException {
+    String name = InterlisFieldBinding.resolve(vars, configured);
+    return InterlisFieldBinding.bind(
+        input,
+        "INTERLIS Structure Collect",
+        name,
+        "basket key",
+        0,
+        new ValueMetaString(name),
+        !name.isBlank());
+  }
 
   static Parent parent(IRowMeta input, InterlisStructureCollectMeta meta, IVariables vars)
       throws HopTransformException {
@@ -45,7 +67,8 @@ final class InterlisStructureCollectBindings {
             0,
             new ValueMetaInterlisObject(carrier),
             true),
-        output(input, meta, vars));
+        output(input, meta, vars),
+        bid(input, meta.getParentBidField(), vars));
   }
 
   static IRowMeta output(IRowMeta input, InterlisStructureCollectMeta meta, IVariables vars)
@@ -96,6 +119,16 @@ final class InterlisStructureCollectBindings {
             input, context, key, "parent key", 0, new ValueMetaString(key), true),
         InterlisFieldBinding.bind(
             input, context, index, "index", 0, new ValueMetaInteger(index), plan.ordered()),
-        new InterlisRowBindings(fields));
+        new InterlisRowBindings(fields),
+        InterlisFieldBinding.bind(
+            input,
+            context,
+            "_ili_child_object",
+            "child source object",
+            0,
+            new ValueMetaInterlisObject("_ili_child_object"),
+            !plan.primitive()
+                && meta.getCollectMode() == InterlisStructureCollectMeta.CollectMode.PRESERVE),
+        bid(input, meta.getChildParentBidField(), vars));
   }
 }

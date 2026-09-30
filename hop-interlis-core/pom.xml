@@ -15,6 +15,10 @@
   <description>INTERLIS model, transfer and geometry logic without SWT or Hop runtime dependencies.</description>
 
   <dependencies>
+    <!-- Hop 2.19 supplies H2 through lib/jdbc; never bundled into this plugin. -->
+    <dependency>
+      <groupId>com.h2database</groupId><artifactId>h2</artifactId><scope>provided</scope>
+    </dependency>
     <!-- Already supplied by Hop core. No second JSON implementation in the plugin ZIP. -->
     <dependency>
       <groupId>com.googlecode.json-simple</groupId><artifactId>json-simple</artifactId>

@@ -67,6 +67,17 @@ class InterlisRoleJoinMetaTest {
   }
 
   @Test
+  void explicitly_requested_unknown_lookup_path_is_rejected() throws Exception {
+    var meta = configuredMeta();
+    meta.setLookupFields(List.of("NoSuchAttribute"));
+    org.assertj.core.api.Assertions.assertThatThrownBy(
+            () ->
+                InterlisRoleJoinBindings.output(
+                    new RowMeta(), meta.probeRole(new Variables()), meta, new Variables()))
+        .hasMessageContaining("HopIli_Associations_V1.Data.Address.NoSuchAttribute");
+  }
+
+  @Test
   void get_fields_with_unresolved_configuration_stays_silent() throws Exception {
     InterlisRoleJoinMeta meta = new InterlisRoleJoinMeta();
     RowMeta rowMeta = new RowMeta();
@@ -82,8 +93,15 @@ class InterlisRoleJoinMetaTest {
     InterlisRoleJoinMeta meta = new InterlisRoleJoinMeta();
 
     meta.check(
-        remarks, null, new TransformMeta("INTERLIS Role Join", meta), null, null, null, null,
-        new Variables(), new MemoryMetadataProvider());
+        remarks,
+        null,
+        new TransformMeta("INTERLIS Role Join", meta),
+        null,
+        null,
+        null,
+        null,
+        new Variables(),
+        new MemoryMetadataProvider());
 
     assertThat(remarks).isNotEmpty();
     assertThat(remarks.get(0).getType()).isEqualTo(ICheckResult.TYPE_RESULT_ERROR);
@@ -95,8 +113,15 @@ class InterlisRoleJoinMetaTest {
     InterlisRoleJoinMeta meta = configuredMeta();
 
     meta.check(
-        remarks, null, new TransformMeta("INTERLIS Role Join", meta), null, null, null, null,
-        new Variables(), new MemoryMetadataProvider());
+        remarks,
+        null,
+        new TransformMeta("INTERLIS Role Join", meta),
+        null,
+        null,
+        null,
+        null,
+        new Variables(),
+        new MemoryMetadataProvider());
 
     assertThat(remarks)
         .anySatisfy(r -> assertThat(r.getType()).isEqualTo(ICheckResult.TYPE_RESULT_OK));

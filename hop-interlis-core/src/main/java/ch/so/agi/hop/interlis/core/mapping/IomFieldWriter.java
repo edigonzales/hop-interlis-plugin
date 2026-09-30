@@ -45,6 +45,11 @@ public final class IomFieldWriter {
       String contextName)
       throws InterlisMappingException {
     switch (field.source()) {
+      case ATTRIBUTE_REFERENCE, ATTRIBUTE_REFERENCE_BID -> {
+        if (field.propertyPath().segments().isEmpty()) writeReference(root, field, value);
+        else
+          writeFlattened(root, field, value, options, structureCache, rootProperties, contextName);
+      }
       case PRIMITIVE_ATTRIBUTE -> writePrimitive(root, field, value, options, contextName);
       case GEOMETRY_ATTRIBUTE -> writeGeometry(root, field, value, options, contextName);
       case FLATTENED_STRUCTURE_ATTRIBUTE ->
@@ -56,6 +61,26 @@ public final class IomFieldWriter {
                   + "> is not an attribute field (source "
                   + field.source()
                   + ")");
+    }
+  }
+
+  private void writeReference(Iom_jObject owner, InterlisFieldPlan field, Object value)
+      throws InterlisMappingException {
+    String name = field.attributeDescriptor().name();
+    String text = value == null ? null : value.toString().trim();
+    if (field.source() == InterlisFieldSource.ATTRIBUTE_REFERENCE) {
+      owner.setattrundefined(name);
+      if (text != null && !text.isEmpty()) {
+        Iom_jObject ref = new Iom_jObject("REF", null);
+        ref.setobjectrefoid(text);
+        owner.addattrobj(name, ref);
+      }
+    } else if (text != null && !text.isEmpty()) {
+      IomObject ref = owner.getattrobj(name, 0);
+      if (ref == null)
+        throw new InterlisMappingException(
+            "Basket identifier without reference: " + field.attributeDescriptor().scopedName());
+      ref.setobjectrefbid(text);
     }
   }
 
@@ -139,6 +164,10 @@ public final class IomFieldWriter {
     }
 
     InterlisAttributeDescriptor leaf = field.attributeDescriptor();
+    if (leaf.kind() == ch.so.agi.hop.interlis.core.model.InterlisValueKind.REFERENCE) {
+      writeReference(owner, field, value);
+      return;
+    }
     if (value == null) {
       owner.setattrundefined(leaf.name());
       return;

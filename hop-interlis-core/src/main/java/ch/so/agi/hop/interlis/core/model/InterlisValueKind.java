@@ -20,7 +20,9 @@ public enum InterlisValueKind {
   TIME,
   ENUM,
   GEOMETRY,
-  STRUCTURE;
+  STRUCTURE,
+  REFERENCE,
+  UNSUPPORTED;
 
   public boolean isTextual() {
     return this == TEXT || this == MTEXT || this == NAME || this == URI;

@@ -34,6 +34,7 @@ import org.apache.hop.pipeline.transform.TransformMeta;
     description = "Collect child rows back into a LIST/BAG OF structure",
     image = "ch/so/agi/hop/interlis/transforms/collect/icons/interlis-structure-collect.svg",
     categoryDescription = "Geospatial",
+    isIncludeJdbcDrivers = true,
     classLoaderGroup = "sogeo-geometry",
     keywords = {"interlis", "xtf", "ili", "structure", "collect"})
 public class InterlisStructureCollectMeta
@@ -43,6 +44,101 @@ public class InterlisStructureCollectMeta
   public static final String DEFAULT_PARENT_KEY_FIELD = "_ili_tid";
   public static final String DEFAULT_CHILD_PARENT_KEY_FIELD = "_ili_parent_tid";
   public static final String DEFAULT_CHILD_INDEX_FIELD = "_ili_index";
+
+  public enum CollectMode {
+    PRESERVE,
+    REBUILD
+  }
+
+  @HopMetadataProperty private List<String> selectedChildFields;
+
+  public List<String> getSelectedChildFields() {
+    return selectedChildFields == null ? List.of() : List.copyOf(selectedChildFields);
+  }
+
+  public void setSelectedChildFields(List<String> fields) {
+    selectedChildFields = fields == null ? List.of() : List.copyOf(fields);
+  }
+
+  @HopMetadataProperty private long bufferMemoryMiB = 64;
+  @HopMetadataProperty private String spillDirectory = "";
+  @HopMetadataProperty private long maxSpillMiB;
+
+  public long getBufferMemoryMiB() {
+    return bufferMemoryMiB;
+  }
+
+  public void setBufferMemoryMiB(long value) {
+    bufferMemoryMiB = value;
+  }
+
+  public String getSpillDirectory() {
+    return spillDirectory;
+  }
+
+  public void setSpillDirectory(String value) {
+    spillDirectory = value;
+  }
+
+  public long getMaxSpillMiB() {
+    return maxSpillMiB;
+  }
+
+  public void setMaxSpillMiB(long value) {
+    maxSpillMiB = value;
+  }
+
+  public ch.so.agi.hop.interlis.core.buffer.SpillOptions spillOptions(IVariables vars) {
+    String dir = spillDirectory == null ? "" : vars.resolve(spillDirectory).trim();
+    return new ch.so.agi.hop.interlis.core.buffer.SpillOptions(
+        Math.multiplyExact(bufferMemoryMiB, 1L << 20),
+        dir.isBlank() ? null : java.nio.file.Path.of(dir),
+        Math.multiplyExact(maxSpillMiB, 1L << 20));
+  }
+
+  @HopMetadataProperty(key = "collect_mode")
+  private CollectMode collectMode;
+
+  @HopMetadataProperty(key = "parent_bid_field")
+  private String parentBidField;
+
+  @HopMetadataProperty(key = "child_parent_bid_field")
+  private String childParentBidField;
+
+  public CollectMode getCollectMode() {
+    return collectMode == null ? CollectMode.REBUILD : collectMode;
+  }
+
+  public void setCollectMode(CollectMode value) {
+    collectMode = value;
+  }
+
+  public String getParentBidField() {
+    return parentBidField;
+  }
+
+  public void setParentBidField(String value) {
+    parentBidField = value;
+  }
+
+  public String getChildParentBidField() {
+    return childParentBidField;
+  }
+
+  public void setChildParentBidField(String value) {
+    childParentBidField = value;
+  }
+
+  @Override
+  public void loadXml(org.w3c.dom.Node node, IHopMetadataProvider provider)
+      throws org.apache.hop.core.exception.HopXmlException {
+    super.loadXml(node, provider);
+    if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "collect_mode") == null) {
+      collectMode = CollectMode.REBUILD;
+      parentBidField = "";
+      childParentBidField = "";
+    }
+  }
 
   @HopMetadataProperty private String parentInputTransform;
   @HopMetadataProperty private String childInputTransform;
@@ -64,6 +160,13 @@ public class InterlisStructureCollectMeta
 
   @Override
   public void setDefault() {
+    bufferMemoryMiB = 64;
+    spillDirectory = "";
+    maxSpillMiB = 0;
+    collectMode = CollectMode.PRESERVE;
+    selectedChildFields = List.of();
+    parentBidField = "_ili_bid";
+    childParentBidField = "_ili_parent_bid";
     parentInputTransform = "";
     childInputTransform = "";
     parentKeyField = DEFAULT_PARENT_KEY_FIELD;
@@ -109,7 +212,15 @@ public class InterlisStructureCollectMeta
   /** Builds the projection options from the persisted configuration. */
   public ProjectionOptions projectionOptions() {
     return new ProjectionOptions(
-        false, false, false, false, false, true, "_", null, java.util.Set.of());
+        false,
+        false,
+        false,
+        false,
+        false,
+        true,
+        "_",
+        null,
+        new java.util.LinkedHashSet<>(getSelectedChildFields()));
   }
 
   @Override

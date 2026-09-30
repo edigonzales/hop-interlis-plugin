@@ -11,7 +11,6 @@ import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisParallelCopies;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.pipeline.Pipeline;
@@ -59,6 +58,14 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
       }
 
       data.pendingOutput = null;
+      if (data.pendingBatch != null) {
+        try {
+          data.pendingBatch.close();
+        } catch (Exception e) {
+          throw new HopException(e);
+        }
+        data.pendingBatch = null;
+      }
 
       InterlisObjectEnvelope envelope;
       try {
@@ -122,21 +129,25 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
   private void flushPending() throws HopException {
     if (data.basketBuffer == null) return;
     var batch = data.basketBuffer.drain();
-    List<Object[]> rows = new ArrayList<>(batch.rows().size());
-    for (var entry : batch.rows()) {
-      var envelope = entry.envelope();
-      Object[] row;
-      try {
-        row = data.mapper.map(envelope, data.plan, batch.lookup());
-      } catch (Exception e) {
-        throw new HopException(e.getMessage(), e);
-      }
-      if (data.keepSourceObject) {
-        row = appendSourceObject(row, envelope.object());
-      }
-      rows.add(row);
-    }
-    data.pendingOutput = rows.iterator();
+    data.pendingBatch = batch;
+    var entries = batch.rows().iterator();
+    data.pendingOutput =
+        new java.util.Iterator<>() {
+          public boolean hasNext() {
+            return entries.hasNext();
+          }
+
+          public Object[] next() {
+            var entry = entries.next();
+            var envelope = entry.envelope();
+            try {
+              var row = data.mapper.map(envelope, data.plan, batch.lookup());
+              return data.keepSourceObject ? appendSourceObject(row, envelope.object()) : row;
+            } catch (Exception e) {
+              throw new IllegalStateException(e.getMessage(), e);
+            }
+          }
+        };
   }
 
   private Object[] appendSourceObject(Object[] row, ch.interlis.iom.IomObject object)
@@ -201,7 +212,10 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
       data.buffering = data.plan.hasLinkResolvedRoles();
       if (data.buffering)
         data.basketBuffer =
-            new ch.so.agi.hop.interlis.core.mapping.InterlisBasketProjectionBuffer<>(data.plan);
+            new ch.so.agi.hop.interlis.core.mapping.InterlisBasketProjectionBuffer<>(
+                data.plan,
+                new ch.so.agi.hop.interlis.core.buffer.JavaRecordCodec<>(),
+                meta.spillOptions(this));
 
       if (isBasic()) {
         logBasic(
@@ -262,5 +276,6 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
     if (data.basketBuffer != null) data.basketBuffer.clear();
     data.basketBuffer = null;
     data.pendingOutput = null;
+    data.pendingBatch = null;
   }
 }

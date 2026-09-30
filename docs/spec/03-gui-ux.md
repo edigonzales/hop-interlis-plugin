@@ -745,3 +745,19 @@ invalidiert den kompilierten Cache. Konfiguration und Variablen werden vor dem
 Hintergrundlauf kopiert. Nur die aktuelle Anfrage darf Ergebnisse im SWT-Thread
 anzeigen; Schliessen des Dialogs verwirft ausstehende Ergebnisse. Probe-Status ist
 typisiert und wird nicht aus englischen Meldungstexten abgeleitet.
+
+## Prio 1/2: Zusätzliche Optionen
+
+Die vorhandenen Transform-IDs bleiben erhalten. Ein `Options…`-Dialog bietet die
+Pufferbudgets und das Spill-Verzeichnis in Input, Object to Row, Role Join und
+Collect. Explode bietet den Kind-Carrier; Collect bietet PRESERVE/REBUILD, die
+beiden BID-Felder und ausgewählte Kindattribut-Pfade. Beide Writer bieten die
+Validierung vor Veröffentlichung mit optionaler Konfigurationsdatei. Numerische
+Budgets werden vor Übernahme geprüft. Die Klassen-Vorschau erläutert Projektion,
+Quellobjekt-Overlay und vollständigen Ereignisstrom; Sammlungen verweisen auf
+Explode/Collect. Referenzfelder zeigen Zielklasse und External-Eigenschaft.
+
+Neue Explode-Konfigurationen liefern Kind-Carrier; neue Collect-Konfigurationen
+verwenden PRESERVE und BID plus Elternschlüssel. Beim Laden alter XML-Dateien
+fehlen diese Optionen bewusst: kein zusätzlicher Carrier, REBUILD, bisherige
+Schlüsselwahl. Die neuen Pufferdefaults gelten auch für alte Dateien.

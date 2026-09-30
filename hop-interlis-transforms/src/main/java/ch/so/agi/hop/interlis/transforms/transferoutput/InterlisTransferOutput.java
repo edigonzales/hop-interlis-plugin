@@ -83,16 +83,12 @@ public class InterlisTransferOutput
         }
         String bid = envelope.basketId() == null ? "b1" : envelope.basketId();
         if (data.currentBid == null) {
-          if (!data.completedBids.add(bid))
-            throw new HopException("Basket <" + bid + "> reappears after it was completed");
           data.currentTopic = requiredTopic(envelope);
           data.currentBasketMetadata = envelope.basket();
           data.writer.startBasket(data.currentTopic, bid, envelope.basket());
           data.currentBid = bid;
         } else if (!data.currentBid.equals(bid)) {
           data.writer.endBasket();
-          if (!data.completedBids.add(bid))
-            throw new HopException("Basket <" + bid + "> reappears after it was completed");
           data.currentTopic = requiredTopic(envelope);
           data.currentBasketMetadata = envelope.basket();
           data.writer.startBasket(data.currentTopic, bid, envelope.basket());
@@ -213,7 +209,13 @@ public class InterlisTransferOutput
                   new ch.so.agi.hop.interlis.core.model.ModelSource(
                       List.of(), modelNames, resolveModelDirectories()),
                   ch.so.agi.hop.interlis.core.model.ModelCompileOptions.defaults());
-      data.writer = XtfTransferWriter.open(file, model.transferDescription(), modelNames);
+      data.writerModel = model.transferDescription();
+      data.preparedOutput =
+          new ch.so.agi.hop.interlis.core.io.PreparedXtfOutput(file, meta.isOverwrite());
+      ch.so.agi.hop.interlis.transforms.InterlisPipelineCompletion.forPipeline(getPipeline())
+          .register(data.preparedOutput, this);
+      data.writer =
+          XtfTransferWriter.open(data.preparedOutput.temporary(), data.writerModel, modelNames);
       if (!meta.isEventMode()) {
         data.writer.startTransfer("hop-interlis-plugin");
       }
@@ -247,6 +249,28 @@ public class InterlisTransferOutput
         data.writer.requireComplete();
       }
       closeWriterChecked();
+      if (meta.isValidateBeforePublish()) {
+        var result =
+            new ch.so.agi.hop.interlis.core.io.InterlisValidationService()
+                .validate(
+                    data.preparedOutput.temporary(),
+                    data.writerModel,
+                    meta.getValidationConfigFile() == null
+                        ? ""
+                        : resolve(meta.getValidationConfigFile()),
+                    this::isStopped,
+                    finding -> {
+                      if (finding.getEventKind() == ch.interlis.iox.IoxLogEvent.ERROR)
+                        logError(finding.getEventMsg());
+                    });
+        if (result.errors() > 0 || result.incomplete() != null)
+          throw new HopException(
+              "INTERLIS validation prevents publication: "
+                  + result.errors()
+                  + " error(s), "
+                  + result.incomplete());
+      }
+      data.preparedOutput.prepare();
     } catch (Exception e) {
       closeAfterFailure(e);
       throw new HopException("Failed to finish INTERLIS transfer: " + e.getMessage(), e);
@@ -265,6 +289,12 @@ public class InterlisTransferOutput
     } catch (InterlisWriteException close) {
       failure.addSuppressed(close);
     }
+    if (data.preparedOutput != null)
+      try {
+        data.preparedOutput.close();
+      } catch (Exception cleanup) {
+        failure.addSuppressed(cleanup);
+      }
   }
 
   private void closeWriter() {

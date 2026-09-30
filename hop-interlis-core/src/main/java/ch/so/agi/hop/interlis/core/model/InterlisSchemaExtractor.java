@@ -37,8 +37,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Extracts immutable {@link InterlisClassDescriptor}/{@link InterlisStructureDescriptor} views
- * from a compiled {@link TransferDescription}.
+ * Extracts immutable {@link InterlisClassDescriptor}/{@link InterlisStructureDescriptor} views from
+ * a compiled {@link TransferDescription}.
  *
  * <p>Only transfer-relevant elements are considered. Property order is the metamodel's stable
  * order; no hash-based ordering is used anywhere.
@@ -50,8 +50,7 @@ public final class InterlisSchemaExtractor {
     Map<String, InterlisStructureDescriptor> structures = new LinkedHashMap<>();
     List<InterlisAssociationDescriptor> associations = new ArrayList<>();
 
-    for (Iterator<Model> models = td.iterator();
-        models.hasNext(); ) {
+    for (Iterator<Model> models = td.iterator(); models.hasNext(); ) {
       Model model = models.next();
       // The predefined INTERLIS model (units, domains, TIMESYSTEMS) is not transfer data.
       if (model instanceof ch.interlis.ili2c.metamodel.PredefinedModel) {
@@ -60,6 +59,9 @@ public final class InterlisSchemaExtractor {
       InterlisModelKind modelKind = InterlisModelKind.from(model);
       for (Iterator<Element> elements = model.iterator(); elements.hasNext(); ) {
         Element element = elements.next();
+        if (element instanceof Table table && !table.isIdentifiable()) {
+          structures.putIfAbsent(table.getScopedName(null), extractStructure(table));
+        }
         if (!(element instanceof Topic topic)) {
           continue;
         }
@@ -92,8 +94,7 @@ public final class InterlisSchemaExtractor {
     List<InterlisPropertyDescriptor> declared = extractDeclaredProperties(viewable);
     List<InterlisPropertyDescriptor> effective = new ArrayList<>(declared);
 
-    for (Iterator<ViewableTransferElement> it = viewable.getAttributesAndRoles2();
-        it.hasNext(); ) {
+    for (Iterator<ViewableTransferElement> it = viewable.getAttributesAndRoles2(); it.hasNext(); ) {
       ViewableTransferElement element = it.next();
       String name = propertyName(element);
       if (declared.stream().noneMatch(p -> p.name().equals(name))) {
@@ -131,11 +132,14 @@ public final class InterlisSchemaExtractor {
       }
     }
     return new InterlisStructureDescriptor(
-        table.getName(), table.getScopedName(null), attributes);
+        table.getName(),
+        table.getScopedName(null),
+        attributes,
+        table.getExtending() == null ? null : table.getExtending().getScopedName(null),
+        table.isAbstract());
   }
 
-  public InterlisAssociationDescriptor extractAssociation(
-      AssociationDef association, Topic topic) {
+  public InterlisAssociationDescriptor extractAssociation(AssociationDef association, Topic topic) {
     return extractAssociation(association, topic, InterlisModelKind.DATA);
   }
 
@@ -230,7 +234,7 @@ public final class InterlisSchemaExtractor {
     Type type = domain == null ? null : Type.findReal(domain);
 
     String scopedName = attribute.getScopedName(null);
-    InterlisCardinality cardinality = cardinalityOf(type);
+    InterlisCardinality cardinality = cardinalityOf(collectionType(domain));
     boolean mandatory = domain != null && domain.isMandatoryConsideringAliases();
     String aliasDomainName = aliasDomainName(domain);
 
@@ -248,6 +252,26 @@ public final class InterlisSchemaExtractor {
           legacyGeometry.encoding());
     }
 
+    if (type instanceof ch.interlis.ili2c.metamodel.ReferenceType reference) {
+      return new InterlisAttributeDescriptor(
+          attribute.getName(),
+          scopedName,
+          cardinality,
+          mandatory,
+          InterlisValueKind.REFERENCE,
+          reference.toString(),
+          inherited,
+          null,
+          null,
+          false,
+          null,
+          collectionType(domain).isOrdered(),
+          -1,
+          -1,
+          InterlisGeometryEncoding.NATIVE,
+          reference.getReferred() == null ? null : reference.getReferred().getScopedName(null),
+          reference.isExternal());
+    }
     if (type instanceof CompositionType composition) {
       Table component = composition.getComponentType();
       String structureName = component == null ? null : component.getScopedName(null);
@@ -318,7 +342,11 @@ public final class InterlisSchemaExtractor {
     }
     if (type instanceof MultiCoordType) {
       return geometryAttribute(
-          attribute, scopedName, cardinality, mandatory, inherited,
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          inherited,
           InterlisGeometryKind.MULTICOORD,
           ((MultiCoordType) type).getDimensions() == null
               ? null
@@ -327,7 +355,11 @@ public final class InterlisSchemaExtractor {
     }
     if (type instanceof CoordType coordType) {
       return geometryAttribute(
-          attribute, scopedName, cardinality, mandatory, inherited,
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          inherited,
           InterlisGeometryKind.COORD,
           coordType.getDimensions() == null ? null : coordType.getDimensions().length,
           false);
@@ -338,20 +370,55 @@ public final class InterlisSchemaExtractor {
       // unresolved domain so the TypeAlias chain is still visible.
       if (domain != null && domain.isBoolean()) {
         return attribute(
-            attribute, scopedName, cardinality, mandatory, InterlisValueKind.BOOLEAN,
-            "BOOLEAN", inherited, null, null, false, null, false, -1, -1);
+            attribute,
+            scopedName,
+            cardinality,
+            mandatory,
+            InterlisValueKind.BOOLEAN,
+            "BOOLEAN",
+            inherited,
+            null,
+            null,
+            false,
+            null,
+            false,
+            -1,
+            -1);
       }
       return attribute(
-          attribute, scopedName, cardinality, mandatory, InterlisValueKind.ENUM,
-          "ENUMERATION", inherited, null, null, false, null, false, -1, -1);
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          InterlisValueKind.ENUM,
+          "ENUMERATION",
+          inherited,
+          null,
+          null,
+          false,
+          null,
+          false,
+          -1,
+          -1);
     }
 
     if (type instanceof TextType textType) {
       InterlisValueKind valueKind = textualKind(aliasDomainName);
       return attribute(
-          attribute, scopedName, cardinality, mandatory, valueKind,
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          valueKind,
           valueKind + "*" + textType.getMaxLength(),
-          inherited, null, null, false, null, false, textType.getMaxLength(), -1);
+          inherited,
+          null,
+          null,
+          false,
+          null,
+          false,
+          textType.getMaxLength(),
+          -1);
     }
 
     if (type instanceof NumericType numericType) {
@@ -359,26 +426,59 @@ public final class InterlisSchemaExtractor {
           Math.max(
               numericType.getMinimum() == null ? 0 : numericType.getMinimum().getAccuracy(),
               numericType.getMaximum() == null ? 0 : numericType.getMaximum().getAccuracy());
-      InterlisValueKind valueKind = decimalPlaces > 0 ? InterlisValueKind.DECIMAL : InterlisValueKind.INTEGER;
+      InterlisValueKind valueKind =
+          decimalPlaces > 0 ? InterlisValueKind.DECIMAL : InterlisValueKind.INTEGER;
       return attribute(
-          attribute, scopedName, cardinality, mandatory, valueKind,
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          valueKind,
           numericType.getMinimum() + " .. " + numericType.getMaximum(),
-          inherited, null, null, false, null, false, -1,
+          inherited,
+          null,
+          null,
+          false,
+          null,
+          false,
+          -1,
           valueKind == InterlisValueKind.DECIMAL ? decimalPlaces : -1);
     }
 
     if (type instanceof FormattedType formattedType) {
       InterlisValueKind valueKind = temporalKind(aliasDomainName);
       return attribute(
-          attribute, scopedName, cardinality, mandatory, valueKind,
+          attribute,
+          scopedName,
+          cardinality,
+          mandatory,
+          valueKind,
           "FORMAT " + String.valueOf(formattedType.getFormat()).trim(),
-          inherited, null, null, false, null, false, -1, -1);
+          inherited,
+          null,
+          null,
+          false,
+          null,
+          false,
+          -1,
+          -1);
     }
 
     return attribute(
-        attribute, scopedName, cardinality, mandatory, InterlisValueKind.TEXT,
+        attribute,
+        scopedName,
+        cardinality,
+        mandatory,
+        InterlisValueKind.UNSUPPORTED,
         type == null ? "?" : type.getClass().getSimpleName(),
-        inherited, null, null, false, null, false, -1, -1);
+        inherited,
+        null,
+        null,
+        false,
+        null,
+        false,
+        -1,
+        -1);
   }
 
   private InterlisValueKind textualKind(String aliasDomainName) {
@@ -399,12 +499,28 @@ public final class InterlisSchemaExtractor {
     };
   }
 
-  private String aliasDomainName(Type domain) {
-    if (domain instanceof TypeAlias alias) {
-      String name = alias.getAliasing() == null ? null : alias.getAliasing().getScopedName(null);
-      return name == null ? "" : name;
+  // Cardinality and ordering belong to the alias at the use site, not to the resolved
+  // scalar domain (e.g. LIST OF MyText). Follow aliases only when the outer type is scalar.
+  private Type collectionType(Type domain) {
+    Type current = domain;
+    while (current instanceof TypeAlias alias
+        && current.getCardinality().getMaximum() <= 1
+        && alias.getAliasing() != null) {
+      Type next = alias.getAliasing().getType();
+      if (next == null) break;
+      current = next;
     }
-    return "";
+    return current != null && current.getCardinality().getMaximum() > 1 ? current : domain;
+  }
+
+  private String aliasDomainName(Type domain) {
+    String name = "";
+    while (domain instanceof TypeAlias alias && alias.getAliasing() != null) {
+      name = alias.getAliasing().getScopedName(null);
+      if (name.startsWith("INTERLIS.")) return name;
+      domain = alias.getAliasing().getType();
+    }
+    return name;
   }
 
   private InterlisAttributeDescriptor geometryAttribute(
@@ -517,10 +633,23 @@ public final class InterlisSchemaExtractor {
         dimension,
         allowsArcs,
         structureScopedName,
-        ordered,
+        ordered
+            || (attribute.getDomain() != null && collectionType(attribute.getDomain()).isOrdered()),
         textMaxLength,
         decimalPlaces,
-        encoding);
+        encoding,
+        null,
+        false,
+        structureRestrictions(attribute.getDomain()));
+  }
+
+  private java.util.Set<String> structureRestrictions(Type type) {
+    var restrictions = new java.util.HashSet<String>();
+    if (type != null && Type.findReal(type) instanceof CompositionType composition)
+      composition
+          .iteratorRestrictedTo()
+          .forEachRemaining(table -> restrictions.add(table.getScopedName(null)));
+    return restrictions;
   }
 
   /**
@@ -634,7 +763,10 @@ public final class InterlisSchemaExtractor {
     if (type == null) {
       return new InterlisCardinality(1, 1);
     }
-    return cardinalityOf(type.getCardinality());
+    var cardinality = cardinalityOf(type.getCardinality());
+    if (cardinality.isSingleValued() && type.isMandatoryConsideringAliases())
+      return new InterlisCardinality(1, cardinality.max());
+    return cardinality;
   }
 
   private InterlisCardinality cardinalityOf(Cardinality cardinality) {
@@ -647,8 +779,7 @@ public final class InterlisSchemaExtractor {
       min = Integer.MAX_VALUE;
     }
     return new InterlisCardinality(
-        (int) min,
-        max == Cardinality.UNBOUND ? InterlisCardinality.UNBOUNDED : max);
+        (int) min, max == Cardinality.UNBOUND ? InterlisCardinality.UNBOUNDED : max);
   }
 
   private Integer lineDimension(Type type) {

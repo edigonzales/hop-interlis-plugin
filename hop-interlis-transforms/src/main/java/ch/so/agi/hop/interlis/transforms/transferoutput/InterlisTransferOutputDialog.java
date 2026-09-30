@@ -1,6 +1,9 @@
 package ch.so.agi.hop.interlis.transforms.transferoutput;
 
 import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisOptionsDialog;
+import ch.so.agi.hop.interlis.transforms.InterlisOptionsDialog.Option;
+import java.util.List;
 import org.apache.hop.core.util.Utils;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.pipeline.PipelineMeta;
@@ -72,6 +75,34 @@ public class InterlisTransferOutputDialog extends BaseTransformDialog {
     fdTransformName.right = new FormAttachment(100, 0);
     fdTransformName.top = new FormAttachment(0, margin);
     wTransformName.setLayoutData(fdTransformName);
+    Button advanced = new Button(shell, SWT.PUSH);
+    advanced.setText("Options…");
+    PropsUi.setLook(advanced);
+    FormData fdAdvanced = new FormData();
+    fdAdvanced.right = new FormAttachment(100, 0);
+    fdAdvanced.top = new FormAttachment(0, margin);
+    advanced.setLayoutData(fdAdvanced);
+    fdTransformName.right = new FormAttachment(advanced, -margin);
+    advanced.addListener(
+        SWT.Selection,
+        e -> {
+          if (InterlisOptionsDialog.open(
+              shell,
+              variables,
+              List.of(
+                  new Option(
+                      "Validate before publication",
+                      Boolean.toString(input.isValidateBeforePublish()),
+                      v -> input.setValidateBeforePublish(Boolean.parseBoolean(v)),
+                      List.of("true", "false")),
+                  new Option(
+                      "Validation configuration",
+                      input.getValidationConfigFile(),
+                      input::setValidationConfigFile)))) {
+            input.setChanged();
+            ;
+          }
+        });
 
     // File
     Composite fileRow = InterlisDialogUiSupport.createRow(shell, wTransformName, margin);
@@ -171,7 +202,8 @@ public class InterlisTransferOutputDialog extends BaseTransformDialog {
   private void getData() {
     wFileName.setText(input.getFileName() == null ? "" : input.getFileName());
     wModelNames.setText(input.getModelNames() == null ? "" : input.getModelNames());
-    wModelDirectories.setText(input.getModelDirectories() == null ? "" : input.getModelDirectories());
+    wModelDirectories.setText(
+        input.getModelDirectories() == null ? "" : input.getModelDirectories());
     wOverwrite.setSelection(input.isOverwrite());
     wEventMode.setSelection(input.isEventMode());
     wTransformName.selectAll();

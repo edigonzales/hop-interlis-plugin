@@ -34,8 +34,86 @@ public record InterlisAttributeDescriptor(
     boolean ordered,
     int textMaxLength,
     int decimalPlaces,
-    InterlisGeometryEncoding geometryEncoding)
+    InterlisGeometryEncoding geometryEncoding,
+    String referenceTarget,
+    boolean externalReference,
+    java.util.Set<String> structureRestrictions)
     implements InterlisPropertyDescriptor {
+
+  public InterlisAttributeDescriptor(
+      String name,
+      String scopedName,
+      InterlisCardinality cardinality,
+      boolean mandatory,
+      InterlisValueKind kind,
+      String typeName,
+      boolean inherited,
+      InterlisGeometryKind geometryKind,
+      Integer coordDimension,
+      boolean allowsArcs,
+      String structureScopedName,
+      boolean ordered,
+      int textMaxLength,
+      int decimalPlaces,
+      InterlisGeometryEncoding geometryEncoding,
+      String referenceTarget,
+      boolean externalReference) {
+    this(
+        name,
+        scopedName,
+        cardinality,
+        mandatory,
+        kind,
+        typeName,
+        inherited,
+        geometryKind,
+        coordDimension,
+        allowsArcs,
+        structureScopedName,
+        ordered,
+        textMaxLength,
+        decimalPlaces,
+        geometryEncoding,
+        referenceTarget,
+        externalReference,
+        java.util.Set.of());
+  }
+
+  public InterlisAttributeDescriptor(
+      String name,
+      String scopedName,
+      InterlisCardinality cardinality,
+      boolean mandatory,
+      InterlisValueKind kind,
+      String typeName,
+      boolean inherited,
+      InterlisGeometryKind geometryKind,
+      Integer coordDimension,
+      boolean allowsArcs,
+      String structureScopedName,
+      boolean ordered,
+      int textMaxLength,
+      int decimalPlaces,
+      InterlisGeometryEncoding geometryEncoding) {
+    this(
+        name,
+        scopedName,
+        cardinality,
+        mandatory,
+        kind,
+        typeName,
+        inherited,
+        geometryKind,
+        coordDimension,
+        allowsArcs,
+        structureScopedName,
+        ordered,
+        textMaxLength,
+        decimalPlaces,
+        geometryEncoding,
+        null,
+        false);
+  }
 
   /** Backwards-compatible constructor for attributes using native geometry encoding. */
   public InterlisAttributeDescriptor(
@@ -72,6 +150,10 @@ public record InterlisAttributeDescriptor(
   }
 
   public InterlisAttributeDescriptor {
+    structureRestrictions =
+        structureRestrictions == null
+            ? java.util.Set.of()
+            : java.util.Set.copyOf(structureRestrictions);
     geometryEncoding =
         geometryEncoding == null ? InterlisGeometryEncoding.NATIVE : geometryEncoding;
   }

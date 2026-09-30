@@ -8,7 +8,6 @@ import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.row.IRowMeta;
@@ -50,6 +49,14 @@ public class InterlisObjectToRow
       }
 
       data.pendingOutput = null;
+      if (data.pendingBatch != null) {
+        try {
+          data.pendingBatch.close();
+        } catch (Exception e) {
+          throw new HopException(e);
+        }
+        data.pendingBatch = null;
+      }
 
       Object[] row = getRow();
       if (row == null) {
@@ -104,10 +111,23 @@ public class InterlisObjectToRow
   private void flushPending() throws HopException {
     if (data.basketBuffer == null) return;
     var batch = data.basketBuffer.drain();
-    List<Object[]> rows = new ArrayList<>(batch.rows().size());
-    for (var entry : batch.rows())
-      rows.add(mapRow(entry.context(), entry.envelope(), batch.lookup()));
-    data.pendingOutput = rows.iterator();
+    data.pendingBatch = batch;
+    var entries = batch.rows().iterator();
+    data.pendingOutput =
+        new java.util.Iterator<>() {
+          public boolean hasNext() {
+            return entries.hasNext();
+          }
+
+          public Object[] next() {
+            var entry = entries.next();
+            try {
+              return mapRow(entry.context(), entry.envelope(), batch.lookup());
+            } catch (Exception e) {
+              throw new IllegalStateException(e.getMessage(), e);
+            }
+          }
+        };
   }
 
   private void doInitialize() throws HopException {
@@ -135,7 +155,10 @@ public class InterlisObjectToRow
       }
       if (data.buffering)
         data.basketBuffer =
-            new ch.so.agi.hop.interlis.core.mapping.InterlisBasketProjectionBuffer<>(data.plan);
+            new ch.so.agi.hop.interlis.core.mapping.InterlisBasketProjectionBuffer<>(
+                data.plan,
+                new ch.so.agi.hop.interlis.transforms.buffer.BasketEntryCodec(inputRowMeta),
+                meta.spillOptions(this));
 
       data.outputPlan =
           InterlisObjectToRowOutputPlan.create(
@@ -182,5 +205,6 @@ public class InterlisObjectToRow
     if (data.basketBuffer != null) data.basketBuffer.clear();
     data.basketBuffer = null;
     data.pendingOutput = null;
+    data.pendingBatch = null;
   }
 }

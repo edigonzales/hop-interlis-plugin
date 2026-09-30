@@ -28,6 +28,7 @@ class InterlisStructureCollectBindingsTest {
     input.addValueMeta(carrier);
     var meta = new InterlisStructureCollectMeta();
     meta.setDefault();
+    meta.setParentBidField("");
     var binding = InterlisStructureCollectBindings.parent(input, meta, new Variables());
     assertThat(binding.carrier().read(new Object[] {"p1", 0})).isSameAs(object);
     var output = input.clone();
@@ -46,6 +47,7 @@ class InterlisStructureCollectBindingsTest {
     input.addValueMeta(new ValueMetaInterlisObject("_ili_source_object"));
     var meta = new InterlisStructureCollectMeta();
     meta.setDefault();
+    meta.setParentBidField("");
     assertThatThrownBy(() -> InterlisStructureCollectBindings.parent(input, meta, new Variables()))
         .hasMessageContaining("parent")
         .hasMessageContaining("expected String, actual Integer");

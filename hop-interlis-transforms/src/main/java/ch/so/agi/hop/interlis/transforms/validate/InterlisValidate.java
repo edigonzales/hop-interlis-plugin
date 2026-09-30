@@ -10,7 +10,6 @@ import ch.interlis.iox_j.IoxIliReader;
 import ch.interlis.iox_j.logging.LogEventFactory;
 import ch.interlis.iox_j.utility.ReaderFactory;
 import ch.interlis.iox_j.validator.ValidationConfig;
-import ch.interlis.iox_j.validator.Validator;
 import ch.so.agi.hop.interlis.core.io.XtfTransferReader;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisModelService;
@@ -68,7 +67,8 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
       long errors = data.errorCount;
       // Hop's transform-finished listener stops the pipeline on a transform error counter.
       // Defer that counter until all consumers have finished, including their final flush.
-      getPipeline().addExecutionFinishedListener(pipeline -> setErrors(getErrors() + errors));
+      ch.so.agi.hop.interlis.transforms.InterlisPipelineCompletion.forPipeline(getPipeline())
+          .deferFailure(this, errors);
     }
     data.phase = InterlisValidateData.Phase.COMPLETE;
     setOutputDone();
@@ -140,40 +140,11 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
         }
 
         long limit = meta.isStopOnFirstError() ? 1 : meta.getMaxErrors();
-        CollectingLogFactory logFactory = new CollectingLogFactory(limit, this::isStopped);
-        String incomplete = null;
-        Validator validator =
-            new Validator(
-                td,
-                config,
-                logFactory,
-                logFactory,
-                new ch.interlis.iox_j.PipelinePool(),
-                new ch.ehi.basics.settings.Settings());
-        try (AutoCloseable validatorResource = validator::close) {
-          validator.setAutoSecondPass(false);
-          try {
-            logFactory.begin();
-            IoxEvent event = first;
-            boolean completeTransfer = false;
-            while (event != null) {
-              logFactory.checkCancelled();
-              validator.validate(event);
-              if (event instanceof ch.interlis.iox.EndTransferEvent) {
-                completeTransfer = true;
-                break;
-              }
-              event = reader.read();
-            }
-            if (!completeTransfer)
-              throw new HopException("Unexpected end of INTERLIS transfer: " + file);
-            logFactory.checkCancelled();
-            // The merged validator configuration also governs these cross-object checks.
-            validator.doSecondPass();
-          } catch (ValidationAborted e) {
-            incomplete = e.getMessage();
-          }
-        }
+        CollectingLogFactory logFactory = new CollectingLogFactory(0, this::isStopped);
+        var result =
+            new ch.so.agi.hop.interlis.core.io.InterlisValidationService()
+                .validate(reader, first, td, config, limit, this::isStopped, logFactory::addEvent);
+        String incomplete = result.incomplete();
         List<Object[]> rows = new ArrayList<>();
         for (IoxLogEvent finding : logFactory.findings) {
           if (accepted(finding)) rows.add(toRow(finding, file));

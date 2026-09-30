@@ -11,6 +11,7 @@ import org.apache.hop.pipeline.transform.BaseTransformData;
 /** Runtime state of the {@link InterlisInput} transform. */
 public class InterlisInputData extends BaseTransformData {
 
+  AutoCloseable pendingBatch;
   boolean initialized;
   InterlisTransferReader reader;
   InterlisProjectionResult projection;

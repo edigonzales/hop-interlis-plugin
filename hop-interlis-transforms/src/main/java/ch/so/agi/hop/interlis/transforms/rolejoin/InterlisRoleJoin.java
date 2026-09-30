@@ -1,7 +1,6 @@
 package ch.so.agi.hop.interlis.transforms.rolejoin;
 
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
-import java.util.LinkedHashMap;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.core.row.RowMeta;
@@ -13,10 +12,10 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 /**
  * INTERLIS Role Join: appends the fields of a role's target class to the main stream.
  *
- * <p>Both streams are read through explicit input rowsets. The lookup stream is loaded into memory
- * once (bounded by {@code maxLookupRows}); the join itself is a plain TID lookup on the
- * model-derived reference field. Missing targets are null fields or an error for mandatory roles,
- * depending on {@code failOnMissingMandatoryReference}.
+ * <p>Both streams are read fairly through explicit input rowsets. The lookup stream is loaded into
+ * a spill-backed index once (bounded by {@code maxLookupRows}); the join itself is a TID lookup on
+ * the model-derived reference field. Missing targets are null fields or an error for mandatory
+ * roles, depending on {@code failOnMissingMandatoryReference}.
  */
 public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, InterlisRoleJoinData> {
 
@@ -38,7 +37,7 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
 
     Object[] mainRow;
     try {
-      mainRow = getRowFrom(data.mainRowSet);
+      mainRow = data.inputs.next(0);
     } catch (Exception e) {
       throw new HopException("Failed to read main stream: " + e.getMessage(), e);
     }
@@ -50,12 +49,13 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
       return false;
     }
     bindMainRowMeta();
-    bindLookupRowMeta();
+    if (data.lookupRowSet.getRowMeta() != null) bindLookupRowMeta();
 
     Object referenceValue = data.mainBindings.reference().read(mainRow);
     String reference = referenceValue == null ? null : referenceValue.toString().trim();
 
-    Object[] lookupRow = reference == null ? null : data.lookupByTid.get(reference);
+    Object[] lookupRow =
+        reference == null || data.lookupByTid == null ? null : data.lookupByTid.get(reference);
 
     if (lookupRow == null) {
       if (data.probe.role().cardinality().min() >= 1 && meta.isFailOnMissingMandatoryReference()) {
@@ -90,10 +90,10 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
     ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.requireSingleCopy(
         getTransformMeta(), this, "independent input streams require a single shared collector");
     InterlisRuntimeSupport.initialize();
+    data.storageOptions = meta.spillOptions(this);
 
     try {
       data.probe = meta.probeRole(this);
-      data.lookupByTid = new LinkedHashMap<>();
 
       String mainTransform = resolve(meta.getMainInputTransform());
       String lookupTransform = resolve(meta.getLookupInputTransform());
@@ -112,6 +112,11 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
         throw new HopException("Lookup input transform <" + lookupTransform + "> not found");
       }
 
+      if (meta.getMaxLookupRows() < 0)
+        throw new HopException("maxLookupRows must be zero (unlimited) or positive");
+      data.inputs =
+          new ch.so.agi.hop.interlis.transforms.buffer.FairInputReader(
+              this, data.storageOptions.divided(2), data.mainRowSet, data.lookupRowSet);
       loadLookup();
 
       data.outputRowMeta = new RowMeta();
@@ -122,7 +127,7 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
                 + " -> "
                 + data.probe.target().scopedName()
                 + " (lookup rows "
-                + data.lookupByTid.size()
+                + (data.lookupByTid == null ? 0 : data.lookupByTid.size())
                 + ")");
       }
       data.initialized = true;
@@ -133,13 +138,13 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
     }
   }
 
-  /** Loads the lookup stream into memory once, keyed by the lookup TID field. */
+  /** Loads the lookup stream into the spill-backed index, keyed by the lookup TID field. */
   private void loadLookup() throws HopException {
     long count = 0;
     try {
       Object[] lookupRow;
-      while ((lookupRow = getRowFrom(data.lookupRowSet)) != null) {
-        if (count >= meta.getMaxLookupRows()) {
+      while ((lookupRow = data.inputs.next(1)) != null) {
+        if (meta.getMaxLookupRows() > 0 && count >= meta.getMaxLookupRows()) {
           throw new HopException(
               "Lookup stream exceeds the configured maximum of "
                   + meta.getMaxLookupRows()
@@ -191,12 +196,23 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
       throw new HopException("Lookup stream of INTERLIS Role Join has no row metadata");
     }
     data.lookupBindings = InterlisRoleJoinBindings.lookup(lookupRowMeta, data.probe, meta, this);
+    data.lookupByTid =
+        new ch.so.agi.hop.interlis.core.buffer.SpillStore<>(
+            new ch.so.agi.hop.interlis.transforms.buffer.HopRowCodec(
+                data.lookupBindings.fields().normalRowMeta()),
+            data.storageOptions.divided(2));
     data.lookupBound = true;
   }
 
   @Override
   public void dispose() {
-    data.lookupByTid = null;
+    try {
+      if (data.lookupByTid != null) data.lookupByTid.close();
+    } finally {
+      if (data.inputs != null) data.inputs.close();
+      data.lookupByTid = null;
+      data.inputs = null;
+    }
     super.dispose();
   }
 }

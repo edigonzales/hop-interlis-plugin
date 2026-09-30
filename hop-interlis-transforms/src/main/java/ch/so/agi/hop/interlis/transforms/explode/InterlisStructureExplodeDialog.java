@@ -2,6 +2,8 @@ package ch.so.agi.hop.interlis.transforms.explode;
 
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisOptionsDialog;
+import ch.so.agi.hop.interlis.transforms.InterlisOptionsDialog.Option;
 import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureProbeResult;
 import java.util.List;
@@ -113,6 +115,30 @@ public class InterlisStructureExplodeDialog extends BaseTransformDialog {
     fdTransformName.right = new FormAttachment(100, 0);
     fdTransformName.top = new FormAttachment(0, margin);
     wTransformName.setLayoutData(fdTransformName);
+    Button advanced = new Button(shell, SWT.PUSH);
+    advanced.setText("Options…");
+    PropsUi.setLook(advanced);
+    FormData fdAdvanced = new FormData();
+    fdAdvanced.right = new FormAttachment(100, 0);
+    fdAdvanced.top = new FormAttachment(0, margin);
+    advanced.setLayoutData(fdAdvanced);
+    fdTransformName.right = new FormAttachment(advanced, -margin);
+    advanced.addListener(
+        SWT.Selection,
+        e -> {
+          if (InterlisOptionsDialog.open(
+              shell,
+              variables,
+              List.of(
+                  new Option(
+                      "Keep child source object",
+                      Boolean.toString(input.isKeepChildSourceObject()),
+                      v -> input.setKeepChildSourceObject(Boolean.parseBoolean(v)),
+                      List.of("true", "false"))))) {
+            input.setChanged();
+            refreshStructureComboAndPreview();
+          }
+        });
 
     // Model configuration
     wModelNames = addTextRow("Models", wTransformName, 0, null);
@@ -329,7 +355,9 @@ public class InterlisStructureExplodeDialog extends BaseTransformDialog {
     populateClassCombo();
     populateStructureCombo();
     if (result.ok() && result.projection() != null) {
-      InterlisSchemaPreview preview = controller.createSchemaPreview(result.projection().plan());
+      InterlisSchemaPreview preview =
+          controller.createSchemaPreview(
+              result.projection().plan(), input.isKeepChildSourceObject());
       setStatus(result, preview);
       InterlisDialogUiSupport.populatePreviewTable(wPreview, preview.rows());
       InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, preview);
@@ -358,7 +386,9 @@ public class InterlisStructureExplodeDialog extends BaseTransformDialog {
   private void applyRefreshPreview(InterlisStructureProbeResult result) {
 
     if (result.ok() && result.projection() != null) {
-      InterlisSchemaPreview preview = controller.createSchemaPreview(result.projection().plan());
+      InterlisSchemaPreview preview =
+          controller.createSchemaPreview(
+              result.projection().plan(), input.isKeepChildSourceObject());
       setStatus(result, preview);
       InterlisDialogUiSupport.populatePreviewTable(wPreview, preview.rows());
       InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, preview);

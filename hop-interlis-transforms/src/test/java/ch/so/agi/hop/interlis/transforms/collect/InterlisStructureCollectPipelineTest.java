@@ -123,8 +123,14 @@ class InterlisStructureCollectPipelineTest {
   }
 
   private IPipelineEngine<PipelineMeta> runWithSyntheticChildren(
-      InterlisStructureCollectMeta collect, InterlisOutputMeta output, SyntheticChildRowsMeta children)
+      InterlisStructureCollectMeta collect,
+      InterlisOutputMeta output,
+      SyntheticChildRowsMeta children)
       throws Exception {
+    // This fixture intentionally creates children without a source carrier (legacy rebuild).
+    collect.setCollectMode(InterlisStructureCollectMeta.CollectMode.REBUILD);
+    collect.setParentBidField("");
+    collect.setChildParentBidField("");
     PipelineMeta pipelineMeta = new PipelineMeta();
     TransformMeta source = new TransformMeta("INTERLIS Input", inputMeta());
     TransformMeta childTransform = new TransformMeta("child rows", children);
@@ -160,8 +166,7 @@ class InterlisStructureCollectPipelineTest {
                     List.of()),
                 ModelCompileOptions.defaults());
     List<InterlisObjectEnvelope> objects = new ArrayList<>();
-    try (XtfTransferReader reader =
-        XtfTransferReader.open(file, model.transferDescription())) {
+    try (XtfTransferReader reader = XtfTransferReader.open(file, model.transferDescription())) {
       InterlisObjectEnvelope event;
       while ((event = reader.next()) != null) {
         if (event.eventType() == InterlisEventType.OBJECT) {
@@ -193,7 +198,8 @@ class InterlisStructureCollectPipelineTest {
     assertThat(engine.getErrors()).isZero();
 
     List<InterlisObjectEnvelope> objects = readObjects(outputFile);
-    assertThat(objects).extracting(InterlisObjectEnvelope::objectId)
+    assertThat(objects)
+        .extracting(InterlisObjectEnvelope::objectId)
         .containsExactly("p1", "p2", "p3");
 
     IomObject p1 = personByTid(objects, "p1");
@@ -215,11 +221,7 @@ class InterlisStructureCollectPipelineTest {
   void full_bag_roundtrip_through_explode_and_collect() throws Exception {
     Path outputFile = tempDir.resolve("structures-bag-roundtrip.xtf");
     IPipelineEngine<PipelineMeta> engine =
-        run(
-            inputMeta(),
-            explodeMeta("Contacts"),
-            collectMeta("Contacts"),
-            outputMeta(outputFile));
+        run(inputMeta(), explodeMeta("Contacts"), collectMeta("Contacts"), outputMeta(outputFile));
 
     assertThat(engine.getErrors()).isZero();
 
@@ -239,8 +241,7 @@ class InterlisStructureCollectPipelineTest {
     children.addRow("p2", 0L, "Changed Road", "99");
 
     IPipelineEngine<PipelineMeta> engine =
-        runWithSyntheticChildren(
-            collectMeta("Addresses"), outputMeta(outputFile), children);
+        runWithSyntheticChildren(collectMeta("Addresses"), outputMeta(outputFile), children);
 
     assertThat(engine.getErrors()).isZero();
 
@@ -259,8 +260,7 @@ class InterlisStructureCollectPipelineTest {
     children.addRow("zz", 0L, "Orphan Street", "1");
 
     IPipelineEngine<PipelineMeta> engine =
-        runWithSyntheticChildren(
-            collectMeta("Addresses"), outputMeta(outputFile), children);
+        runWithSyntheticChildren(collectMeta("Addresses"), outputMeta(outputFile), children);
 
     assertThat(engine.getErrors()).isGreaterThan(0);
   }
@@ -272,8 +272,7 @@ class InterlisStructureCollectPipelineTest {
     children.addRow("p1", null, "No Index Street", "1");
 
     IPipelineEngine<PipelineMeta> engine =
-        runWithSyntheticChildren(
-            collectMeta("Addresses"), outputMeta(outputFile), children);
+        runWithSyntheticChildren(collectMeta("Addresses"), outputMeta(outputFile), children);
 
     assertThat(engine.getErrors()).isGreaterThan(0);
   }
@@ -286,8 +285,7 @@ class InterlisStructureCollectPipelineTest {
     children.addRow("p1", 0L, "Second Street", "2");
 
     IPipelineEngine<PipelineMeta> engine =
-        runWithSyntheticChildren(
-            collectMeta("Addresses"), outputMeta(outputFile), children);
+        runWithSyntheticChildren(collectMeta("Addresses"), outputMeta(outputFile), children);
 
     assertThat(engine.getErrors()).isGreaterThan(0);
   }

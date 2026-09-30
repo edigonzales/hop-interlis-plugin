@@ -26,33 +26,37 @@ final class InterlisRoleJoinBindings {
   private static List<InterlisFieldPlan> fields(
       InterlisRoleJoinProbeResult probe, InterlisRoleJoinMeta meta, IVariables vars)
       throws HopTransformException {
-    var result = new ArrayList<InterlisFieldPlan>();
-    for (String configured : meta.effectiveLookupFields(probe)) {
-      String name = InterlisFieldBinding.resolve(vars, configured);
-      var attribute =
-          probe.target().attributes().stream()
-              .filter(a -> a.name().equalsIgnoreCase(name))
-              .findFirst()
-              .orElseThrow(
-                  () ->
-                      new HopTransformException(
-                          "INTERLIS Role Join: selected lookup field <"
-                              + name
-                              + "> not found in "
-                              + probe.target().scopedName()));
-      result.add(
-          new InterlisFieldPlan(
-              result.size(),
-              attribute.name(),
-              attribute.kind().isGeometry()
-                  ? InterlisFieldSource.GEOMETRY_ATTRIBUTE
-                  : InterlisFieldSource.PRIMITIVE_ATTRIBUTE,
-              InterlisPropertyPath.root(attribute.name()),
-              attribute,
-              null,
-              null));
+    var selected = new java.util.HashSet<String>();
+    for (String field : meta.effectiveLookupFields(probe))
+      selected.add(InterlisFieldBinding.resolve(vars, field));
+    try {
+      var options =
+          new ProjectionOptions(false, false, false, false, false, true, "_", null, selected);
+      var fields =
+          new InterlisRowSchemaBuilder()
+              .build(probe.schema(), probe.target(), options).fields().stream()
+                  .filter(field -> field.attributeDescriptor() != null)
+                  .toList();
+      if (meta.getLookupFields() != null && !meta.getLookupFields().isEmpty()) {
+        for (String path : selected) {
+          if (fields.stream()
+              .noneMatch(
+                  field ->
+                      field.propertyPath().dotted().equals(path)
+                          || field.propertyPath().dotted().startsWith(path + "."))) {
+            throw new HopTransformException(
+                "INTERLIS Role Join lookup: no supported scalar projection for "
+                    + probe.target().scopedName()
+                    + "."
+                    + path
+                    + "; collections require Structure Explode/Collect");
+          }
+        }
+      }
+      return fields;
+    } catch (InterlisMappingException e) {
+      throw new HopTransformException("INTERLIS Role Join lookup: " + e.getMessage(), e);
     }
-    return List.copyOf(result);
   }
 
   static Main main(

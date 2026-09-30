@@ -56,10 +56,13 @@ public final class HopRowSchemaFactory {
     return switch (field.source()) {
       case OBJECT_ID, BASKET_ID, CLASS_NAME, TOPIC_NAME, OPERATION, ROLE_REFERENCE ->
           new ValueMetaString(field.hopFieldName());
-      case ROLE_REFERENCE_BID -> new ValueMetaString(field.hopFieldName());
+      case ROLE_REFERENCE_BID, ATTRIBUTE_REFERENCE, ATTRIBUTE_REFERENCE_BID ->
+          new ValueMetaString(field.hopFieldName());
       case ROLE_ORDER_POS -> new ValueMetaInteger(field.hopFieldName());
-      case PRIMITIVE_ATTRIBUTE, GEOMETRY_ATTRIBUTE, FLATTENED_STRUCTURE_ATTRIBUTE,
-          ASSOCIATION_ATTRIBUTE ->
+      case PRIMITIVE_ATTRIBUTE,
+              GEOMETRY_ATTRIBUTE,
+              FLATTENED_STRUCTURE_ATTRIBUTE,
+              ASSOCIATION_ATTRIBUTE ->
           createAttributeValueMeta(field);
     };
   }
@@ -68,10 +71,11 @@ public final class HopRowSchemaFactory {
       throws HopTransformException {
     InterlisAttributeDescriptor attribute = field.attributeDescriptor();
     if (attribute == null) {
-      throw new HopTransformException("Field " + field.hopFieldName() + " has no attribute descriptor");
+      throw new HopTransformException(
+          "Field " + field.hopFieldName() + " has no attribute descriptor");
     }
     return switch (attribute.kind()) {
-      case TEXT, MTEXT, NAME, URI, ENUM, TIME -> {
+      case TEXT, MTEXT, NAME, URI, ENUM, TIME, REFERENCE -> {
         ValueMetaString meta = new ValueMetaString(field.hopFieldName());
         if (attribute.textMaxLength() > 0) {
           meta.setLength(attribute.textMaxLength());
@@ -90,23 +94,25 @@ public final class HopRowSchemaFactory {
       case DATE -> new ValueMetaDate(field.hopFieldName());
       case DATETIME -> new ValueMetaTimestamp(field.hopFieldName());
       case GEOMETRY -> new ValueMetaGeometry(field.hopFieldName());
-      case STRUCTURE ->
+      case STRUCTURE, UNSUPPORTED ->
           throw new HopTransformException(
-              "Structure attribute " + field.hopFieldName() + " must be flattened before projection");
+              "Structure attribute "
+                  + field.hopFieldName()
+                  + " must be flattened before projection");
     };
   }
 
   /** Java runtime type produced by the mapper for a value kind. */
   static Class<?> runtimeType(InterlisValueKind kind) {
     return switch (kind) {
-      case TEXT, MTEXT, NAME, URI, ENUM, TIME -> String.class;
+      case TEXT, MTEXT, NAME, URI, ENUM, TIME, REFERENCE -> String.class;
       case BOOLEAN -> Boolean.class;
       case INTEGER -> Long.class;
       case DECIMAL -> BigDecimal.class;
       case DATE -> Date.class;
       case DATETIME -> Timestamp.class;
       case GEOMETRY -> org.locationtech.jts.geom.Geometry.class;
-      case STRUCTURE -> Object.class;
+      case STRUCTURE, UNSUPPORTED -> Object.class;
     };
   }
 }

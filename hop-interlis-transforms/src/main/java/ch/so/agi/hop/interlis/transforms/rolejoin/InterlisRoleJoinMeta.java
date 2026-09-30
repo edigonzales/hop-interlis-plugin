@@ -25,6 +25,7 @@ import org.apache.hop.pipeline.transform.TransformMeta;
     description = "Join the target class fields of a reference role onto the main stream",
     image = "ch/so/agi/hop/interlis/transforms/rolejoin/icons/interlis-role-join.svg",
     categoryDescription = "Geospatial",
+    isIncludeJdbcDrivers = true,
     classLoaderGroup = "sogeo-geometry",
     keywords = {"interlis", "xtf", "ili", "role", "join"})
 public class InterlisRoleJoinMeta
@@ -32,6 +33,42 @@ public class InterlisRoleJoinMeta
 
   public static final String DEFAULT_LOOKUP_TID_FIELD = "_ili_tid";
   public static final long DEFAULT_MAX_LOOKUP_ROWS = 500_000;
+
+  @HopMetadataProperty private long bufferMemoryMiB = 64;
+  @HopMetadataProperty private String spillDirectory = "";
+  @HopMetadataProperty private long maxSpillMiB;
+
+  public long getBufferMemoryMiB() {
+    return bufferMemoryMiB;
+  }
+
+  public void setBufferMemoryMiB(long value) {
+    bufferMemoryMiB = value;
+  }
+
+  public String getSpillDirectory() {
+    return spillDirectory;
+  }
+
+  public void setSpillDirectory(String value) {
+    spillDirectory = value;
+  }
+
+  public long getMaxSpillMiB() {
+    return maxSpillMiB;
+  }
+
+  public void setMaxSpillMiB(long value) {
+    maxSpillMiB = value;
+  }
+
+  public ch.so.agi.hop.interlis.core.buffer.SpillOptions spillOptions(IVariables vars) {
+    String dir = spillDirectory == null ? "" : vars.resolve(spillDirectory).trim();
+    return new ch.so.agi.hop.interlis.core.buffer.SpillOptions(
+        Math.multiplyExact(bufferMemoryMiB, 1L << 20),
+        dir.isBlank() ? null : java.nio.file.Path.of(dir),
+        Math.multiplyExact(maxSpillMiB, 1L << 20));
+  }
 
   @HopMetadataProperty private String mainInputTransform;
   @HopMetadataProperty private String lookupInputTransform;
@@ -53,6 +90,9 @@ public class InterlisRoleJoinMeta
 
   @Override
   public void setDefault() {
+    bufferMemoryMiB = 64;
+    spillDirectory = "";
+    maxSpillMiB = 0;
     mainInputTransform = "";
     lookupInputTransform = "";
     modelNames = "";

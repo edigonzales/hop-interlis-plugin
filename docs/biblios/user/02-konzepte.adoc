@@ -337,3 +337,17 @@ Geometrie   Geometry
 ====
 Die Vererbung wird vollständig flach aufgelöst. Es gibt keine separate Unterscheidung zwischen BaseObject- und Gebaeude-Rows. Wenn Sie nur BaseObject-Objekte haben möchten, wählen Sie die Klasse `BaseObject` als Input-Klasse.
 ====
+
+=== Projektion und Erhaltung
+
+Eine typisierte Klassenzeile bildet die sichtbaren Felder ab. Primitive `BAG/LIST`
+werden wie mehrwertige Strukturen über Explode/Collect verarbeitet; sie erscheinen
+nicht als skalares Textfeld. `REFERENCE TO` liefert `<Pfad>_ref` und
+`<Pfad>_ref_bid`, auch innerhalb abgeflachter Strukturen. Eine BID ohne Ziel-TID
+ist unzulässig; null entfernt die projizierte Referenz.
+
+Für das Erhalten weiterer Objektinhalte muss der Input das Quellobjekt mitführen
+und der Output dieses als Overlay verwenden. Die ausgewählte Klasse allein erhält
+keine anderen Klassen, Transfer-Header oder vollständigen Basket-Ereignisse.
+Dafür dient der generische Ereignisstrom. Nicht unterstützte angeforderte Typen
+führen zu einem Fehler mit dem betroffenen Attribut und Typ.

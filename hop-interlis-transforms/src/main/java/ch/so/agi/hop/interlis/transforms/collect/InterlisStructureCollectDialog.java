@@ -2,6 +2,8 @@ package ch.so.agi.hop.interlis.transforms.collect;
 
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisOptionsDialog;
+import ch.so.agi.hop.interlis.transforms.InterlisOptionsDialog.Option;
 import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureProbeResult;
 import java.util.List;
@@ -116,6 +118,58 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
     fdTransformName.right = new FormAttachment(100, 0);
     fdTransformName.top = new FormAttachment(0, margin);
     wTransformName.setLayoutData(fdTransformName);
+    Button advanced = new Button(shell, SWT.PUSH);
+    advanced.setText("Options…");
+    PropsUi.setLook(advanced);
+    FormData fdAdvanced = new FormData();
+    fdAdvanced.right = new FormAttachment(100, 0);
+    fdAdvanced.top = new FormAttachment(0, margin);
+    advanced.setLayoutData(fdAdvanced);
+    fdTransformName.right = new FormAttachment(advanced, -margin);
+    advanced.addListener(
+        SWT.Selection,
+        e -> {
+          if (InterlisOptionsDialog.open(
+              shell,
+              variables,
+              List.of(
+                  new Option(
+                      "Buffer memory (MiB)",
+                      Long.toString(input.getBufferMemoryMiB()),
+                      v -> input.setBufferMemoryMiB(Long.parseLong(v))),
+                  new Option(
+                      "Spill directory (empty: system temp)",
+                      input.getSpillDirectory(),
+                      input::setSpillDirectory),
+                  new Option(
+                      "Maximum spill (MiB, 0: unlimited)",
+                      Long.toString(input.getMaxSpillMiB()),
+                      v -> input.setMaxSpillMiB(Long.parseLong(v))),
+                  new Option(
+                      "Child attribute paths (comma separated, empty: all)",
+                      String.join(",", input.getSelectedChildFields()),
+                      v ->
+                          input.setSelectedChildFields(
+                              java.util.Arrays.stream(v.split(","))
+                                  .map(String::trim)
+                                  .filter(f -> !f.isEmpty())
+                                  .toList())),
+                  new Option(
+                      "Collect mode",
+                      input.getCollectMode().name(),
+                      v ->
+                          input.setCollectMode(InterlisStructureCollectMeta.CollectMode.valueOf(v)),
+                      List.of("PRESERVE", "REBUILD")),
+                  new Option(
+                      "Parent basket field", input.getParentBidField(), input::setParentBidField),
+                  new Option(
+                      "Child parent basket field",
+                      input.getChildParentBidField(),
+                      input::setChildParentBidField)))) {
+            input.setChanged();
+            refreshStructureComboAndPreview();
+          }
+        });
 
     // Streams
     wParentInputTransform = addComboRow("Parent input transform", wTransformName, 0);
@@ -376,7 +430,8 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
               wParentInputTransform.getText(),
               wChildInputTransform.getText(),
               wParentKeyField.getText(),
-              wChildParentKeyField.getText());
+              wChildParentKeyField.getText(),
+              input);
       wStatus.set(
           InterlisDialogUiSupport.statusSeverity(
               InterlisDialogUiSupport.StatusSeverity.valueOf(result.status().name()), preview),

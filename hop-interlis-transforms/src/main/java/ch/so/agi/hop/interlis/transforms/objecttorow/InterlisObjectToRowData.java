@@ -11,6 +11,7 @@ import org.apache.hop.pipeline.transform.BaseTransformData;
 public class InterlisObjectToRowData extends BaseTransformData {
   public ch.so.agi.hop.interlis.transforms.mapping.InterlisEnvelopeBindings envelopeBindings;
 
+  AutoCloseable pendingBatch;
   boolean initialized;
   InterlisProjectionResult projection;
   InterlisRowMappingPlan plan;

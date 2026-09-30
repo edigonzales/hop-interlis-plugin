@@ -40,7 +40,11 @@ public final class InterlisSchemaPreviewSupport {
         IValueMeta valueMeta = rowMeta.getValueMeta(i);
         rows.add(toPreviewRow(valueMeta, plan.fields().get(i)));
       }
-      return new InterlisSchemaPreview(rows, plan.warnings(), null);
+      var warnings = new ArrayList<>(plan.warnings());
+      warnings.add(
+          "Typed projection edits the listed fields. A source-object overlay preserves unprojected"
+              + " content; preserving a complete transfer requires the event stream.");
+      return new InterlisSchemaPreview(rows, warnings, null);
     } catch (HopTransformException e) {
       return new InterlisSchemaPreview(
           rows, plan.warnings(), "Schema preview failed: " + message(e));
@@ -51,9 +55,7 @@ public final class InterlisSchemaPreviewSupport {
 
   /** Creates preview rows for structure-child fields and optional technical/prefix rows. */
   public static InterlisSchemaPreview createFieldPreview(
-      List<InterlisPreviewRow> prefixRows,
-      List<InterlisFieldPlan> fields,
-      List<String> warnings) {
+      List<InterlisPreviewRow> prefixRows, List<InterlisFieldPlan> fields, List<String> warnings) {
     List<InterlisPreviewRow> rows =
         prefixRows == null ? new ArrayList<>() : new ArrayList<>(prefixRows);
     try {
@@ -71,20 +73,31 @@ public final class InterlisSchemaPreviewSupport {
 
   /** Builds the child-row preview used by Structure Explode. */
   public static InterlisSchemaPreview createStructurePreview(InterlisStructurePlan plan) {
+    return createStructurePreview(plan, false);
+  }
+
+  public static InterlisSchemaPreview createStructurePreview(
+      InterlisStructurePlan plan, boolean carrier) {
     List<InterlisPreviewRow> prefixRows =
         List.of(
             new InterlisPreviewRow(plan.parentClass().scopedName(), "", "parent class"),
             new InterlisPreviewRow(
-                plan.attributeName(),
-                plan.ordered() ? "LIST" : "BAG",
-                plan.structure().scopedName()),
+                plan.attributeName(), plan.ordered() ? "LIST" : "BAG", plan.childTypeName()),
             new InterlisPreviewRow("_ili_parent_tid", "String", "parent TID"),
             new InterlisPreviewRow("_ili_parent_bid", "String", "parent BID"),
             new InterlisPreviewRow(
                 "_ili_index",
                 "Integer",
                 plan.ordered() ? "LIST order (semantic)" : "technical index"));
-    return createFieldPreview(prefixRows, plan.childFields(), plan.warnings());
+    var preview = createFieldPreview(prefixRows, plan.childFields(), plan.warnings());
+    if (!carrier || plan.primitive()) return preview;
+    var rows = new ArrayList<>(preview.rows());
+    rows.add(
+        new InterlisPreviewRow(
+            "_ili_child_object",
+            "InterlisObject",
+            "concrete child, unselected fields and nested collections for PRESERVE"));
+    return new InterlisSchemaPreview(rows, preview.warnings(), preview.errorMessage());
   }
 
   public static InterlisPreviewRow toPreviewRow(IValueMeta valueMeta, InterlisFieldPlan field) {
@@ -98,9 +111,12 @@ public final class InterlisSchemaPreviewSupport {
       case CLASS_NAME -> "@CLASS";
       case TOPIC_NAME -> "@TOPIC";
       case OPERATION -> "@OPERATION";
+      case ATTRIBUTE_REFERENCE, ATTRIBUTE_REFERENCE_BID ->
+          "REFERENCE TO "
+              + field.attributeDescriptor().referenceTarget()
+              + (field.attributeDescriptor().externalReference() ? " (EXTERNAL)" : "");
       case ROLE_REFERENCE -> "-> " + field.roleDescriptor().targetClassScopedName();
-      default ->
-          field.attributeDescriptor() == null ? "" : field.attributeDescriptor().typeName();
+      default -> field.attributeDescriptor() == null ? "" : field.attributeDescriptor().typeName();
     };
   }
 
@@ -112,19 +128,11 @@ public final class InterlisSchemaPreviewSupport {
             ? InterlisFieldSource.GEOMETRY_ATTRIBUTE
             : InterlisFieldSource.PRIMITIVE_ATTRIBUTE;
     return new InterlisFieldPlan(
-        0,
-        outputName,
-        source,
-        InterlisPropertyPath.root(attribute.name()),
-        attribute,
-        null,
-        null);
+        0, outputName, source, InterlisPropertyPath.root(attribute.name()), attribute, null, null);
   }
 
   private static String message(Throwable throwable) {
     String message = throwable.getMessage();
-    return message == null || message.isBlank()
-        ? throwable.getClass().getSimpleName()
-        : message;
+    return message == null || message.isBlank() ? throwable.getClass().getSimpleName() : message;
   }
 }

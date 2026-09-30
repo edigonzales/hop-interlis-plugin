@@ -37,74 +37,37 @@ public class InterlisStructureExplode
 
   @Override
   public boolean processRow() throws HopException {
-    if (data.pendingChildren != null && data.pendingChildren.hasNext()) {
-      putRow(data.outputRowMeta, data.pendingChildren.next());
-      return true;
-    }
-
-    Object[] parentRow = getRow();
-    if (parentRow == null) {
-      setOutputDone();
-      if (isBasic()) {
-        logBasic("Finished exploding structure " + meta.getStructureAttributePath());
+    while (!isStopped()) {
+      if (data.pendingChildren != null && data.pendingChildren.hasNext()) {
+        try {
+          putRow(
+              data.outputRowMeta,
+              buildChildRow(data.pendingParentRow, data.pendingChildren.next()));
+        } catch (ch.so.agi.hop.interlis.core.mapping.InterlisMappingException e) {
+          throw new HopException(e);
+        }
+        return true;
       }
-      return false;
-    }
-
-    if (!data.initialized) {
-      doInitialize();
-    }
-
-    data.pendingChildren = explode(parentRow).iterator();
-    if (!data.pendingChildren.hasNext()) {
-      // No children: continue with the next parent row.
       data.pendingChildren = null;
-      return processRow();
+      data.pendingParentRow = null;
+      Object[] parentRow = getRow();
+      if (parentRow == null) {
+        setOutputDone();
+        return false;
+      }
+      if (!data.initialized) doInitialize();
+      Object carrier = data.bindings.carrier().read(parentRow);
+      if (!(carrier instanceof IomObject source))
+        throw new HopException("Missing INTERLIS source object for parent " + parentKey(parentRow));
+      try {
+        data.pendingChildren = data.exploder.cursor(source, data.plan);
+      } catch (Exception e) {
+        throw new HopException(
+            "Failed to explode " + meta.getStructureAttributePath() + ": " + e.getMessage(), e);
+      }
+      data.pendingParentRow = parentRow;
     }
-    putRow(data.outputRowMeta, data.pendingChildren.next());
-    return true;
-  }
-
-  private List<Object[]> explode(Object[] parentRow) throws HopException {
-    Object carrier = data.bindings.carrier().read(parentRow);
-    if (carrier == null) {
-      throw new HopException(
-          "Source object field <"
-              + res(meta.getSourceObjectField())
-              + "> is null for parent row "
-              + parentKey(parentRow)
-              + "; INTERLIS Input must be configured with \"Keep source object for Structure"
-              + " Explode\"");
-    }
-    if (!(carrier instanceof IomObject sourceObject)) {
-      throw new HopException(
-          "Source object field <"
-              + res(meta.getSourceObjectField())
-              + "> does not contain an INTERLIS object but "
-              + carrier.getClass().getName());
-    }
-
-    List<InterlisStructureExploder.ExplodedChild> children;
-    try {
-      children = data.exploder.explode(sourceObject, data.plan);
-    } catch (Exception e) {
-      throw new HopException(
-          "Failed to explode structure "
-              + meta.getStructureAttributePath()
-              + " of class "
-              + res(meta.getClassName())
-              + " (parent "
-              + parentKey(parentRow)
-              + "): "
-              + e.getMessage(),
-          e);
-    }
-
-    List<Object[]> rows = new ArrayList<>(children.size());
-    for (InterlisStructureExploder.ExplodedChild child : children) {
-      rows.add(buildChildRow(parentRow, child));
-    }
-    return rows;
+    return false;
   }
 
   private Object[] buildChildRow(Object[] parentRow, InterlisStructureExploder.ExplodedChild child)
@@ -120,10 +83,18 @@ public class InterlisStructureExplode
     for (Object childValue : child.values()) {
       values.add(childValue);
     }
+    if (meta.isKeepChildSourceObject() && !data.plan.primitive()) values.add(child.source());
     for (var field : data.bindings.parentFields()) {
       values.add(parentRow[field.sourceIndex()]);
     }
     return values.toArray();
+  }
+
+  @Override
+  public void dispose() {
+    data.pendingChildren = null;
+    data.pendingParentRow = null;
+    super.dispose();
   }
 
   private String parentKey(Object[] parentRow) throws HopException {
@@ -154,7 +125,7 @@ public class InterlisStructureExplode
             "Exploding structure "
                 + data.plan.attributeName()
                 + " ("
-                + data.plan.structure().scopedName()
+                + data.plan.childTypeName()
                 + ") of class "
                 + data.plan.parentClass().scopedName());
       }

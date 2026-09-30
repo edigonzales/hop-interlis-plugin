@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:m="http://www.interlis.ch/xtf/2.4/HopIli_Collections_V1">
+  <ili:headersection><ili:models><ili:model>HopIli_Collections_V1</ili:model></ili:models><ili:sender>test</ili:sender></ili:headersection>
+  <ili:datasection>
+    <m:Data ili:bid="b1">
+      <m:Target ili:tid="t1"><m:Name>first</m:Name></m:Target>
+      <m:Item ili:tid="i1">
+        <m:Texts>first</m:Texts><m:Texts>second</m:Texts>
+        <m:Numbers>7</m:Numbers><m:Numbers>7</m:Numbers>
+        <m:Flags>true</m:Flags><m:Flags>false</m:Flags>
+        <m:Choices>red</m:Choices><m:Choices>blue</m:Choices>
+        <m:Required>required</m:Required>
+        <m:InternalRef ili:ref="t1"/><m:ExternalRef ili:ref="t2" ili:bid="b2"/>
+        <m:Holder><m:Holder><m:TargetRef ili:ref="t2" ili:bid="b2"/></m:Holder></m:Holder>
+        <m:Children><m:SpecialChild>
+          <m:Name>old</m:Name><m:Hidden>keep</m:Hidden>
+          <m:Details><m:Detail><m:Text>nested</m:Text></m:Detail></m:Details>
+          <m:TargetRef ili:ref="t2" ili:bid="b2"/><m:Extra>subtype</m:Extra>
+        </m:SpecialChild></m:Children>
+      </m:Item>
+    </m:Data>
+    <m:Data ili:bid="b2"><m:Target ili:tid="t2"><m:Name>second</m:Name></m:Target></m:Data>
+  </ili:datasection>
+</ili:transfer>

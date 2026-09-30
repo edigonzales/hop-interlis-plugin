@@ -1,6 +1,6 @@
 == XTF schreiben: Der INTERLIS Output-Transform
 
-Der `INTERLIS Output`-Transform schreibt typisierte Hop-Rows als INTERLIS-XTF-Datei. Er ist das Gegenstück zum `INTERLIS Input`-Transform und ermöglicht den vollständigen Roundtrip.
+Der `INTERLIS Output`-Transform schreibt typisierte Hop-Rows als INTERLIS-XTF-Datei. Er ist das Gegenstück zum `INTERLIS Input`-Transform und ermöglicht den Roundtrip der projizierten Inhalte. Ein Quellobjekt-Overlay erhält weitere Objektinhalte.
 
 [TIP]
 ====
@@ -56,12 +56,6 @@ Der `INTERLIS Output` schreibt _eine Klasse pro Transform_. Wenn Sie mehrere Kla
 - **Existing file**: Was passiert, wenn die Datei bereits existiert?
   - `Fail`: Pipeline bricht ab
   - `Overwrite`: Datei wird überschrieben
-  - `Append`: Daten werden angehängt (nicht empfohlen für XTF)
-
-[IMPORTANT]
-====
-XTF ist ein XML-Format. _Append_ führt zu ungültigem XML, es sei denn, Sie wissen genau, was Sie tun. Verwenden Sie _Overwrite_ oder schreiben Sie in separate Dateien pro Basket.
-====
 
 === Modell und Klasse
 
@@ -319,3 +313,24 @@ Die Validierung nach dem Schreiben erfordert einen zusätzlichen Lesedurchlauf. 
 - **Sortierung**: Sortieren Sie vor dem Output nach BID, falls Sie mehrere Baskets haben.
 - **Geometrie**: Das Plugin verwendet vorkompilierte WKB-Converter pro Transform-Instanz.
 - **TID-Cache**: Bei UUID-Generierung wird ein Cache verwendet, um Duplikate zu vermeiden.
+
+=== Veröffentlichung erst nach Pipeline-Erfolg
+
+Beide INTERLIS-Writer schreiben zunächst in eine eindeutige temporäre XTF-Datei
+im Zielverzeichnis. Erst nach vollständigem Transferende, erfolgreichem Schliessen
+und erfolgreichem Pipeline-Abschluss wird diese veröffentlicht. Mappingfehler,
+Close-Fehler, Stop und spätere Fehler anderer Zweige erhalten eine bisherige
+Ausgabe. Der Validate-Transform darf seine Diagnosezeilen vollständig ausgeben;
+sein aufgeschobener Fehler verhindert trotzdem die Veröffentlichung.
+
+`Overwrite` ersetzt das Ziel atomar. Ohne Überschreiben wird es atomar angelegt;
+ein während des Laufs entstandenes Ziel wird nicht ersetzt. Unterstützt das
+Dateisystem die notwendige Operation nicht, scheitert der Lauf. Die Garantie
+gilt pro Datei; mehrere Ausgaben bilden keine gemeinsame Dateisystemtransaktion.
+
+In `Options…` aktiviert `Validate before publish` eine vollständige Prüfung der
+temporären Datei einschliesslich zweitem Validierungsdurchlauf. Default ist aus;
+eine optionale Validierungskonfigurationsdatei kann angegeben werden. Fehler oder
+unvollständige Validierung verhindern die Veröffentlichung. Reihenfolgen wie
+`B1 → B2 → B1` werden in typisierter Ausgabe, Objekt- und Ereignismodus abgelehnt;
+Objekte eines Baskets müssen zusammenhängend geliefert werden.

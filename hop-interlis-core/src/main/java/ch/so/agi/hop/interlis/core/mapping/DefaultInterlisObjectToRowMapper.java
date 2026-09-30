@@ -66,14 +66,18 @@ public final class DefaultInterlisObjectToRowMapper implements InterlisObjectToR
       case CLASS_NAME -> envelope.className();
       case TOPIC_NAME -> envelope.topicName();
       case OPERATION -> envelope.operation() == null ? null : envelope.operation().name();
-      case PRIMITIVE_ATTRIBUTE, GEOMETRY_ATTRIBUTE, FLATTENED_STRUCTURE_ATTRIBUTE ->
+      case PRIMITIVE_ATTRIBUTE,
+              GEOMETRY_ATTRIBUTE,
+              FLATTENED_STRUCTURE_ATTRIBUTE,
+              ATTRIBUTE_REFERENCE,
+              ATTRIBUTE_REFERENCE_BID ->
           fieldReader.read(envelope.object(), field, plan.defaultSrid());
-      case ROLE_REFERENCE ->
-          readRoleReference(envelope.object(), plan, field, linkLookup, false);
+      case ROLE_REFERENCE -> readRoleReference(envelope.object(), plan, field, linkLookup, false);
       case ROLE_REFERENCE_BID ->
           readRoleReference(envelope.object(), plan, field, linkLookup, true);
       case ROLE_ORDER_POS -> readRoleOrderPos(envelope.object(), field);
-      case ASSOCIATION_ATTRIBUTE -> readAssociationAttribute(envelope.object(), plan, field, linkLookup);
+      case ASSOCIATION_ATTRIBUTE ->
+          readAssociationAttribute(envelope.object(), plan, field, linkLookup);
     };
   }
 
@@ -87,8 +91,7 @@ public final class DefaultInterlisObjectToRowMapper implements InterlisObjectToR
     String roleName = field.propertyPath().leafName();
     InterlisAssociationDescriptor association = plan.linkResolvedRoles().get(roleName);
     if (association != null) {
-      IomObject link =
-          linkLookup == null ? null : linkLookup.find(owner.getobjectoid(), roleName);
+      IomObject link = linkLookup == null ? null : linkLookup.find(owner.getobjectoid(), roleName);
       IomObject member = link == null ? null : link.getattrobj(roleName, 0);
       if (member == null) {
         return null;
@@ -127,8 +130,7 @@ public final class DefaultInterlisObjectToRowMapper implements InterlisObjectToR
       InterlisAssociationLinkLookup linkLookup)
       throws InterlisMappingException {
     String roleName = field.roleDescriptor().name();
-    IomObject link =
-        linkLookup == null ? null : linkLookup.find(owner.getobjectoid(), roleName);
+    IomObject link = linkLookup == null ? null : linkLookup.find(owner.getobjectoid(), roleName);
     if (link == null) {
       return null;
     }

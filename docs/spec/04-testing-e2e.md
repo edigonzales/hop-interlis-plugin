@@ -1774,3 +1774,28 @@ Verbraucher prüfen Erfolg, Mappingfehler, Abbruch und idempotentes Aufräumen.
 Paket-E2E 29–32 prüfen umgeordnete Explode-/Collect- und Join-Streams sowie fehlende
 konfigurierte Felder und falsche Schlüsseltypen. Die Fehlerfälle verlangen Exit 1
 und eine konkrete Bindungsdiagnose. Alle bisherigen Paket-Pipelines bleiben aktiv.
+
+## Prio 1/2-Abnahme
+
+`HopIli_Collections_V1` und die minimale gültige 2.4-Fixture prüfen primitive
+Text-/Zahl-/Boolean-/Enum-Sammlungen, Aliase, echte Referenzattribute, Struktur-
+Untertypen, Composition-Restrictions und verschachtelte Listen. Regressionen
+prüfen leere Sammlungen, Duplikate, Reihenfolge, Kardinalität, null, Carrier-Fehler,
+Overlay und das Entfernen von Kindern. XML-Tests verwenden auch den tatsächlichen
+Hop-Metadatenserializer und unterscheiden alte und neue Konfigurationen.
+
+Zwei separate JVM-Läufe unter `-Xmx128m` puffern jeweils einen Basket und einen
+Lookup mit mehr als 256 MiB serialisierten Daten. Der Consumer akkumuliert keine
+Ergebniszeilen. Gemessen werden Dauer, beobachteter maximaler Heap, temporärer
+Diskbedarf und Zeit bis zur ersten Ausgabe. Pipeline-Tests mit Queuegrössen 1/2
+prüfen gemeinsame Produzenten, langsame Konsumenten und identische Eltern-TIDs
+in verschiedenen Baskets. Codec-Tests erzwingen Spill und prüfen ARC, XYZ, SRID,
+Referenzmetadaten und verschachtelte Carrier.
+
+Ausgaberegressionen prüfen atomare Veröffentlichung, konkurrierendes Anlegen,
+Mapping-, Close-, Validierungs-, Stop- und späte Zweigfehler sowie vollständige
+Validate-Diagnosen vor dem Pipelinefehler. Paket-E2E 39–42 prüfen Sammlungs-
+Roundtrips, Kind-Erhaltung, externe BIDs im Ereignisstrom mit Dateivalidierung
+und 600 grosse Strukturkinder bei 1 MiB Pufferbudget. H2 muss dabei über Hops
+JDBC-Classloader erreichbar sein. Die bisherigen Paketpipelines einschliesslich
+Vector/Raster-GeoPackage bleiben Pflichtteil der Abnahme.

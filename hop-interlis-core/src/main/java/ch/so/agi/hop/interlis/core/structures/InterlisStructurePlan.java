@@ -7,8 +7,8 @@ import ch.so.agi.hop.interlis.core.model.InterlisStructureDescriptor;
 import java.util.List;
 
 /**
- * Precomputed plan for exploding or collecting one multi-valued structure attribute
- * ({@code LIST}/{@code BAG OF} structure).
+ * Precomputed plan for exploding or collecting one multi-valued structure attribute ({@code
+ * LIST}/{@code BAG OF} structure).
  *
  * @param parentClass the class the structure attribute belongs to
  * @param pathAttributes single-valued structure attributes leading from the class object to the
@@ -24,9 +24,36 @@ public record InterlisStructurePlan(
     InterlisAttributeDescriptor structureAttribute,
     InterlisStructureDescriptor structure,
     List<InterlisFieldPlan> childFields,
-    List<String> warnings) {
+    List<String> warnings,
+    java.util.Set<String> allowedChildTypes) {
+
+  public InterlisStructurePlan(
+      InterlisClassDescriptor parentClass,
+      List<InterlisAttributeDescriptor> pathAttributes,
+      InterlisAttributeDescriptor structureAttribute,
+      InterlisStructureDescriptor structure,
+      List<InterlisFieldPlan> childFields,
+      List<String> warnings) {
+    this(
+        parentClass,
+        pathAttributes,
+        structureAttribute,
+        structure,
+        childFields,
+        warnings,
+        structure == null ? java.util.Set.of() : java.util.Set.of(structure.scopedName()));
+  }
+
+  public String childTypeName() {
+    return primitive() ? structureAttribute.typeName() : structure.scopedName();
+  }
+
+  public boolean primitive() {
+    return structure == null;
+  }
 
   public InterlisStructurePlan {
+    allowedChildTypes = java.util.Set.copyOf(allowedChildTypes);
     pathAttributes = pathAttributes == null ? List.of() : List.copyOf(pathAttributes);
     childFields = childFields == null ? List.of() : List.copyOf(childFields);
     warnings = warnings == null ? List.of() : List.copyOf(warnings);

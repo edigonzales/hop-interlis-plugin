@@ -5,7 +5,8 @@ import org.apache.hop.pipeline.transform.BaseTransformData;
 
 /** Runtime state of the {@link InterlisTransferOutput} transform. */
 public class InterlisTransferOutputData extends BaseTransformData {
-  public final java.util.Set<String> completedBids = new java.util.HashSet<>();
+  ch.so.agi.hop.interlis.core.io.PreparedXtfOutput preparedOutput;
+  ch.interlis.ili2c.metamodel.TransferDescription writerModel;
   public String currentTopic;
   public ch.so.agi.hop.interlis.core.io.InterlisBasketMetadata currentBasketMetadata;
   public ch.so.agi.hop.interlis.transforms.mapping.InterlisEnvelopeBindings envelopeBindings;

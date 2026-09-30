@@ -38,6 +38,8 @@ with ZipFile(zip_path) as archive:
     # Shared via classLoaderGroup=sogeo-geometry / provided by Hop itself.
     forbidden = [
         "hop-geometry-type",
+        "h2-",
+        "imagen-",
         "jts-core-1.20",  # org.locationtech.jts shared Hop geometry
         "hop-core-",
         "json-simple-",

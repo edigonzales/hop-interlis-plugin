@@ -12,22 +12,22 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Maps typed row values back to INTERLIS IOM objects according to a precomputed
- * {@link InterlisRowMappingPlan}.
+ * Maps typed row values back to INTERLIS IOM objects according to a precomputed {@link
+ * InterlisRowMappingPlan}.
  *
  * <p>The mapper is stateless and Hop-free: the row values are passed in plan field order; the
- * caller binds the incoming Hop row to that order beforehand (see
- * {@code InterlisRowBindings} in the transforms module).
+ * caller binds the incoming Hop row to that order beforehand (see {@code InterlisRowBindings} in
+ * the transforms module).
  *
  * <p>Write rules:
  *
  * <ul>
- *   <li>the object identifier comes from the projected {@code OBJECT_ID} field; a missing TID
- *       fails unless the root is a non-identifiable association (XTF link objects carry no TID);
+ *   <li>the object identifier comes from the projected {@code OBJECT_ID} field; a missing TID fails
+ *       unless the root is a non-identifiable association (XTF link objects carry no TID);
  *   <li>{@code null} values leave optional attributes undefined; in strict mode a {@code null}
  *       value for a mandatory attribute fails;
- *   <li>flattened single structures are re-created once per structure when at least one child
- *       has a value; an entirely empty mandatory top-level structure fails in strict mode;
+ *   <li>flattened single structures are re-created once per structure when at least one child has a
+ *       value; an entirely empty mandatory top-level structure fails in strict mode;
  *   <li>role reference fields become IOM reference objects ({@code REF} semantics), including
  *       external basket references and ORDERED order positions;
  *   <li>association rows produce a link object; class rows with flattened association attributes
@@ -48,8 +48,7 @@ public final class RowToIomMapper {
   public record InterlisWriteResult(IomObject object, List<IomObject> additionalObjects) {
 
     public InterlisWriteResult {
-      additionalObjects =
-          additionalObjects == null ? List.of() : List.copyOf(additionalObjects);
+      additionalObjects = additionalObjects == null ? List.of() : List.copyOf(additionalObjects);
     }
 
     /** All objects to write, primary first. */
@@ -78,8 +77,8 @@ public final class RowToIomMapper {
   }
 
   /**
-   * Overlays row values onto a carrier object (e.g. the {@code _ili_source_object} kept by
-   * INTERLIS Input and updated by INTERLIS Structure Collect).
+   * Overlays row values onto a carrier object (e.g. the {@code _ili_source_object} kept by INTERLIS
+   * Input and updated by INTERLIS Structure Collect).
    *
    * <p>The carrier is never mutated; the result is a deep copy with the row values applied.
    *
@@ -154,8 +153,12 @@ public final class RowToIomMapper {
       Object value = values[field.outputIndex()];
       switch (field.source()) {
         case OBJECT_ID, BASKET_ID, CLASS_NAME, TOPIC_NAME, OPERATION ->
-            /* consumed above or handled by the caller */ { }
-        case PRIMITIVE_ATTRIBUTE, GEOMETRY_ATTRIBUTE, FLATTENED_STRUCTURE_ATTRIBUTE ->
+        /* consumed above or handled by the caller */ {}
+        case PRIMITIVE_ATTRIBUTE,
+                GEOMETRY_ATTRIBUTE,
+                FLATTENED_STRUCTURE_ATTRIBUTE,
+                ATTRIBUTE_REFERENCE,
+                ATTRIBUTE_REFERENCE_BID ->
             fieldWriter.write(
                 object,
                 field,
@@ -164,14 +167,10 @@ public final class RowToIomMapper {
                 structureCache,
                 plan.root().effectiveProperties(),
                 plan.root().scopedName());
-        case ROLE_REFERENCE ->
-            writeRoleReference(plan, object, field, value, linkBuilders);
-        case ROLE_REFERENCE_BID ->
-            writeRoleReferenceBid(plan, object, field, value, linkBuilders);
-        case ROLE_ORDER_POS ->
-            writeRoleOrderPos(object, field, value, plan.root().scopedName());
-        case ASSOCIATION_ATTRIBUTE ->
-            writeAssociationAttribute(plan, field, value, linkBuilders);
+        case ROLE_REFERENCE -> writeRoleReference(plan, object, field, value, linkBuilders);
+        case ROLE_REFERENCE_BID -> writeRoleReferenceBid(plan, object, field, value, linkBuilders);
+        case ROLE_ORDER_POS -> writeRoleOrderPos(object, field, value, plan.root().scopedName());
+        case ASSOCIATION_ATTRIBUTE -> writeAssociationAttribute(plan, field, value, linkBuilders);
       }
     }
 
@@ -193,8 +192,13 @@ public final class RowToIomMapper {
             && attribute.cardinality().isSingleValued()
             && object.getattrvaluecount(attribute.name()) == 0) {
           throw new InterlisMappingException(
-              "Mandatory structure " + attribute.name() + " has no value for "
-                  + plan.root().scopedName() + " (TID " + tid + ")");
+              "Mandatory structure "
+                  + attribute.name()
+                  + " has no value for "
+                  + plan.root().scopedName()
+                  + " (TID "
+                  + tid
+                  + ")");
         }
       }
     }
@@ -226,9 +230,15 @@ public final class RowToIomMapper {
       }
       if (targetRefOid == null) {
         throw new InterlisMappingException(
-            "Role " + classSideRole.name() + " of " + association.scopedName()
-                + " has association values but no reference; the " + classSideRole.name()
-                + "_ref field must be set (class TID " + classTid + ")");
+            "Role "
+                + classSideRole.name()
+                + " of "
+                + association.scopedName()
+                + " has association values but no reference; the "
+                + classSideRole.name()
+                + "_ref field must be set (class TID "
+                + classTid
+                + ")");
       }
       Iom_jObject link = new Iom_jObject(association.scopedName(), null);
       for (InterlisRoleDescriptor role : association.roles()) {
@@ -248,8 +258,13 @@ public final class RowToIomMapper {
         if (value == null) {
           if (options.strict() && attribute.mandatory()) {
             throw new InterlisMappingException(
-                "Mandatory association attribute " + attribute.name() + " is null for "
-                    + association.scopedName() + " (class TID " + classTid + ")");
+                "Mandatory association attribute "
+                    + attribute.name()
+                    + " is null for "
+                    + association.scopedName()
+                    + " (class TID "
+                    + classTid
+                    + ")");
           }
           continue;
         }
@@ -361,7 +376,9 @@ public final class RowToIomMapper {
       throws InterlisMappingException {
     if (values == null || values.length != plan.fieldCount()) {
       throw new InterlisMappingException(
-          "Expected " + plan.fieldCount() + " values but got "
+          "Expected "
+              + plan.fieldCount()
+              + " values but got "
               + (values == null ? 0 : values.length));
     }
     String tid = null;
@@ -379,7 +396,8 @@ public final class RowToIomMapper {
             && !association.identifiable();
     if (tid == null && !tidOptional) {
       throw new InterlisMappingException(
-          "No object identifier (TID) for " + plan.root().scopedName()
+          "No object identifier (TID) for "
+              + plan.root().scopedName()
               + "; the projection must include _ili_tid");
     }
     return tid;
@@ -393,12 +411,13 @@ public final class RowToIomMapper {
       return;
     }
     Iom_jObject reference =
-        owner.getattrvaluecount(roleName) == 0
-            ? null
-            : (Iom_jObject) owner.getattrobj(roleName, 0);
+        owner.getattrvaluecount(roleName) == 0 ? null : (Iom_jObject) owner.getattrobj(roleName, 0);
     if (reference == null) {
       throw new InterlisMappingException(
-          "Role " + roleName + " of " + contextName
+          "Role "
+              + roleName
+              + " of "
+              + contextName
               + " has an order position but no reference; the role reference field must be set");
     }
     reference.setobjectreforderpos(((Number) value).longValue());

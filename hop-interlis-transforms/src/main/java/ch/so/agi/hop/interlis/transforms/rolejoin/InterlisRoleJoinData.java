@@ -1,12 +1,12 @@
 package ch.so.agi.hop.interlis.transforms.rolejoin;
 
-import java.util.Map;
 import org.apache.hop.core.IRowSet;
 import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.pipeline.transform.BaseTransformData;
 
 /** Runtime state of the {@link InterlisRoleJoin} transform. */
 public class InterlisRoleJoinData extends BaseTransformData {
+  ch.so.agi.hop.interlis.core.buffer.SpillOptions storageOptions;
   InterlisRoleJoinBindings.Main mainBindings;
   InterlisRoleJoinBindings.Lookup lookupBindings;
 
@@ -16,6 +16,7 @@ public class InterlisRoleJoinData extends BaseTransformData {
   InterlisRoleJoinProbeResult probe;
   IRowSet mainRowSet;
   IRowSet lookupRowSet;
-  Map<String, Object[]> lookupByTid;
+  ch.so.agi.hop.interlis.core.buffer.SpillStore<Object[]> lookupByTid;
+  ch.so.agi.hop.interlis.transforms.buffer.FairInputReader inputs;
   IRowMeta outputRowMeta;
 }

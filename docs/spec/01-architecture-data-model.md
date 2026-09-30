@@ -660,15 +660,12 @@ municipality_Name
 municipality_BfsNo
 ```
 
-Wichtig: Der Join kann modellgetrieben die korrekten Schlüssel vorschlagen, ist runtime-seitig aber ein normaler Stream-Lookup/Join. Für grosse Zielstreams muss eine Strategie gewählt werden:
-
-- in-memory lookup für kleine Referenzdaten,
-- sorted/streaming join später,
-- optional delegieren an bestehende Hop-Transforms.
-
-Phase 4 implementiert den in-memory Lookup mit klarer Warnung/Limit-Konfiguration
-(`maxLookupRows`, Default 500'000); Hop 2.x liest beide Ströme explizit via
-`findInputRowSet` (kein Info-Hop-Konzept mehr).
+Der Join schlägt Schlüssel und Felder modellgetrieben vor. Der Lookup wird vor
+der ersten Join-Ausgabe vollständig eingelesen; Prio 1/2 lagert Nutzdaten und
+Index oberhalb des Pufferbudgets auf Disk aus. Beide Eingänge werden abwechselnd
+gelesen, damit ein gemeinsamer Produzent auch bei kleinen Hop-Queues weiterläuft.
+`maxLookupRows` bleibt eine zusätzliche Schutzgrenze (Default 500'000; 0 ohne
+Zeilenlimit). Hop 2.x verwendet explizite Eingangs-Rowsets aus `findInputRowSet`.
 
 ## 14. Vererbung
 
@@ -920,7 +917,7 @@ Einige Mappings können lenient sein, aber Defaults bleiben sicher:
 - Reader bleibt streaming; niemals gesamtes XTF in Memory laden.
 - `Structure Explode` arbeitet rowweise.
 - `Structure Collect` benötigt je nach Pipelineform Pufferung; Phase 3 dokumentiert Speichergrenzen.
-- `Role Join` initial zunächst in-memory mit konfigurierbarer Schutzgrenze.
+- `Role Join` puffert den vollständigen Lookup mit Spill und konfigurierbarer Schutzgrenze.
 
 ## 23. Threading
 
@@ -996,3 +993,42 @@ Die Auswahl eines tiefen Blatts traversiert Elternstrukturen, ohne Geschwister
 mit auszuwählen. Auswahl einer Struktur umfasst alle unterstützten Nachfahren.
 Strukturpfade werden im Plan aufgelöst. Klassenprojektion und Strukturprojektion
 verwenden dieselben Auswahlregeln.
+
+## Prio 1/2: Erhaltende Sammlungen und Referenzattribute
+
+Die Deskriptoren unterscheiden primitive Werte, Geometrien, Strukturen, echte
+`REFERENCE TO`-Attribute und nicht unterstützte Typen. Kardinalität und LIST/BAG
+werden vor dem Auflösen eines Typalias gelesen; Alias-Ketten bleiben berücksichtigt.
+Referenzattribute tragen Zielklasse und External-Eigenschaft. Die Abbildung erzeugt
+`<Pfad>_ref` und nullable `<Pfad>_ref_bid`, auch in abgeflachten Strukturen. Eine
+BID ohne TID scheitert; null entfernt die projizierte Referenz. Rollen bleiben ein
+separater Mappingfall. Nicht unterstützte angeforderte Typen werden mit qualifiziertem
+Attribut- und Typkontext abgelehnt und erhalten keinen TEXT-Konverter.
+
+Mehrwertige primitive Attribute erscheinen nicht im skalaren Klassenplan.
+Explode/Collect erzeugen bzw. verbrauchen dafür `_ili_value` mit dem passenden
+Hop-Typ sowie Elternschlüssel, optionaler BID und `_ili_index`. BAG-Duplikate und
+LIST-Reihenfolge bleiben erhalten. Kardinalität wird nach dem Sammeln geprüft;
+null als einzelnes Sammlungselement ist unzulässig. Die Klassenprojektion weist
+auf diesen separaten Pfad hin. Ein Quellobjekt-Overlay erhält ausgelassene Sammlungen.
+Mehrwertige Referenzattribute sind kein unterstützter Explode/Collect-Pfad.
+
+Strukturkinder können `_ili_child_object` mitführen. `PRESERVE` kopiert das konkrete
+Kindobjekt und überschreibt ausschliesslich die ausgewählten Kindattribute;
+`REBUILD` erzeugt den deklarierten Strukturtyp aus diesen Feldern. Die erlaubten
+konkreten Typen werden einschliesslich Vererbung, abstrakten Typen und Composition-
+Restrictions vorab ermittelt. Fehlende oder inkompatible Carrier scheitern im
+Erhaltungsmodus. Subtypattribute und verschachtelte Sammlungen bleiben im Carrier
+bestehen; eine zusätzliche Projektion verschachtelter Mehrfachstrukturen ist nicht
+Teil dieses Ausbaus.
+
+Collect ersetzt die gesamte ausgewählte Sammlung. Gefilterte Kinder verschwinden;
+bei strikten LIST-Indizes müssen verbleibende Kinder gegebenenfalls neu nummeriert
+werden. Neue Konfigurationen ordnen Eltern über `(BID, Elternschlüssel)` zu und
+prüfen leere Schlüssel, doppelte Eltern, Sortierung und verwaiste Kinder. Alte
+Dateien behalten ihre bisherige Schlüsselwahl und den Neuaufbau ohne Kind-Carrier.
+
+Die drei Erhaltungszusagen sind verschieden: Projektion bearbeitet ausgewählte
+Felder; Overlay erhält zusätzlich unprojizierte Objektinhalte; der vollständige
+Ereignisstrom erhält die unterstützten Transfer- und Basket-Metadaten. Keine dieser
+Zusagen bedeutet byte-identisches XML oder Unterstützung aller INTERLIS-Typen.

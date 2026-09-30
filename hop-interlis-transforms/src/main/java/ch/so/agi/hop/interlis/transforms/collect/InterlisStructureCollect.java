@@ -9,7 +9,6 @@ import ch.so.agi.hop.interlis.core.structures.InterlisStructureCollector.Structu
 import ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionService;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisRuntimeSupport;
-import java.util.ArrayList;
 import java.util.List;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.pipeline.Pipeline;
@@ -47,7 +46,7 @@ public class InterlisStructureCollect
     if (data.pendingParentRow == null) {
       Object[] parentRow;
       try {
-        parentRow = getRowFrom(data.parentRowSet);
+        parentRow = data.inputs.next(0);
       } catch (Exception e) {
         throw new HopException("Failed to read parent stream: " + e.getMessage(), e);
       }
@@ -61,22 +60,45 @@ public class InterlisStructureCollect
       }
       data.pendingParentRow = parentRow;
       bindParentRowMeta();
-      String parentKey = key(data.parentBindings.key().read(data.pendingParentRow));
-      if (data.lastParentKey != null && parentKey.compareTo(data.lastParentKey) < 0) {
+      String parentKey = parentKey(data.pendingParentRow);
+      if (data.lastParentKey != null && parentKey.compareTo(data.lastParentKey) <= 0) {
         throw new HopException(
             "Parent stream of INTERLIS Structure Collect must be sorted by parent key <"
                 + res(meta.getParentKeyField())
                 + "> ascending; got "
-                + parentKey
+                + display(parentKey)
                 + " after "
-                + data.lastParentKey);
+                + display(data.lastParentKey));
       }
       data.lastParentKey = parentKey;
     }
 
     try {
-      List<StructureChild> children =
-          collectChildrenFor(key(data.parentBindings.key().read(data.pendingParentRow)));
+      collectChildrenFor(parentKey(data.pendingParentRow));
+      java.util.Iterator<Object[]> rows =
+          data.children == null
+              ? java.util.Collections.emptyIterator()
+              : data.children.iterator(data.plan.ordered());
+      java.util.Iterator<StructureChild> children =
+          new java.util.Iterator<>() {
+            public boolean hasNext() {
+              return rows.hasNext();
+            }
+
+            public StructureChild next() {
+              var row = rows.next();
+              try {
+                return new StructureChild(
+                    Math.toIntExact(childIndex(row, data.lastParentKey)),
+                    childValues(row),
+                    data.plan.primitive()
+                        ? null
+                        : (IomObject) data.childBindings.carrier().read(row));
+              } catch (Exception e) {
+                throw new IllegalStateException(e.getMessage(), e);
+              }
+            }
+          };
 
       Object carrier = data.parentBindings.carrier().read(data.pendingParentRow);
       if (carrier == null) {
@@ -84,7 +106,7 @@ public class InterlisStructureCollect
             "Source object field <"
                 + res(meta.getSourceObjectField())
                 + "> is null for parent "
-                + data.lastParentKey
+                + display(data.lastParentKey)
                 + "; INTERLIS Input must be configured with \"Keep source object for Structure"
                 + " Explode\"");
       }
@@ -97,11 +119,13 @@ public class InterlisStructureCollect
       }
 
       IomObject updated =
-          data.collector.collect(carrierObject, children, data.plan, collectOptions());
+          data.collector.collectOrdered(carrierObject, children, data.plan, collectOptions());
 
       Object[] outputRow = data.pendingParentRow.clone();
       outputRow[data.parentBindings.carrier().sourceIndex()] = updated;
       data.pendingParentRow = null;
+      if (data.children != null) data.children.close();
+      data.children = null;
       putRow(data.outputRowMeta, outputRow);
       return true;
     } catch (HopException e) {
@@ -111,15 +135,15 @@ public class InterlisStructureCollect
           "Failed to collect structure "
               + meta.getStructureAttributePath()
               + " for parent "
-              + data.lastParentKey
+              + display(data.lastParentKey)
               + ": "
               + e.getMessage(),
           e);
     }
   }
 
-  private List<StructureChild> collectChildrenFor(String parentKey) throws HopException {
-    List<StructureChild> children = new ArrayList<>();
+  private void collectChildrenFor(String parentKey) throws HopException {
+    data.children = null;
     long lastIndex = -1;
     boolean first = true;
 
@@ -130,40 +154,48 @@ public class InterlisStructureCollect
         if (data.childStreamExhausted) {
           // Hop removes a finished input rowset from the transform on the first exhausted
           // read; reading it again would trip the internal rowset bookkeeping.
-          return children;
+          return;
         }
         try {
-          childRow = getRowFrom(data.childRowSet);
+          childRow = data.inputs.next(1);
         } catch (Exception e) {
           throw new HopException("Failed to read child stream: " + e.getMessage(), e);
         }
       }
       if (childRow == null) {
         data.childStreamExhausted = true;
-        return children;
+        return;
       }
       bindChildRowMeta();
 
-      String childKey = key(data.childBindings.key().read(childRow));
+      String childKey = childKey(childRow);
+      if (data.lastChildKey != null && childKey.compareTo(data.lastChildKey) < 0)
+        throw new HopException(
+            "Child stream must be sorted by parent key: "
+                + display(childKey)
+                + " after "
+                + display(data.lastChildKey));
+      data.lastChildKey = childKey;
       int comparison = childKey.compareTo(parentKey);
       if (comparison < 0) {
         // The child's parent never appeared (streams are sorted ascending).
         if (meta.isFailOnChildWithoutParent()) {
           throw new HopException(
               "Child row with parent key "
-                  + childKey
+                  + display(childKey)
                   + " has no matching parent row (parent stream of INTERLIS Structure Collect "
                   + "is sorted by parent key); configure the transform or reorder the streams");
         }
         if (isBasic()) {
           logBasic(
-              "INTERLIS Structure Collect: skipping child row with unknown parent " + childKey);
+              "INTERLIS Structure Collect: skipping child row with unknown parent "
+                  + display(childKey));
         }
         continue;
       }
       if (comparison > 0) {
         data.pendingChildRow = childRow;
-        return children;
+        return;
       }
 
       long index = childIndex(childRow, parentKey);
@@ -172,7 +204,7 @@ public class InterlisStructureCollect
           throw new HopException(
               "Child stream of INTERLIS Structure Collect must be sorted by index ascending "
                   + "within parent "
-                  + parentKey
+                  + display(parentKey)
                   + "; got index "
                   + index
                   + " after "
@@ -181,7 +213,15 @@ public class InterlisStructureCollect
       }
       lastIndex = index;
       first = false;
-      children.add(new StructureChild((int) index, childValues(childRow)));
+      if (index < 0 || index > Integer.MAX_VALUE)
+        throw new HopException("Child index out of range: " + index);
+      if (data.children == null)
+        data.children =
+            new ch.so.agi.hop.interlis.core.buffer.SpillStore<>(
+                new ch.so.agi.hop.interlis.transforms.buffer.HopRowCodec(
+                    data.childRowSet.getRowMeta()),
+                data.storageOptions.divided(3));
+      data.children.appendOrdered(index, childRow);
     }
   }
 
@@ -194,7 +234,7 @@ public class InterlisStructureCollect
     if (indexValue == null) {
       throw new HopException(
           "Child row for parent "
-              + parentKey
+              + display(parentKey)
               + " has no index value in field <"
               + res(meta.getChildIndexField())
               + ">; LIST structures require the index field");
@@ -206,7 +246,10 @@ public class InterlisStructureCollect
               + "> must be numeric but is "
               + indexValue.getClass().getName());
     }
-    return number.longValue();
+    long value = number.longValue();
+    if (number.doubleValue() != value || value < 0 || value > Integer.MAX_VALUE)
+      throw new HopException("Invalid LIST index " + number);
+    return value;
   }
 
   private Object[] childValues(Object[] childRow) throws HopException {
@@ -219,21 +262,28 @@ public class InterlisStructureCollect
     }
     Object[] childRow = data.pendingChildRow;
     data.pendingChildRow = null;
-    if (childRow == null) childRow = getRowFrom(data.childRowSet);
+    if (childRow == null) childRow = data.inputs.next(1);
     long skipped = 0;
     while (childRow != null && !isStopped()) {
       bindChildRowMeta();
-      String childKey = key(data.childBindings.key().read(childRow));
+      String childKey = childKey(childRow);
+      if (data.lastChildKey != null && childKey.compareTo(data.lastChildKey) < 0)
+        throw new HopException(
+            "Child stream must be sorted by parent key: "
+                + display(childKey)
+                + " after "
+                + display(data.lastChildKey));
+      data.lastChildKey = childKey;
       if (meta.isFailOnChildWithoutParent()) {
         throw new HopException(
             "Child row with parent key "
-                + childKey
+                + display(childKey)
                 + " has no matching parent row; configure INTERLIS Structure Collect or fix "
                 + "the child stream");
       }
       skipped++;
       try {
-        childRow = getRowFrom(data.childRowSet);
+        childRow = data.inputs.next(1);
       } catch (Exception e) {
         throw new HopException("Failed to read child stream: " + e.getMessage(), e);
       }
@@ -245,7 +295,10 @@ public class InterlisStructureCollect
 
   private StructureCollectOptions collectOptions() {
     return new StructureCollectOptions(
-        meta.isStrictOrdering(), meta.isFailOnDuplicateIndex(), new RowWriteOptions(true, null));
+        meta.isStrictOrdering(),
+        meta.isFailOnDuplicateIndex(),
+        new RowWriteOptions(true, null),
+        meta.getCollectMode() == InterlisStructureCollectMeta.CollectMode.PRESERVE);
   }
 
   /** Binds the parent stream row meta once the first parent row is available. */
@@ -279,6 +332,34 @@ public class InterlisStructureCollect
     data.childBound = true;
   }
 
+  private String parentKey(Object[] row) throws HopException {
+    return identity(
+        data.parentBindings.bid().read(row),
+        data.parentBindings.key().read(row),
+        !res(meta.getParentBidField()).isBlank());
+  }
+
+  private String childKey(Object[] row) throws HopException {
+    return identity(
+        data.childBindings.bid().read(row),
+        data.childBindings.key().read(row),
+        !res(meta.getChildParentBidField()).isBlank());
+  }
+
+  private String identity(Object bid, Object tid, boolean bidRequired) throws HopException {
+    String key = key(tid);
+    if (key.isEmpty()) throw new HopException("Collect parent key is empty");
+    if (bidRequired && key(bid).isEmpty())
+      throw new HopException("Collect basket key is empty for parent " + key);
+    if (key.indexOf(0) >= 0 || key(bid).indexOf(0) >= 0)
+      throw new HopException("Collect identity contains a NUL character");
+    return key(bid) + "\u0000" + key;
+  }
+
+  private static String display(String key) {
+    return key == null ? "" : key.replace("\u0000", " / ");
+  }
+
   private static String key(Object value) {
     return value == null ? "" : value.toString().trim();
   }
@@ -287,6 +368,7 @@ public class InterlisStructureCollect
     ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.requireSingleCopy(
         getTransformMeta(), this, "independent input streams require a single shared collector");
     InterlisRuntimeSupport.initialize();
+    data.storageOptions = meta.spillOptions(this);
 
     try {
       data.projection =
@@ -314,12 +396,15 @@ public class InterlisStructureCollect
         throw new HopException("Child input transform <" + childTransform + "> not found");
       }
 
+      data.inputs =
+          new ch.so.agi.hop.interlis.transforms.buffer.FairInputReader(
+              this, data.storageOptions.divided(3), data.parentRowSet, data.childRowSet);
       if (isBasic()) {
         logBasic(
             "Collecting structure "
                 + data.plan.attributeName()
                 + " ("
-                + data.plan.structure().scopedName()
+                + data.plan.childTypeName()
                 + ") of class "
                 + data.plan.parentClass().scopedName()
                 + " from child stream "
@@ -331,6 +416,20 @@ public class InterlisStructureCollect
     } catch (Exception e) {
       throw new HopException(
           "Failed to initialize INTERLIS Structure Collect: " + e.getMessage(), e);
+    }
+  }
+
+  @Override
+  public void dispose() {
+    try {
+      if (data.children != null) data.children.close();
+    } finally {
+      if (data.inputs != null) data.inputs.close();
+      data.inputs = null;
+      data.children = null;
+      data.pendingParentRow = null;
+      data.pendingChildRow = null;
+      super.dispose();
     }
   }
 

@@ -18,3 +18,9 @@ that the reader continues to accept XTF 2.3 while the model is INTERLIS 2.4.
 The test resource helpers expose both version-specific directories and a
 temporary aggregate directory for older tests that need to search all local
 models.
+
+`HopIli_Collections_V1` is a minimal INTERLIS 2.4 collection/reference fixture.
+Its valid transfer contains primitive LIST/BAG values (including duplicates),
+internal/external references, two baskets, a concrete structure subtype and a
+nested LIST. `RestrictedChildren` exercises composition restrictions separately.
+Large payloads are generated at test time; no large datasets are committed.

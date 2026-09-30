@@ -29,9 +29,29 @@ import org.apache.hop.pipeline.transform.TransformMeta;
     description = "Write one INTERLIS class as typed rows to an XTF file",
     image = "ch/so/agi/hop/interlis/transforms/output/icons/interlis-output.svg",
     categoryDescription = "Geospatial",
+    isIncludeJdbcDrivers = true,
     classLoaderGroup = "sogeo-geometry",
     keywords = {"interlis", "xtf", "ili", "writer"})
 public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, InterlisOutputData> {
+
+  @HopMetadataProperty private boolean validateBeforePublish;
+  @HopMetadataProperty private String validationConfigFile = "";
+
+  public boolean isValidateBeforePublish() {
+    return validateBeforePublish;
+  }
+
+  public void setValidateBeforePublish(boolean value) {
+    validateBeforePublish = value;
+  }
+
+  public String getValidationConfigFile() {
+    return validationConfigFile;
+  }
+
+  public void setValidationConfigFile(String value) {
+    validationConfigFile = value;
+  }
 
   @HopMetadataProperty private String fileName;
   @HopMetadataProperty private String modelNames;
@@ -50,6 +70,8 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
 
   @Override
   public void setDefault() {
+    validateBeforePublish = false;
+    validationConfigFile = "";
     fileName = "";
     modelNames = "";
     modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
@@ -75,9 +97,8 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
   }
 
   /**
-   * Tries to build the projection for the current configuration; returns empty if the
-   * configuration is incomplete (e.g. unresolved variables) and throws if models or the class
-   * cannot be resolved.
+   * Tries to build the projection for the current configuration; returns empty if the configuration
+   * is incomplete (e.g. unresolved variables) and throws if models or the class cannot be resolved.
    */
   public Optional<InterlisProjectionResult> tryProject(IVariables variables)
       throws ch.so.agi.hop.interlis.core.model.InterlisModelException,
@@ -99,8 +120,7 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
           "INTERLIS Output requires explicit model names; %DATA cannot be used because no "
               + "transfer file is read");
     }
-    InterlisModelRequest request =
-        new InterlisModelRequest(null, resolvedModels, resolvedDirs);
+    InterlisModelRequest request = new InterlisModelRequest(null, resolvedModels, resolvedDirs);
     return Optional.of(
         new InterlisProjectionService()
             .project(request, resolve(variables, className), projectionOptions(variables)));

@@ -8,10 +8,14 @@ import org.apache.hop.pipeline.transform.BaseTransformData;
 
 /** Runtime state of the {@link InterlisStructureCollect} transform. */
 public class InterlisStructureCollectData extends BaseTransformData {
+  ch.so.agi.hop.interlis.core.buffer.SpillOptions storageOptions;
   InterlisStructureCollectBindings.Parent parentBindings;
   InterlisStructureCollectBindings.Child childBindings;
 
   org.apache.hop.core.row.IRowMeta outputRowMeta;
+  ch.so.agi.hop.interlis.transforms.buffer.FairInputReader inputs;
+  ch.so.agi.hop.interlis.core.buffer.SpillStore<Object[]> children;
+  String lastChildKey;
   boolean initialized;
   boolean parentBound;
   boolean childBound;

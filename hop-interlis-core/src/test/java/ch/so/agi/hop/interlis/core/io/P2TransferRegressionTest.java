@@ -82,6 +82,54 @@ class P2TransferRegressionTest {
   }
 
   @Test
+  void external_standalone_role_can_be_read_and_written_without_duplicate_ref_members()
+      throws Exception {
+    var model =
+        new InterlisModelServiceImpl()
+            .compile(
+                new ModelSource(
+                    List.of(TestResources.path("/models/HopIli_Associations_V1.ili")),
+                    List.of(),
+                    List.of()),
+                ModelCompileOptions.defaults());
+    var output = dir.resolve("external.xtf");
+    try (var reader =
+            XtfTransferReader.open(
+                TestResources.path("/data/HopIli_Associations_V1_extref.xtf"),
+                model.transferDescription());
+        var writer =
+            XtfTransferWriter.open(
+                output, model.transferDescription(), List.of("HopIli_Associations_V1"))) {
+      writer.startTransfer("test");
+      writer.startBasket("HopIli_Associations_V1.Data", "b1");
+      InterlisObjectEnvelope event;
+      while ((event = reader.next()) != null)
+        if (event.eventType() == InterlisEventType.OBJECT) {
+          if (event.object().getattrobj("Task", 0) != null
+              && event.object().getattrobj("Task", 0).getobjectrefbid() != null)
+            assertThat(event.object().getattrvaluecount("Task")).isEqualTo(1);
+          writer.writeObject(event.object());
+        }
+      writer.endBasket();
+      writer.endTransfer();
+    }
+    try (var reader = XtfTransferReader.open(output, model.transferDescription())) {
+      InterlisObjectEnvelope event;
+      boolean found = false;
+      while ((event = reader.next()) != null)
+        if (event.object() != null
+            && event.object().getattrobj("Task", 0) != null
+            && event.object().getattrobj("Task", 0).getobjectrefbid() != null) {
+          found = true;
+          assertThat(event.object().getattrvaluecount("Task")).isEqualTo(1);
+          assertThat(event.object().getattrobj("Task", 0).getobjectrefbid()).isEqualTo("b2");
+          assertThat(event.object().getattrobj("Task", 0).getobjectreforderpos()).isEqualTo(1);
+        }
+      assertThat(found).isTrue();
+    }
+  }
+
+  @Test
   void close_is_attempted_after_flush_failure_and_both_errors_are_retained() throws Exception {
     boolean[] closed = {false};
     var output =

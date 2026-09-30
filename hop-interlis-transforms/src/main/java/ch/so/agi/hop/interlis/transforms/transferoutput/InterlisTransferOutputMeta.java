@@ -28,10 +28,30 @@ import org.apache.hop.pipeline.transform.TransformMeta;
     description = "Write canonical envelope rows as an INTERLIS transfer",
     image = "ch/so/agi/hop/interlis/transforms/transferoutput/icons/interlis-transfer-output.svg",
     categoryDescription = "Geospatial",
+    isIncludeJdbcDrivers = true,
     classLoaderGroup = "sogeo-geometry",
     keywords = {"interlis", "xtf", "ili", "envelope", "transfer", "writer"})
 public class InterlisTransferOutputMeta
     extends BaseTransformMeta<InterlisTransferOutput, InterlisTransferOutputData> {
+
+  @HopMetadataProperty private boolean validateBeforePublish;
+  @HopMetadataProperty private String validationConfigFile = "";
+
+  public boolean isValidateBeforePublish() {
+    return validateBeforePublish;
+  }
+
+  public void setValidateBeforePublish(boolean value) {
+    validateBeforePublish = value;
+  }
+
+  public String getValidationConfigFile() {
+    return validationConfigFile;
+  }
+
+  public void setValidationConfigFile(String value) {
+    validationConfigFile = value;
+  }
 
   @HopMetadataProperty private String fileName;
   @HopMetadataProperty private String modelNames;
@@ -45,6 +65,8 @@ public class InterlisTransferOutputMeta
 
   @Override
   public void setDefault() {
+    validateBeforePublish = false;
+    validationConfigFile = "";
     fileName = "";
     modelNames = "";
     modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;

@@ -2,6 +2,8 @@ package ch.so.agi.hop.interlis.transforms.output;
 
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisOptionsDialog;
+import ch.so.agi.hop.interlis.transforms.InterlisOptionsDialog.Option;
 import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
 import java.util.HashMap;
 import java.util.List;
@@ -115,6 +117,34 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     fdTransformName.right = new FormAttachment(100, 0);
     fdTransformName.top = new FormAttachment(0, margin);
     wTransformName.setLayoutData(fdTransformName);
+    Button advanced = new Button(shell, SWT.PUSH);
+    advanced.setText("Options…");
+    PropsUi.setLook(advanced);
+    FormData fdAdvanced = new FormData();
+    fdAdvanced.right = new FormAttachment(100, 0);
+    fdAdvanced.top = new FormAttachment(0, margin);
+    advanced.setLayoutData(fdAdvanced);
+    fdTransformName.right = new FormAttachment(advanced, -margin);
+    advanced.addListener(
+        SWT.Selection,
+        e -> {
+          if (InterlisOptionsDialog.open(
+              shell,
+              variables,
+              List.of(
+                  new Option(
+                      "Validate before publication",
+                      Boolean.toString(input.isValidateBeforePublish()),
+                      v -> input.setValidateBeforePublish(Boolean.parseBoolean(v)),
+                      List.of("true", "false")),
+                  new Option(
+                      "Validation configuration",
+                      input.getValidationConfigFile(),
+                      input::setValidationConfigFile)))) {
+            input.setChanged();
+            refresh();
+          }
+        });
 
     // Output file
     Composite fileRow = InterlisDialogUiSupport.createRow(shell, wTransformName, margin);

@@ -14,10 +14,14 @@ public enum InterlisFieldSource {
   OPERATION,
   /** Primitive, enum or temporal attribute at the object root. */
   PRIMITIVE_ATTRIBUTE,
+  ATTRIBUTE_REFERENCE,
+  ATTRIBUTE_REFERENCE_BID,
   /** Geometry attribute at the object root. */
   GEOMETRY_ATTRIBUTE,
-  /** Attribute below one or more flattened single structures; the leaf may be
-      primitive, enum or geometry. */
+  /**
+   * Attribute below one or more flattened single structures; the leaf may be primitive, enum or
+   * geometry.
+   */
   FLATTENED_STRUCTURE_ATTRIBUTE,
   /** Reference role projected as a TID reference field. */
   ROLE_REFERENCE,
@@ -25,7 +29,9 @@ public enum InterlisFieldSource {
   ROLE_REFERENCE_BID,
   /** Order position of an ORDERED role member ({@code <role>_order_pos}). */
   ROLE_ORDER_POS,
-  /** Association attribute of a flattenable association role
-      ({@code <role>_<attribute>}); resolved from the association link object. */
+  /**
+   * Association attribute of a flattenable association role ({@code <role>_<attribute>}); resolved
+   * from the association link object.
+   */
   ASSOCIATION_ATTRIBUTE
 }

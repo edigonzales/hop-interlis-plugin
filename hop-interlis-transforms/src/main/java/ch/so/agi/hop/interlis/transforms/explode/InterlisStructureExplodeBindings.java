@@ -97,6 +97,9 @@ record InterlisStructureExplodeBindings(
     var factory = new HopRowSchemaFactory();
     for (var field : plan.childFields())
       InterlisFieldBinding.addUnique(output, factory.createValueMeta(field), context);
+    if (meta.isKeepChildSourceObject() && !plan.primitive())
+      InterlisFieldBinding.addUnique(
+          output, new ValueMetaInterlisObject("_ili_child_object"), context);
     var parents = new ArrayList<InterlisFieldBinding>();
     for (String configured :
         meta.getIncludeParentFields() == null ? List.<String>of() : meta.getIncludeParentFields()) {

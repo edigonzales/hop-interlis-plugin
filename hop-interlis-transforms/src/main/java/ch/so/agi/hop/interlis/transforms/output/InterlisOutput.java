@@ -133,9 +133,14 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       data.mapper = new RowToIomMapper();
       data.bindings = InterlisOutputBindings.bind(getInputRowMeta(), data.plan, meta, this);
 
+      data.writerModel = data.projection.model().transferDescription();
+      data.preparedOutput =
+          new ch.so.agi.hop.interlis.core.io.PreparedXtfOutput(file, meta.isOverwrite());
+      ch.so.agi.hop.interlis.transforms.InterlisPipelineCompletion.forPipeline(getPipeline())
+          .register(data.preparedOutput, this);
       data.writer =
           XtfTransferWriter.open(
-              file, data.projection.model().transferDescription(), data.projection.modelNames());
+              data.preparedOutput.temporary(), data.writerModel, data.projection.modelNames());
       data.writer.startTransfer("hop-interlis-plugin");
 
       if (isBasic()) {
@@ -184,6 +189,28 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
       }
       data.writer.endTransfer();
       closeWriterChecked();
+      if (meta.isValidateBeforePublish()) {
+        var result =
+            new ch.so.agi.hop.interlis.core.io.InterlisValidationService()
+                .validate(
+                    data.preparedOutput.temporary(),
+                    data.writerModel,
+                    meta.getValidationConfigFile() == null
+                        ? ""
+                        : resolve(meta.getValidationConfigFile()),
+                    this::isStopped,
+                    finding -> {
+                      if (finding.getEventKind() == ch.interlis.iox.IoxLogEvent.ERROR)
+                        logError(finding.getEventMsg());
+                    });
+        if (result.errors() > 0 || result.incomplete() != null)
+          throw new HopException(
+              "INTERLIS validation prevents publication: "
+                  + result.errors()
+                  + " error(s), "
+                  + result.incomplete());
+      }
+      data.preparedOutput.prepare();
     } catch (Exception e) {
       closeAfterFailure(e);
       throw new HopException("Failed to finish INTERLIS transfer: " + e.getMessage(), e);
@@ -202,6 +229,12 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
     } catch (ch.so.agi.hop.interlis.core.io.InterlisWriteException e) {
       failure.addSuppressed(e);
     }
+    if (data.preparedOutput != null)
+      try {
+        data.preparedOutput.close();
+      } catch (Exception cleanup) {
+        failure.addSuppressed(cleanup);
+      }
   }
 
   private void closeWriter() {

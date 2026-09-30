@@ -10,11 +10,10 @@ import org.locationtech.jts.geom.Geometry;
 /**
  * Reads attribute field values from an IOM owner object.
  *
- * <p>This is the single implementation shared by the class row mapper
- * ({@link DefaultInterlisObjectToRowMapper}) and the structure exploder: both map
- * {@link InterlisFieldPlan}s to Hop values, the only difference being the owner object (class
- * object vs. structure child). Geometry values go through the SQL/MM WKB bridge, so arcs are
- * preserved.
+ * <p>This is the single implementation shared by the class row mapper ({@link
+ * DefaultInterlisObjectToRowMapper}) and the structure exploder: both map {@link
+ * InterlisFieldPlan}s to Hop values, the only difference being the owner object (class object vs.
+ * structure child). Geometry values go through the SQL/MM WKB bridge, so arcs are preserved.
  */
 public final class IomFieldReader {
 
@@ -31,6 +30,16 @@ public final class IomFieldReader {
   public Object read(IomObject owner, InterlisFieldPlan field, Integer defaultSrid)
       throws InterlisMappingException {
     return switch (field.source()) {
+      case ATTRIBUTE_REFERENCE, ATTRIBUTE_REFERENCE_BID -> {
+        IomObject nested = navigateSingleStructure(owner, field.propertyPath().segments());
+        IomObject ref =
+            nested == null ? null : nested.getattrobj(field.attributeDescriptor().name(), 0);
+        yield ref == null
+            ? null
+            : field.source() == InterlisFieldSource.ATTRIBUTE_REFERENCE
+                ? ref.getobjectrefoid()
+                : ref.getobjectrefbid();
+      }
       case PRIMITIVE_ATTRIBUTE -> readPrimitive(owner, field.attributeDescriptor());
       case GEOMETRY_ATTRIBUTE -> readGeometry(owner, field.attributeDescriptor(), defaultSrid);
       case FLATTENED_STRUCTURE_ATTRIBUTE -> {
@@ -45,14 +54,17 @@ public final class IomFieldReader {
       }
       default ->
           throw new InterlisMappingException(
-              "Field <" + field.hopFieldName() + "> is not an attribute field (source "
-                  + field.source() + ")");
+              "Field <"
+                  + field.hopFieldName()
+                  + "> is not an attribute field (source "
+                  + field.source()
+                  + ")");
     };
   }
 
   /**
-   * Reads a primitive or geometry attribute value directly from an owner object, ignoring the
-   * field source. Used for association attributes read from the link object.
+   * Reads a primitive or geometry attribute value directly from an owner object, ignoring the field
+   * source. Used for association attributes read from the link object.
    */
   public Object readAttributeFrom(IomObject owner, InterlisFieldPlan field, Integer defaultSrid)
       throws InterlisMappingException {
@@ -107,8 +119,8 @@ public final class IomFieldReader {
   }
 
   /**
-   * Navigates through single-structure attributes; returns the owning structure or {@code null}
-   * if the (optional) structure is absent.
+   * Navigates through single-structure attributes; returns the owning structure or {@code null} if
+   * the (optional) structure is absent.
    */
   public IomObject navigateSingleStructure(IomObject root, List<String> segments)
       throws InterlisMappingException {

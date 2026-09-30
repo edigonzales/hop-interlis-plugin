@@ -13,8 +13,8 @@ import org.apache.hop.core.variables.IVariables;
 /**
  * SWT-free controller for the INTERLIS Structure Explode dialog.
  *
- * <p>The dialog only renders widgets; all model probing and schema preview formatting lives here
- * so it can be unit-tested without a display.
+ * <p>The dialog only renders widgets; all model probing and schema preview formatting lives here so
+ * it can be unit-tested without a display.
  */
 public final class InterlisStructureExplodeDialogController {
 
@@ -52,6 +52,10 @@ public final class InterlisStructureExplodeDialogController {
   }
 
   /** Builds the structured preview consumed by the SWT table. */
+  public InterlisSchemaPreview createSchemaPreview(InterlisStructurePlan plan, boolean carrier) {
+    return InterlisSchemaPreviewSupport.createStructurePreview(plan, carrier);
+  }
+
   public InterlisSchemaPreview createSchemaPreview(InterlisStructurePlan plan) {
     return InterlisSchemaPreviewSupport.createStructurePreview(plan);
   }

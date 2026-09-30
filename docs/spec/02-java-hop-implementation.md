@@ -1869,3 +1869,62 @@ verwirft Inhalte und Kapazitäten idempotent. Input und Object to Row geben Puff
 und Ausgabeiteratoren bei EOF beziehungsweise in `dispose()` auch nach Fehler und
 Benutzerabbruch frei. Der Speicherbedarf hängt vom grössten Basket und ausstehenden
 Ausgabezeilen ab; es gibt kein neues Produktionslimit oder Spill-to-disk.
+
+## Prio 1/2: Puffer- und Ausgabe-Lebenszyklus
+
+`SpillStore<T>` bietet Sequenz, FIFO, eindeutigen Lookup und stabile Sortierung
+über einen privaten Record-Codec. Speicherpayloads und Indizes wechseln gemeinsam
+in eine temporäre H2-Datenbank. `SpillOptions` gehört dem Transform; Teilpuffer
+teilen sich dessen Disk-Obergrenze und erhalten Teilbudgets des Pufferspeichers.
+Defaults: `bufferMemoryMiB=64`, `spillDirectory=""` (Java-Temp), `maxSpillMiB=0`
+(unbegrenzter Diskbedarf). Die diskbasierte Iteration verwendet einzelne Datensätze,
+keine vollständigen Resultsets oder Listen von Datensatz-IDs. Schliessen entfernt
+DB-Dateien und gibt deren Budget frei. Das Budget begrenzt Puffer, nicht die Grösse
+eines einzelnen IOM-Objekts oder dessen bearbeiteten Ergebnisses.
+
+Der Core kennt `RecordCodec`, aber keine Hop-APIs. `HopRowCodec` nutzt Hops binäre
+Value-Meta-Konverter und erhält ARC, XYZ, SRID, Referenzmetadaten und Carrier.
+`BasketEntryCodec` kombiniert den Envelope mit dem binären Kontext der Hop-Zeile.
+Input/Object to Row halten einen Basket bei erforderlicher Linkauflösung zurück,
+projizieren nach dessen Abschluss aber jeweils nur eine Ergebniszeile. Der
+Association-Index trennt Rolle und Besitzerende; widersprüchliche Linkobjekte
+werden abgelehnt. `Batch` ist ein explizit zu schliessender Ressourcenbesitzer.
+
+`FairInputReader` bedient beide begrenzten Rowsets im Wechsel. Während Role Join
+auf das Ende des Lookup-Stroms wartet, puffert er Hauptzeilen über denselben
+Spill-Speicher. Collect puffert ausstehende Eltern und die aktuelle Kindgruppe;
+LIST-Sortierung erfolgt auf Disk, falls das Budget überschritten ist. Die
+Eingangsströme bleiben nach Elternidentität zu sortieren. Explode liefert Kinder
+über einen Cursor einzeln. Das bestehende Role-Join-Limit bleibt 500'000
+Eingangszeilen; 0 bedeutet unbegrenzt, negative Werte sind Fehler.
+
+Beide Hop-Writer verwenden `PreparedXtfOutput`: eindeutige temporäre Datei im
+Zielverzeichnis, vollständiges Transferende, erfolgreiches Schliessen und optional
+Vollvalidierung, dann Vorbereitung. `InterlisPipelineCompletion` veröffentlicht
+am Pipeline-Ende erst nach allen aufgeschobenen Validate-Fehlern und nur ohne
+Stop oder Transformfehler. Fehler beim Veröffentlichen zählen als Pipelinefehler.
+Überschreiben nutzt ATOMIC_MOVE/REPLACE_EXISTING. Ohne Überschreiben wird ein
+Hardlink atomar mit CREATE_NEW-Semantik angelegt; ein konkurrierendes Ziel wird
+nicht ersetzt. Eine nicht unterstützte Operation scheitert ohne unsicheren
+Fallback. Die Garantie gilt pro Datei; mehrere Ziele sind keine gemeinsame
+Dateisystemtransaktion.
+
+`validateBeforePublish=false` bleibt Default. Eine optionale Konfigurationsdatei
+und `InterlisValidationService` ermöglichen Vollvalidierung einschliesslich zweitem
+Durchlauf. Fehler oder unvollständige Validierung verhindern die Veröffentlichung.
+Der Validate-Transform verwendet denselben Dienst und liefert vor dem Pipelinefehler
+weiterhin alle ausgewählten Diagnosezeilen. Wiederholte BIDs werden zentral im
+Core-Writer abgelehnt, auch in Objekt- und Ereignismodus.
+
+Veröffentlichungsfehler werden dem Writer zugerechnet und protokolliert. Der
+Abschluss-Listener wirft dabei keine Exception: Hop 2.19.0 signalisiert
+`waitUntilFinished()` erst nach erfolgreich durchlaufenen Abschluss-Listenern.
+Fehlerzähler und Cleanup müssen daher vor dessen regulärer Rückkehr gesetzt sein.
+
+Für das gepinnte iox-ili 1.24.4 bestehen zwei eng begrenzte Adapter: Der geschützte
+StAX-Ausgang des XTF-2.4-Writers ergänzt ausgelassene externe BIDs anhand des
+aktuellen IOM-Referenzobjekts. Der Reader und Validator entfernen das genau
+identifizierte, zusätzlich erzeugte leere REF-Mitglied einer eigenständigen
+Assoziationsrolle mit BID. Primitive Referenzsammlungen und beliebige fehlerhafte
+Objekte werden dabei nicht normalisiert. Modell- und Transferinterpretation
+verbleiben bei ili2c/iox-ili; die Bibliotheks-Pins bleiben unverändert.

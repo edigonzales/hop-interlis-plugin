@@ -350,3 +350,28 @@ assert rows == [["Name", "reference", "_ili_tid", "Address_Street"],
                 ["Meier", "a1", "p1", "Main Street"],
                 ["Mueller", "", "p2", ""], ["Keller", "", "p3", ""]], rows
 print("  Bindings: reordered Explode/Collect and Role Join values plus expected binding failures verified")
+
+# Priority 1/2 packaged regressions: values, subtype/carrier contents and external BIDs.
+import xml.etree.ElementTree as ET
+collections_ns="http://www.interlis.ch/xtf/2.4/HopIli_Collections_V1"
+ili_ns="http://www.interlis.ch/xtf/2.4/INTERLIS"
+q=lambda name: "{"+collections_ns+"}"+name
+for filename in ("primitive-collections.xtf","child-preserve.xtf","reference-event-roundtrip.xtf","child-spill.xtf"):
+    tree=ET.parse(output_dir/filename); item=tree.find(".//"+q("Item"))
+    assert item is not None,filename
+    for attr,values in {"Texts":["first","second"],"Numbers":["7","7"],"Flags":["true","false"],"Choices":["red","blue"],"Required":["required"]}.items():
+        assert [node.text for node in item.findall(q(attr))]==values,(filename,attr)
+    assert item.find(q("ExternalRef")).get("{"+ili_ns+"}bid")=="b2",filename
+    assert item.find(q("Holder")+"/"+q("Holder")+"/"+q("TargetRef")).get("{"+ili_ns+"}bid")=="b2",filename
+    children=item.find(q("Children")); assert len(children)==(600 if filename=="child-spill.xtf" else 1),filename
+    for child in children:
+        assert child.tag==q("SpecialChild"),filename
+        assert child.find(q("Extra")).text=="subtype",filename
+        assert child.find(q("Hidden")).text=="keep",filename
+        assert child.find(q("Details")+"/"+q("Detail")+"/"+q("Text")).text=="nested",filename
+        assert child.find(q("TargetRef")).get("{"+ili_ns+"}bid")=="b2",filename
+        if filename=="child-spill.xtf": assert child.find(q("Payload")).text=="payload"*600,filename
+    if filename=="reference-event-roundtrip.xtf": assert len(tree.findall(".//"+q("Target")))==2,filename
+assert not list(output_dir.glob("hop-interlis-spill-*")),"spill directories were not cleaned up"
+assert not list(output_dir.glob("*.pending.xtf")),"prepared outputs were not cleaned up"
+print("Priority 1/2 E2E values OK")

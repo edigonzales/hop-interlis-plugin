@@ -210,6 +210,11 @@ class P2PipelineRegressionTest {
         children.rows.add(new Object[] {"absent", (long) i, "child", null, null});
       var collect = new ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta();
       collect.setDefault();
+      collect.setCollectMode(
+          ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta.CollectMode
+              .REBUILD);
+      collect.setParentBidField("");
+      collect.setChildParentBidField("");
       collect.setModelNames(MODEL);
       collect.setModelDirectories(models);
       collect.setClassName(ITEM);

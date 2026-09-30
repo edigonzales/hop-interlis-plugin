@@ -315,7 +315,7 @@ _ili_tid | Name    | Gemeinde_ref | Gemeinde_Name | Gemeinde_BFS_Nummer
 | Präfix für die hinzugefügten Felder (z. B. `Gemeinde_`)
 
 | Max lookup rows
-| Maximalzahl der Lookup-Rows (Default: 500'000)
+| Maximalzahl der Lookup-Rows (Default: 500'000; 0 bedeutet unbegrenzt)
 
 | Fail on missing mandatory reference
 | Ob die Pipeline abbrechen soll, wenn eine mandatory Rolle nicht aufgelöst werden kann
@@ -323,7 +323,11 @@ _ili_tid | Name    | Gemeinde_ref | Gemeinde_Name | Gemeinde_BFS_Nummer
 
 [WARNING]
 ====
-Der `Role Join` verwendet einen In-Memory-Lookup. Bei mehr als 500'000 Lookup-Rows wird eine Warnung ausgegeben. Für sehr grosse Referenzdaten verwenden Sie stattdessen einen `Stream Lookup`-Transform oder eine Datenbank-Join.
+Der `Role Join` liest den Lookup vollständig ein und lagert Puffer und Index bei
+Bedarf auf Disk aus. Ein Überschreiten von `Max lookup rows` ist ein Fehler.
+Die Puffer- und Diskbudgets werden unter `Options` konfiguriert; beide Eingänge
+werden abwechselnd gelesen. Die erste Join-Ausgabe wartet weiterhin auf den
+Abschluss des Lookup-Stroms.
 ====
 
 [NOTE]
@@ -501,3 +505,62 @@ Schritte:
 ====
 Der `Append Streams`-Transform ist ein Standard-Hop-Transform. Er fügt zwei oder mehr Streams zusammen. Achten Sie darauf, dass beide Streams das gleiche Schema haben (die Envelope-Felder).
 ====
+
+=== Sammlungen und Kindobjekte erhalten
+
+Explode/Collect bearbeiten auch primitive `BAG/LIST`. Die Kindzeile enthält den
+Elternschlüssel, optional die Basket-ID, `_ili_index` und den typisierten Wert
+`_ili_value`. LIST-Reihenfolge, leere Sammlungen und BAG-Duplikate bleiben erhalten.
+Ein einzelner null-Wert ist kein gültiges Sammlungselement. Die Modellkardinalität
+wird beim Collect geprüft.
+
+Neue Explode-Konfigurationen liefern bei Strukturen zusätzlich
+`_ili_child_object`. Neue Collect-Konfigurationen verwenden im Dialog `Options…`
+den Modus `PRESERVE`: Sie kopieren dieses konkrete Kind und überschreiben nur die
+unter _Child attribute paths_ gewählten Felder (kommagetrennte Modellpfade; leer
+bedeutet alle unterstützten Felder). Dadurch bleiben zulässige Subtypen, weitere
+Attribute und verschachtelte Sammlungen erhalten. Fehlende, abstrakte oder
+inkompatible Carrier werden abgelehnt. `REBUILD` baut den deklarierten Typ aus den
+gewählten Feldern neu auf. Für primitive Sammlungen ist kein Kind-Carrier nötig.
+
+Die ausgewählte Sammlung wird in beiden Modi vollständig durch den Kindstrom
+ersetzt. Ein Filter entfernt Kinder auch aus dem Ergebnisobjekt. Bei strikten
+LIST-Indizes müssen danach die Indizes gegebenenfalls auf 0, 1, … neu vergeben
+werden. Alte `.hpl`-Dateien werden weiterhin als REBUILD ohne neuen Kind-Carrier
+und mit ihrer bisherigen Schlüsselwahl geladen.
+
+Neue Collect-Konfigurationen verwenden `(BID, Elternschlüssel)`: Eltern nach
+`(_ili_bid, _ili_tid)`, Kinder nach `(_ili_parent_bid, _ili_parent_tid)` sortieren.
+Die Schlüssel können in `Options…` geändert werden. Bei strikter Reihenfolge
+müssen auch die Kindindizes aufsteigend sein; sonst sortiert Collect die aktuelle
+LIST-Gruppe im Spill-Speicher. Doppelte Eltern und mehrdeutige Zuordnungen sind
+Fehler. Die Kindprojektion verschachtelter Mehrfachstrukturen ist hier nicht
+vorgesehen; der Kind-Carrier erhält deren Inhalte.
+
+=== Puffer und grosse Daten
+
+Input, Object to Row, Role Join und Collect bieten in `Options…`:
+
+[cols="1,1,3"]
+|===
+| Einstellung | Default | Bedeutung
+| `bufferMemoryMiB` | 64 | Budget für die Puffer eines Transforms
+| `spillDirectory` | leer | Java-Tempverzeichnis; alternativ ein konfigurierbares Verzeichnis
+| `maxSpillMiB` | 0 | Gemeinsame Disk-Obergrenze der Puffer; 0 bedeutet unbegrenzt
+|===
+
+Bei Überschreitung des Speicherbudgets wechseln Datensätze und Lookup-Indizes
+auf Disk. Temporäre Daten werden bei Abschluss, Fehler und Stop geschlossen und
+entfernt. Einzelne IOM-Objekte und ihr bearbeitetes Ergebnis müssen weiterhin in
+den Heap passen. Bei Assoziationsauflösung kann die erste Zeile erst nach Ende
+des vollständigen Baskets erscheinen.
+
+Role Join bedient beide Eingänge während des Lookup-Aufbaus; Collect bedient
+beide Zweige während der Gruppierung. Ein gemeinsamer Produzent mit kleinen
+Queues kann deshalb weiterliefern. Das Role-Join-Limit zählt Lookup-Eingangszeilen:
+500'000 ist Default, 0 bedeutet unbegrenzt.
+
+Ausführbare Paketbeispiele stehen unter `e2e/pipelines/39-primitive-collections.hpl`,
+`40-child-preserve.hpl`, `41-reference-event-roundtrip.hpl` und `42-child-spill.hpl`.
+Die E2E-Suite liefert ihre Modelle und Transferdateien mit; das Spill-Beispiel
+wird aus der minimalen Fixture mit 600 Kindern erzeugt.

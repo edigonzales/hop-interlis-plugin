@@ -48,8 +48,15 @@ class InterlisStructureExplodeMetaTest {
 
     assertThat(rowMeta.getFieldNames())
         .containsExactly(
-            "_ili_parent_tid", "_ili_parent_bid", "_ili_index", "Street", "Number", "Location",
-            "PostCode_Code", "PostCode_Town");
+            "_ili_parent_tid",
+            "_ili_parent_bid",
+            "_ili_index",
+            "Street",
+            "Number",
+            "Location",
+            "PostCode_Code",
+            "PostCode_Town",
+            "_ili_child_object");
     assertThat(rowMeta.getValueMeta(2).getType())
         .isEqualTo(org.apache.hop.core.row.value.ValueMetaInteger.TYPE_INTEGER);
     assertThat(rowMeta.getValueMeta(5).getType())
@@ -68,8 +75,14 @@ class InterlisStructureExplodeMetaTest {
 
     assertThat(rowMeta.getFieldNames())
         .containsSubsequence(
-            "_ili_parent_tid", "_ili_parent_bid", "_ili_index", "Street", "Number", "Location",
-            "PostCode_Code", "PostCode_Town")
+            "_ili_parent_tid",
+            "_ili_parent_bid",
+            "_ili_index",
+            "Street",
+            "Number",
+            "Location",
+            "PostCode_Code",
+            "PostCode_Town")
         .endsWith("_ili_tid", "Name");
   }
 
@@ -82,7 +95,13 @@ class InterlisStructureExplodeMetaTest {
     meta.getFields(rowMeta, "origin", null, null, new Variables(), null);
 
     assertThat(rowMeta.getFieldNames())
-        .containsExactly("_ili_parent_tid", "_ili_parent_bid", "_ili_index", "Kind", "Value");
+        .containsExactly(
+            "_ili_parent_tid",
+            "_ili_parent_bid",
+            "_ili_index",
+            "Kind",
+            "Value",
+            "_ili_child_object");
   }
 
   @Test
@@ -113,8 +132,7 @@ class InterlisStructureExplodeMetaTest {
   void try_structure_plan_reports_invalid_path() {
     InterlisStructureExplodeMeta meta = configuredMeta();
     meta.setStructureAttributePath("Home");
-    org.assertj.core.api.Assertions.assertThatThrownBy(
-            () -> meta.tryStructurePlan(new Variables()))
+    org.assertj.core.api.Assertions.assertThatThrownBy(() -> meta.tryStructurePlan(new Variables()))
         .isInstanceOf(ch.so.agi.hop.interlis.core.mapping.InterlisMappingException.class)
         .hasMessageContaining("not a multi-valued");
   }
@@ -125,8 +143,15 @@ class InterlisStructureExplodeMetaTest {
     InterlisStructureExplodeMeta meta = new InterlisStructureExplodeMeta();
 
     meta.check(
-        remarks, null, new TransformMeta("INTERLIS Structure Explode", meta), null, null, null,
-        null, new Variables(), new MemoryMetadataProvider());
+        remarks,
+        null,
+        new TransformMeta("INTERLIS Structure Explode", meta),
+        null,
+        null,
+        null,
+        null,
+        new Variables(),
+        new MemoryMetadataProvider());
 
     assertThat(remarks).isNotEmpty();
     assertThat(remarks.get(0).getType()).isEqualTo(ICheckResult.TYPE_RESULT_ERROR);
@@ -138,8 +163,15 @@ class InterlisStructureExplodeMetaTest {
     InterlisStructureExplodeMeta meta = configuredMeta();
 
     meta.check(
-        remarks, null, new TransformMeta("INTERLIS Structure Explode", meta), null, null, null,
-        null, new Variables(), new MemoryMetadataProvider());
+        remarks,
+        null,
+        new TransformMeta("INTERLIS Structure Explode", meta),
+        null,
+        null,
+        null,
+        null,
+        new Variables(),
+        new MemoryMetadataProvider());
 
     assertThat(remarks)
         .anySatisfy(r -> assertThat(r.getType()).isEqualTo(ICheckResult.TYPE_RESULT_OK));

@@ -80,8 +80,15 @@ class InterlisStructureExplodePipelineTest {
     assertThat(rows).hasSize(4);
     assertThat(rows.get(0).getRowMeta().getFieldNames())
         .containsExactly(
-            "_ili_parent_tid", "_ili_parent_bid", "_ili_index", "Street", "Number", "Location",
-            "PostCode_Code", "PostCode_Town");
+            "_ili_parent_tid",
+            "_ili_parent_bid",
+            "_ili_index",
+            "Street",
+            "Number",
+            "Location",
+            "PostCode_Code",
+            "PostCode_Town",
+            "_ili_child_object");
 
     RowMetaAndData first = rows.get(0);
     assertThat(first.getData()[0]).isEqualTo("p1");
@@ -119,8 +126,7 @@ class InterlisStructureExplodePipelineTest {
   void copies_selected_parent_fields() throws Exception {
     List<RowMetaAndData> rows = runExplode("Contacts", new String[] {"Name"});
 
-    assertThat(rows.get(0).getRowMeta().getFieldNames())
-        .endsWith("Name");
+    assertThat(rows.get(0).getRowMeta().getFieldNames()).endsWith("Name");
     assertThat(rows.get(0).getData()[rows.get(0).getRowMeta().size() - 1]).isEqualTo("Meier");
   }
 
