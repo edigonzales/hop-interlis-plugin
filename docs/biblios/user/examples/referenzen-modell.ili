@@ -1,0 +1,15 @@
+INTERLIS 2.4;
+MODEL DemoReferenzen (de)
+AT "https://example.org"
+VERSION "2026-09-30" =
+  TOPIC Daten =
+    CLASS Ziel =
+      Name : MANDATORY TEXT*40;
+    END Ziel;
+    CLASS Objekt =
+      Name : MANDATORY TEXT*40;
+      Intern : REFERENCE TO Ziel;
+      Extern : REFERENCE TO (EXTERNAL) Ziel;
+    END Objekt;
+  END Daten;
+END DemoReferenzen.

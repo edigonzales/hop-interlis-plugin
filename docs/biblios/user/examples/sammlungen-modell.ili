@@ -1,0 +1,14 @@
+INTERLIS 2.4;
+MODEL DemoSammlungen (de)
+AT "https://example.org"
+VERSION "2026-09-30" =
+  TOPIC Daten =
+    CLASS Objekt =
+      Name : MANDATORY TEXT*40;
+      Texte : LIST {0..3} OF TEXT*40;
+      Zahlen : BAG {0..3} OF 0..100;
+      Flags : LIST {0..3} OF BOOLEAN;
+      Farben : LIST {0..3} OF (rot, gruen, blau);
+    END Objekt;
+  END Daten;
+END DemoSammlungen.

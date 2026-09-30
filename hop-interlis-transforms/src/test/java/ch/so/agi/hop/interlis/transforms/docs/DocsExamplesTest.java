@@ -3,6 +3,7 @@ package ch.so.agi.hop.interlis.transforms.docs;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.so.agi.hop.interlis.transforms.TestData;
+import ch.so.agi.hop.interlis.transforms.explode.InterlisStructureExplodeMeta;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
 import ch.so.agi.hop.interlis.transforms.validate.InterlisValidateMeta;
 import com.atolcd.hop.gis.geometry.curve.CircularString;
@@ -38,7 +39,17 @@ class DocsExamplesTest {
 
   @Test
   void all_documentation_transfers_are_2_4_and_models_compile() throws Exception {
-    for (String example : List.of("bogen", "demo", "liste", "rolle", "struktur", "validierung")) {
+    for (String example :
+        List.of(
+            "bogen",
+            "demo",
+            "liste",
+            "rolle",
+            "struktur",
+            "validierung",
+            "sammlungen",
+            "erhaltung",
+            "referenzen")) {
       Path model = EXAMPLES.resolve(example + "-modell.ili");
       Path transfer = EXAMPLES.resolve(example + "-transfer.xtf");
 
@@ -56,6 +67,111 @@ class DocsExamplesTest {
                   List.of(model), List.of(), List.of()),
               ch.so.agi.hop.interlis.core.model.ModelCompileOptions.defaults());
     }
+  }
+
+  @Test
+  void valid_documentation_transfers_complete_both_validation_passes() throws Exception {
+    for (String[] example :
+        List.of(
+            new String[] {"demo", "DemoBodenbedeckung"},
+            new String[] {"struktur", "DemoStruktur"},
+            new String[] {"liste", "DemoListe"},
+            new String[] {"rolle", "DemoRolle"},
+            new String[] {"bogen", "DemoBogen"},
+            new String[] {"sammlungen", "DemoSammlungen"},
+            new String[] {"erhaltung", "DemoErhaltung"},
+            new String[] {"referenzen", "DemoReferenzen"})) {
+      assertThat(runValidation(example[0] + "-transfer.xtf", example[1]))
+          .as("complete validation of %s", example[0])
+          .isEmpty();
+    }
+  }
+
+  @Test
+  void collection_examples_expose_typed_children_and_no_scalar_collection_fields()
+      throws Exception {
+    var parents =
+        runInput("sammlungen-transfer.xtf", "DemoSammlungen.Daten.Objekt", "DemoSammlungen");
+    assertThat(parents).hasSize(2);
+    assertThat(parents.get(0).getRowMeta().getFieldNames())
+        .containsExactly("_ili_tid", "_ili_bid", "Name");
+    String[][] examples = {
+      {"Texte", "String", "erster", "zweiter"},
+      {"Zahlen", "Integer", "7", "7", "9"},
+      {"Flags", "Boolean", "true", "false"},
+      {"Farben", "String", "rot", "blau"}
+    };
+    for (String[] example : examples) {
+      var children =
+          runExplode(
+              "sammlungen", "DemoSammlungen", "DemoSammlungen.Daten.Objekt", example[0], List.of());
+      assertThat(children).hasSize(example.length - 2);
+      var rowMeta = children.get(0).getRowMeta();
+      assertThat(rowMeta.getFieldNames())
+          .containsExactly("_ili_parent_tid", "_ili_parent_bid", "_ili_index", "_ili_value");
+      assertThat(rowMeta.getValueMeta(3).getTypeDesc()).isEqualTo(example[1]);
+      for (int i = 0; i < children.size(); i++) {
+        assertThat(children.get(i).getData()[0]).isEqualTo("o1");
+        assertThat(children.get(i).getData()[1]).isEqualTo("b1");
+        assertThat(children.get(i).getData()[2]).isEqualTo((long) i);
+        assertThat(children.get(i).getData()[3].toString()).isEqualTo(example[i + 2]);
+      }
+    }
+  }
+
+  @Test
+  void preservation_example_projects_only_name_and_retains_full_child_carrier() throws Exception {
+    var children =
+        runExplode(
+            "erhaltung", "DemoErhaltung", "DemoErhaltung.Daten.Eltern", "Kinder", List.of("Name"));
+    assertThat(children).hasSize(2);
+    assertThat(children.get(0).getRowMeta().getFieldNames())
+        .containsExactly(
+            "_ili_parent_tid", "_ili_parent_bid", "_ili_index", "Name", "_ili_child_object");
+    var carrier = (ch.interlis.iom.IomObject) children.get(0).getData()[4];
+    assertThat(carrier.getobjecttag()).isEqualTo("DemoErhaltung.Daten.SpezialKind");
+    assertThat(carrier.getattrvalue("Versteckt")).isEqualTo("erhalten");
+    assertThat(carrier.getattrvalue("Zusatz")).isEqualTo("Untertyp");
+    assertThat(carrier.getattrvaluecount("Details")).isEqualTo(2);
+  }
+
+  @Test
+  void reference_example_exposes_tid_and_nullable_bid() throws Exception {
+    var rows = runInput("referenzen-transfer.xtf", "DemoReferenzen.Daten.Objekt", "DemoReferenzen");
+    assertThat(rows).hasSize(1);
+    assertThat(rows.get(0).getRowMeta().getFieldNames())
+        .containsExactly(
+            "_ili_tid",
+            "_ili_bid",
+            "Name",
+            "Intern_ref",
+            "Intern_ref_bid",
+            "Extern_ref",
+            "Extern_ref_bid");
+    assertThat(rows.get(0).getData())
+        .containsExactly("o1", "b1", "verweist", "z1", null, "z2", "b2");
+  }
+
+  private List<RowMetaAndData> runExplode(
+      String fixture, String model, String className, String attribute, List<String> fields)
+      throws Exception {
+    InterlisInputMeta input = new InterlisInputMeta();
+    input.setDefault();
+    input.setFileName(EXAMPLES.resolve(fixture + "-transfer.xtf").toString());
+    input.setModelNames(model);
+    input.setModelDirectories(EXAMPLES.toString());
+    input.setClassName(className);
+    input.setKeepSourceObject(true);
+    InterlisStructureExplodeMeta explode = new InterlisStructureExplodeMeta();
+    explode.setDefault();
+    explode.setModelNames(model);
+    explode.setModelDirectories(EXAMPLES.toString());
+    explode.setClassName(className);
+    explode.setStructureAttributePath(attribute);
+    explode.setSelectedChildFields(fields);
+    return run(
+        new TransformMeta("INTERLIS_INPUT", "Input", input),
+        new TransformMeta("INTERLIS_STRUCTURE_EXPLODE", "Explode", explode));
   }
 
   @Test
@@ -163,12 +279,19 @@ class DocsExamplesTest {
     return run(new TransformMeta("INTERLIS_VALIDATE", "INTERLIS Validate", meta));
   }
 
-  private List<RowMetaAndData> run(TransformMeta source) throws Exception {
+  private List<RowMetaAndData> run(TransformMeta source, TransformMeta... intermediates)
+      throws Exception {
     TransformMeta sink = new TransformMeta("Rows to result", new RowsToResultMeta());
     PipelineMeta pipelineMeta = new PipelineMeta();
     pipelineMeta.addTransform(source);
     pipelineMeta.addTransform(sink);
-    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
+    TransformMeta previous = source;
+    for (TransformMeta intermediate : intermediates) {
+      pipelineMeta.addTransform(intermediate);
+      pipelineMeta.addPipelineHop(new PipelineHopMeta(previous, intermediate));
+      previous = intermediate;
+    }
+    pipelineMeta.addPipelineHop(new PipelineHopMeta(previous, sink));
 
     PipelineRunConfiguration runConfiguration = new PipelineRunConfiguration();
     LocalPipelineRunConfiguration engineRunConfiguration = new LocalPipelineRunConfiguration();

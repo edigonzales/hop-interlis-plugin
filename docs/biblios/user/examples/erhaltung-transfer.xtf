@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:m="http://www.interlis.ch/xtf/2.4/DemoErhaltung">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>DemoErhaltung</ili:model>
+    </ili:models>
+    <ili:sender>Handbuch</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+    <m:Daten ili:bid="b1">
+      <m:Eltern ili:tid="e1">
+        <m:Name>Elternobjekt</m:Name>
+        <m:Kinder>
+          <m:SpezialKind>
+            <m:Name>bleibt</m:Name>
+            <m:Versteckt>erhalten</m:Versteckt>
+            <m:Details>
+              <m:Detail>
+                <m:Text>innen eins</m:Text>
+              </m:Detail>
+            </m:Details>
+            <m:Details>
+              <m:Detail>
+                <m:Text>innen zwei</m:Text>
+              </m:Detail>
+            </m:Details>
+            <m:Zusatz>Untertyp</m:Zusatz>
+          </m:SpezialKind>
+        </m:Kinder>
+        <m:Kinder>
+          <m:Kind>
+            <m:Name>entfaellt</m:Name>
+            <m:Versteckt>entfernt</m:Versteckt>
+          </m:Kind>
+        </m:Kinder>
+      </m:Eltern>
+    </m:Daten>
+  </ili:datasection>
+</ili:transfer>

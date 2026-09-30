@@ -33,10 +33,10 @@ Eine Entität mit Attributen, z. B. `Gebaeude` mit den Attributen `Name`, `Art` 
 Ein zusammengesetztes Attribut, das mehrere Unterattribute gruppiert. Strukturen können einwertig (`0..1` oder `1`) oder mehrwertig (`BAG` oder `LIST`) sein.
 
 *TID*::
-_Der Transferidentifikator_ -- eine eindeutige ID eines Objekts innerhalb des gesamten Transfers.
+_Der Transferidentifikator_ -- der Identifikator eines Objekts; seine Eindeutigkeit richtet sich nach dem Identitätsraum des Modells und Transfers.
 
 *BID*::
-_Der Basket-Identifikator_ -- eine eindeutige ID eines Baskets. Ein Basket enthält alle Objekte eines Topics.
+_Der Basket-Identifikator_ -- eine eindeutige ID eines Baskets. Ein Basket enthält Objekte eines Topics.
 
 *Basket*::
 Eine Sammlung von Objekten eines Topics. Ein Transfer kann mehrere Baskets desselben oder verschiedener Topics enthalten.
@@ -54,7 +54,7 @@ Eine Klasse kann von einer anderen Klasse erben und deren Attribute erweitern.
 Ein benutzerdefinierter Datentyp, z. B. eine Koordinate oder eine OID.
 
 *Enumeration*::
-Eine feste Liste von erlaubten Werten, z. B. `Wohngebaeude`, `Gewerbegebaeude`, `Oeffentliches_Gebaeude`.
+Eine feste Liste von erlaubten Werten, z. B. `Wohngebaeude`, `Gewerbegebaeude`, `+Oeffentliches_Gebaeude+`.
 
 === Was macht das hop-interlis-plugin?
 
@@ -63,9 +63,9 @@ Das `hop-interlis-plugin` ist ein Apache-Hop-Plugin für INTERLIS-Daten. Es erm�
 - *INTERLIS-Daten lesen*: XTF-Dateien als typisierte Hop-Rows einlesen
 - *INTERLIS-Daten schreiben*: Typisierte Hop-Rows als XTF-Dateien ausgeben
 - *INTERLIS-Daten validieren*: Daten gegen das Modell prüfen
-- *Strukturen verarbeiten*: Mehrwertige Strukturen in Child-Rows auflösen und wieder zusammenführen
+- *Strukturen verarbeiten*: Primitive und strukturierte Sammlungen in Kindzeilen auflösen und wieder zusammenführen
 - *Rollen auflösen*: Referenzen auf Zielobjekte auflösen und deren Felder hinzufügen
-- *Transfers verarbeiten*: Den vollständigen Transfer als Event-Stream lesen und schreiben
+- *Transfers verarbeiten*: Unterstützte Objekt-, Basket- und Headerinformationen als Ereignisstrom lesen und schreiben
 
 [NOTE]
 ====

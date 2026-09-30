@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:m="http://www.interlis.ch/xtf/2.4/DemoSammlungen">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>DemoSammlungen</ili:model>
+    </ili:models>
+    <ili:sender>Handbuch</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+    <m:Daten ili:bid="b1">
+      <m:Objekt ili:tid="o1">
+        <m:Name>mit Werten</m:Name>
+        <m:Texte>erster</m:Texte>
+        <m:Texte>zweiter</m:Texte>
+        <m:Zahlen>7</m:Zahlen>
+        <m:Zahlen>7</m:Zahlen>
+        <m:Zahlen>9</m:Zahlen>
+        <m:Flags>true</m:Flags>
+        <m:Flags>false</m:Flags>
+        <m:Farben>rot</m:Farben>
+        <m:Farben>blau</m:Farben>
+      </m:Objekt>
+      <m:Objekt ili:tid="o2">
+        <m:Name>leere Sammlungen</m:Name>
+      </m:Objekt>
+    </m:Daten>
+  </ili:datasection>
+</ili:transfer>

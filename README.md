@@ -10,6 +10,12 @@ The authoritative architecture and implementation specification lives in [`docs/
 
 ## Status
 
+The [German user handbook](https://edigonzales.github.io/hop-interlis-plugin/)
+tracks the current controls and defaults. [Runnable tutorials](examples/README.md)
+cover primitive collections, child preservation and references with safe output;
+[documentation acceptance](docs/progress/documentation-current.md) records the checks.
+
+
 **Prio 1/2 hardening:** primitive BAG/LIST through the existing Explode/Collect
 transforms; scalar reference attributes with TID/BID; explicit child PRESERVE/REBUILD
 modes; automatic H2 spill for basket, lookup and child buffers; fair multi-input
@@ -58,7 +64,8 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
 - `INTERLIS Transfer Input` streams the complete XTF event stream as canonical
   envelope rows with a constant schema (`_ili_event_type`, `_ili_model`,
   `_ili_topic`, `_ili_bid`, `_ili_class`, `_ili_tid`, `_ili_operation`,
-  `_ili_object`, `_ili_line`, `_ili_column`) in `OBJECTS` or lossless `EVENTS`
+  `_ili_object`, `_ili_line`, `_ili_column`, four basket metadata fields and
+  `_ili_transfer_metadata`) in `OBJECTS` or supported-preservation `EVENTS`
   mode – any number of classes travel in one Hop stream;
 - `INTERLIS Object to Row` projects the `_ili_object` payload onto typed class
   rows (incl. flattened association attributes) and `INTERLIS Row to Object` maps
@@ -68,7 +75,7 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
   derives transfer/basket events (basket grouping by `_ili_bid`), event mode
   writes the explicit event sequence; INSERT/UPDATE/DELETE operations are
   preserved (`ili:operation`, verified for DELETE through the full roundtrip);
-- the lossless generic roundtrip `Transfer Input (EVENTS) → Transfer Output
+- the supported generic event roundtrip `Transfer Input (EVENTS) → Transfer Output
   (EVENTS)` is verified in unit, pipeline and `hop-run` E2E tests (mixed classes,
   baskets preserved);
 - the `InterlisObject` Hop value type now also serves binary consumers
@@ -102,8 +109,7 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
   `LIST`/`BAG` roundtrip `XTF → Input → Explode → Collect → Output → XTF` works –
   **LIST order, child geometries and nested structures survive** (verified in unit,
   pipeline and `hop-run` E2E tests);
-- `INTERLIS Input` keeps the raw source object on demand (`Keep source object for
-  Structure Explode`, technical `_ili_source_object` field of the new
+- `INTERLIS Input` keeps the raw source object on demand (`Keep source object for Structure Explode`, technical `_ili_source_object` field of the new
   `InterlisObject` Hop value type); model-aware dialogs for Explode and Collect;
 - recursive flattening of nested single structures (`Home_Place_Country_Name`)
   with warnings pointing multi-valued structures to Structure Explode.
@@ -115,8 +121,8 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
 - the full roundtrip `XTF → INTERLIS Input → INTERLIS Output → XTF` is verified in unit,
   pipeline and `hop-run` E2E tests – **circular arcs survive the write/read cycle** as
   SQL/MM curves;
-- dialog with target file, model source, class browser, identity/basket options and a
-  field mapping grid (auto-map by name, status per property).
+- dialog with target file, model source, class browser, identity/basket fields and
+  a read-only mapping preview; runtime binds incoming fields by their expected names.
 
 **Phase 1** (`INTERLIS Input` for XTF) is implemented:
 
@@ -189,11 +195,15 @@ bash scripts/run-e2e.sh "$HOP_HOME"
 
 ### Requirements
 
-- Java 21 (a local `.sdkmanrc` pins the SDKMAN identifier used for development; Apache Hop 2.18 requires Java 21)
+- Java 21 (a local `.sdkmanrc` pins the SDKMAN identifier used for development; Apache Hop 2.19 requires Java 21)
 - Maven 3.x or the included Maven wrapper
 - an Apache Hop 2.19.x installation for local testing (`HOP_HOME`)
 - a checkout of `hop-geometry-type-plugin` next to this repository
 - a checkout of `hop-vector-raster-plugin` next to this repository (only for the GeoPackage E2E)
+
+For installed E2E, compatible prebuilt ZIPs can replace the sibling builds through
+`HOP_GEOMETRY_TYPE_ZIP` and `HOP_VECTOR_RASTER_ZIP`. Set
+`REQUIRE_VECTOR_RASTER_E2E=true` for the full acceptance suite.
 
 ## Modules
 

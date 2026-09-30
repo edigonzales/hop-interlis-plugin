@@ -6,8 +6,20 @@ Dieses Glossar erklärt die wichtigsten Fachbegriffe aus dem INTERLIS-Umfeld und
 |===
 | Begriff | Erklärung
 
+| Carrier
+| Technischer Objektträger, etwa `+_ili_source_object+` oder `+_ili_child_object+`, zum Erhalten unprojizierter Inhalte.
+
+| Overlay
+| Kopieren eines Quellobjekts und Überschreiben seiner projizierten Felder.
+
+| PRESERVE / REBUILD
+| Collect kopiert das vollständige Strukturkind beziehungsweise baut es nur aus projizierten Feldern neu auf.
+
+| Spill
+| Automatisches Auslagern von Puffern in temporären Disk-Speicher.
+
 | Auflösen (Structure Explode)
-| Das Zerlegen einer mehrwertigen Struktur in einzelne Child-Rows (`INTERLIS Structure Explode`).
+| Das Zerlegen einer primitiven oder strukturierten Sammlung in einzelne Child-Rows (`INTERLIS Structure Explode`).
 
 | Basket (BID)
 | Eine Sammlung von INTERLIS-Objekten eines Topics. Jeder Basket hat eine eindeutige ID (BID). Ein Transfer kann mehrere Baskets enthalten.
@@ -25,7 +37,7 @@ Dieses Glossar erklärt die wichtigsten Fachbegriffe aus dem INTERLIS-Umfeld und
 | Vererbung in INTERLIS. Eine Klasse erbt Attribute und Rollen von einer anderen.
 
 | Flattening
-| Das Überführen einer verschachtelten Struktur in flache Felder, z. B. `Adresse_Strasse` statt `Adresse.Strasse`.
+| Das Überführen einer verschachtelten Struktur in flache Felder, z. B. `+Adresse_Strasse+` statt `Adresse.Strasse`.
 
 | Geometrie (INTERLIS)
 | Räumliche Daten: COORD (Punkt), POLYLINE (Linie), SURFACE/AREA (Fläche). Bögen werden mit `WITH (ARCS)` gekennzeichnet.
@@ -49,7 +61,7 @@ Dieses Glossar erklärt die wichtigsten Fachbegriffe aus dem INTERLIS-Umfeld und
 | Eine Entität im INTERLIS-Modell mit Attributen und Rollen. Entspricht in etwa einer Tabelle in einer Datenbank.
 
 | LIST OF / BAG OF
-| Mehrwertige Strukturattribute. LIST ist geordnet, BAG ist ungeordnet.
+| Mehrwertige primitive oder strukturierte Attribute. LIST ist geordnet; BAG besitzt keine fachliche Reihenfolge und erlaubt Duplikate.
 
 | m:n-Assoziation
 | Eine Beziehung zwischen mehreren Objekten, bei der jedes Objekt auf der einen Seite mit mehreren auf der anderen Seite verbunden sein kann.
@@ -60,16 +72,16 @@ Dieses Glossar erklärt die wichtigsten Fachbegriffe aus dem INTERLIS-Umfeld und
 | OID
 | _Object Identifier_ -- definiert den Typ bzw. Wertebereich der TIDs, z. B. `UUIDOID`.
 
-| Referenz (Rolle)
-| Eine Beziehung zwischen zwei INTERLIS-Objekten. Einfache Referenzen verweisen auf ein Zielobjekt (1:1), komplexe auf mehrere.
+| Referenzattribut / Rolle
+| Ein REFERENCE TO-Attribut oder eine Assoziationsrolle verweist auf Zielobjekte. Im Mapping werden TID und gegebenenfalls BID mitgeführt; Attribute und Rollen bleiben getrennte Mappingfälle.
 
 | Rolle
 | Ein INTERLIS-Konstrukt, das eine Beziehung zwischen Klassen darstellt. Siehe auch _Referenz_.
 
 | Roundtrip
-| Der vollständige Kreislauf: Lesen → Transformieren → Schreiben → Validieren.
+| Der vollständige Kreislauf: Lesen → Transformieren → Schreiben → Prüfen. Erhaltung wird durch semantischen Inhaltsvergleich nachgewiesen; Validierung allein genügt dafür nicht.
 
-| RowSchemaPlan
+| InterlisRowMappingPlan
 | Der vorberechnete Plan, der beschreibt, wie ein INTERLIS-Objekt auf Hop-Felder abgebildet wird.
 
 | Schema Preview
@@ -91,7 +103,7 @@ Dieses Glossar erklärt die wichtigsten Fachbegriffe aus dem INTERLIS-Umfeld und
 | Ein JVM-basierter Static-Site-Generator für AsciiDoc-Dokumentation (https://github.com/edigonzales/thoth).
 
 | TID
-| _Transfer Identifier_ -- die eindeutige ID eines Objekts innerhalb des gesamten Transfers.
+| _Transfer Identifier_ -- Objektidentifikator als String; seine Eindeutigkeit gilt im Identitätsraum des Modells und Transfers.
 
 | Topic
 | Ein thematischer Bereich in einem INTERLIS-Modell, der verwandte Klassen und Strukturen gruppiert.
@@ -112,5 +124,5 @@ Dieses Glossar erklärt die wichtigsten Fachbegriffe aus dem INTERLIS-Umfeld und
 | _XML Transfer Format_ -- das moderne INTERLIS-2-Transferformat (XML-basiert).
 
 | Zusammenführen (Structure Collect)
-| Das Wiederherstellen der Parent-Struktur aus Child-Rows (`INTERLIS Structure Collect`).
+| Das Ersetzen der gewählten Elternsammlung durch Kindzeilen (`INTERLIS Structure Collect`).
 |===

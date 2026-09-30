@@ -1,144 +1,69 @@
 == Installation
 
-Dieses Kapitel beschreibt, wie Sie das `hop-interlis-plugin` installieren und in Apache Hop verfügbar machen.
-
 === Voraussetzungen
 
-Bevor Sie das Plugin installieren, stellen Sie sicher, dass folgende Komponenten vorhanden sind:
-
-[cols="1,2"]
+[cols="2,3"]
 |===
-| Komponente | Version / Anforderung
-
-| Java
-| Java 21 (entspricht der Anforderung von Apache Hop 2.18)
-
-| Apache Hop
-| Version 2.18.x (oder kompatible Version)
-
-| hop-geometry-type-plugin
-| Muss installiert sein (wird vom INTERLIS-Plugin für Geometrie-Typen benötigt)
-
-| Betriebssystem
-| Linux, macOS oder Windows
+| Komponente | Getesteter Stand
+| Apache Hop | 2.19.0
+| Java | JDK 21
+| Geometry Type Plugin | `hop-geometry-type-plugin` 0.2.0-SNAPSHOT, passend zur getesteten Plugin-Kombination
+| Vector/Raster Plugin | `hop-vector-raster-plugin` 0.1.0-SNAPSHOT für das GeoPackage-Tutorial mit `Vector Writer`
+| Betriebssystem | macOS, Linux oder Windows
 |===
 
-[IMPORTANT]
-====
-Das INTERLIS-Plugin benötigt das `hop-geometry-type-plugin` als Voraussetzung, da es Geometrie-Werte in Hop-Rows als JTS-Geometrien darstellt. Ohne dieses Plugin funktioniert die Geometrie-Verarbeitung nicht.
-====
+Installieren Sie die gemeinsam getesteten ZIPs. Snapshot-Koordinaten können später andere Artefakte liefern; für eine reproduzierbare Installation halten Sie Artefaktstände und Prüfsummen fest. INTERLIS-Bibliotheken und Hop-Version werden durch den Build vorgegeben.
 
-=== Plugin herunterladen oder bauen
+=== ZIP installieren
 
-Das Plugin wird als installierbare ZIP-Datei (`hop-interlis-plugin-<version>.zip`) ausgeliefert.
+Das INTERLIS-ZIP heisst `hop-interlis-plugin-<version>.zip`. Die Maven-Repositories für https://jars.interlis.guru/releases/ch/so/agi/hop-interlis-plugin/[Releases] und https://jars.interlis.guru/snapshots/ch/so/agi/hop-interlis-plugin/[Snapshots] enthalten die verfügbaren Artefakte.
 
-==== Option A: Maven-Artefakt herunterladen
+. Hop und laufende Pipelines beenden.
+. Beim Update das bisherige Verzeichnis `plugins/transforms/interlis` entfernen.
+. Das INTERLIS-ZIP und das Geometry-ZIP direkt in `+$HOP_HOME+` entpacken.
+. Für GeoPackage zusätzlich das Vector/Raster-ZIP dort entpacken.
+. Hop mit Java 21 neu starten.
 
-1. Öffnen Sie das
-   https://jars.interlis.guru/releases/ch/so/agi/hop-interlis-plugin/[Maven-Repository].
-2. Wählen Sie die gewünschte unveränderliche Version und laden Sie
-   `hop-interlis-plugin-<version>.zip` herunter.
-3. Entpacken Sie die ZIP-Datei in ein temporäres Verzeichnis.
-
-==== Option B: Aus Quellen bauen
-
-Wenn Sie das Plugin aus dem Quellcode bauen möchten, benötigen Sie Maven:
-
-[source,bash,subs=none]
-----
-# Repository klonen
-$ git clone https://github.com/edigonzales/hop-interlis-plugin.git
-$ cd hop-interlis-plugin
-
-# Mit Maven Wrapper bauen (ergibt ZIP im assemblies/-Verzeichnis)
-$ ./mvnw -B -ntp clean verify
-----
-
-Die installierbare ZIP-Datei finden Sie anschliessend unter:
-
-[source,text]
-----
-assemblies/assemblies-hop-interlis/target/hop-interlis-plugin-<version>.zip
-----
-
-=== Plugin in Apache Hop installieren
-
-1. **Hop beenden**: Schliessen Sie die Hop-GUI und stellen Sie sicher, dass keine Hop-Prozesse laufen.
-
-2. **ZIP entpacken**: Entpacken Sie das Plugin-ZIP direkt im Hauptverzeichnis Ihrer Hop-Installation. Die Struktur sollte wie folgt aussehen:
-+
 [source,text]
 ----
 $HOP_HOME/
   plugins/
     transforms/
       interlis/
-        hop-interlis-core-<version>.jar
         hop-interlis-transforms-<version>.jar
-        ... (weitere JARs und Konfigurationsdateien)
-----
-+
-[IMPORTANT]
-====
-Das ZIP legt das Verzeichnis `plugins/transforms/interlis/` an. Entfernen Sie
-vor einem Versionswechsel die bisherige Installation vollständig, damit keine
-alten JARs zurückbleiben.
-====
-
-3. **hop-geometry-type-plugin prüfen**: Stellen Sie sicher, dass das `hop-geometry-type-plugin` ebenfalls unter `plugins/` installiert ist:
-+
-[source,text]
-----
-$HOP_HOME/
-  plugins/
+        lib/
+          hop-interlis-core-<version>.jar
+          ... INTERLIS-Abhängigkeiten ...
+      vector-raster/                 # für Vector Writer
     misc/
       hop-geometry-type/
-      ...
 ----
 
-=== Installation verifizieren
+H2 wird über Hops JDBC-Classloader verwendet und gehört bereits zu Hop 2.19.0. Es wird nicht zusätzlich ins INTERLIS-ZIP gepackt. Kopieren Sie keine weiteren Geometry-, JTS- oder H2-JARs in das Pluginverzeichnis.
 
-1. **Hop GUI starten**.
+=== Installation kontrollieren
 
-2. **Transform-Palette öffnen**: Gehen Sie zu _Pipeline → Transforms_ oder drücken Sie `Ctrl+Shift+T`.
+Suchen Sie in Hops Transform-Auswahl nach `INTERLIS`. Erwartet werden Input, Output, Transfer Input/Output, Object to Row, Row to Object, Structure Explode/Collect, Role Join, Validate und Enumerations. Für das erste Tutorial muss auch `Vector Writer` verfügbar sein.
 
-3. **Suchen**: Geben Sie im Suchfeld `interlis` ein.
+Bei fehlenden Transforms prüfen Sie das Hop-Startprotokoll, die Verzeichnisstruktur und `java -version`. Alte und neue JARs im gleichen Pluginverzeichnis können Classloader-Fehler verursachen.
 
-4. **Ergebnis prüfen**: Sie sollten folgende Transforms sehen:
-
-[source,text]
-----
-INTERLIS Input
-INTERLIS Output
-INTERLIS Transfer Input
-INTERLIS Transfer Output
-INTERLIS Object to Row
-INTERLIS Row to Object
-INTERLIS Structure Explode
-INTERLIS Structure Collect
-INTERLIS Role Join
-INTERLIS Validate
-INTERLIS Enumerations
-----
-
-[CAUTION]
-====
-Wenn die Transforms nicht erscheinen, prüfen Sie:
-
-- Ob das Plugin-ZIP vollständig entpackt wurde
-- Ob keine JAR-Dateien doppelt vorhanden sind (ClassLoader-Probleme)
-- Das Hop-Startprotokoll auf Fehlermeldungen (unter `logs/` oder in der Konsole)
-- Ob Java 21 verwendet wird (prüfen Sie mit `java -version`)
-====
-
-[TIP]
-====
-Für die lokale Entwicklung gibt es ein Skript, das den Build, die Installation und den Hop-Start automatisiert:
+=== Aus Quellen bauen
 
 [source,bash]
 ----
-$ bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
+git clone https://github.com/edigonzales/hop-interlis-plugin.git
+cd hop-interlis-plugin
+./mvnw -B -ntp clean verify
+python3 scripts/check-distribution.py
 ----
 
-Das Skript baut das Plugin, installiert es in Hop und startet die Hop-GUI neu.
-====
+Die Distribution liegt unter `assemblies/assemblies-hop-interlis/target/`. Die benötigte Geometry-Abhängigkeit muss über die im Repository beschriebenen Maven-Repositories verfügbar sein. Die Entwickleranleitung und `AGENTS.md` beschreiben JDK-Auswahl und CI-kompatible Maven-Einstellungen.
+
+Für den lokalen Entwicklungszyklus:
+
+[source,bash]
+----
+bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
+----
+
+Das Skript baut und prüft die Distribution, installiert sie und startet die Hop-GUI neu. Verwenden Sie eine eigene Entwicklungsinstallation.

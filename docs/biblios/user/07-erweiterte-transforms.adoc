@@ -1,566 +1,202 @@
 [[erweiterte-transforms]]
 == Erweiterte Transforms
 
-Dieses Kapitel beschreibt die spezialisierten Transforms für fortgeschrittene Szenarien.
-
-[TIP]
-====
-Diese Transforms sind für fortgeschrittene Anwendungsfälle gedacht. Für die meisten ETL-Aufgaben reichen `INTERLIS Input` und `INTERLIS Output` aus.
-====
+Diese Transforms ergänzen die typisierte Klassenverarbeitung. Die generischen Objektfelder sind technische Träger; für fachliche Bearbeitung projizieren Sie gezielt auf typisierte Zeilen.
 
 === INTERLIS Transfer Input
 
-Liest den gesamten Transfer als Event-Stream. Im Gegensatz zum `INTERLIS Input` (der nur Objekte einer Klasse liefert), liefert der `INTERLIS Transfer Input` alle Events des Transfers: Transfer-Start, Basket-Start, Objekte aller Klassen, Basket-Ende, Transfer-Ende.
+Der Dateiinput hat `Data file`, `Models`, `Model dirs` und `Mode`. Default ist `OBJECTS`. `EVENTS` liefert zusätzlich `+START_TRANSFER+`, `+START_BASKET+`, `+END_BASKET+` und `+END_TRANSFER+`. Objektzeilen verwenden `OBJECT`; Löschoperationen werden über `+_ili_operation=DELETE+` dargestellt.
 
-#### Anwendungsfälle
+Beide Modi verwenden dasselbe Schema:
 
-- Paralleles Verarbeiten mehrerer Klassen aus demselben Transfer
-- Zugriff auf Transfer-Metadaten (Header, OID-Spaces)
-- Verarbeitung von inkrementellen Transfers mit vollständigem Event-Stream
-
-#### Output-Schema
-
-[cols="1,1,2"]
+[cols="2,1,3"]
 |===
-| Feld | Typ | Bedeutung
-
-| _ili_event_type
-| String
-| `START_TRANSFER`, `START_BASKET`, `OBJECT`, `DELETE_OBJECT`, `END_BASKET`, `END_TRANSFER`
-
-| _ili_model
-| String
-| Name des Modells (bei OBJECT)
-
-| _ili_topic
-| String
-| Name des Topics (bei START_BASKET und OBJECT)
-
-| _ili_bid
-| String
-| Basket-ID
-
-| _ili_class
-| String
-| Qualifizierter Klassenname (bei OBJECT)
-
-| _ili_tid
-| String
-| Object-ID (bei OBJECT und DELETE_OBJECT)
-
-| _ili_operation
-| String
-| `INSERT`, `UPDATE`, `DELETE` (bei inkrementellen Transfers)
-
-| _ili_object
-| InterlisObject
-| Das rohe IOM-Objekt (nur bei OBJECT)
-
-| _ili_line
-| Integer
-| Zeilennummer in der XTF-Datei
-
-| _ili_column
-| Integer
-| Spaltennummer in der XTF-Datei
+| Feld | Hop-Typ | Inhalt
+| `+_ili_event_type+` | String | Ereignisname
+| `+_ili_model+`, `+_ili_topic+` | String | Modell und qualifizierter Topicname
+| `+_ili_bid+` | String | Basket-ID
+| `+_ili_class+`, `+_ili_tid+` | String | Klasse und Objekt-ID
+| `+_ili_operation+` | String | NONE/INSERT/UPDATE/DELETE
+| `+_ili_object+` | InterlisObject | Objektträger; bei Grenzereignissen null
+| `+_ili_line+`, `+_ili_column+` | Integer | Quellposition, soweit verfügbar
+| `+_ili_basket_consistency+`, `+_ili_basket_kind+` | String | Basket-Metadaten
+| `+_ili_basket_start_state+`, `+_ili_basket_end_state+` | String | Basket-Zustände
+| `+_ili_transfer_metadata+` | String | JSON-Träger unterstützter Transfermetadaten
 |===
 
-[IMPORTANT]
-====
-Der Output-Stream hat ein **stabiles Schema** -- unabhängig davon, welche Klassen im Transfer vorkommen. Alle Objekte aller Klassen erscheinen in demselben Stream.
-====
-
-#### Modi
-
-[cols="1,2"]
-|===
-| Modus | Beschreibung
-
-| Objects (Default)
-| Nur OBJECT- und DELETE_OBJECT-Events werden ausgegeben. Transfer- und Basket-Events werden zwar gelesen, aber nicht als Rows ausgegeben (ihre Daten stehen als Felder in den Object-Rows).
-
-| Events
-| Der vollständige Event-Stream inkl. START_TRANSFER, START_BASKET, END_BASKET, END_TRANSFER.
-|===
-
-[WARNING]
-====
-Im Events-Modus ändert sich das Verhalten der nachfolgenden Transforms, da auch Rows ohne Objekt vorhanden sind. Verwenden Sie einen `Filter rows`-Transform, um nur OBJECT-Rows weiterzugeben:
-
-[source,text]
-----
-Filter rows:
-  Condition: _ili_event_type = "OBJECT"
-----
-====
+Die Reihenfolge ist genau die Tabellenreihenfolge, innerhalb zusammengefasster Zeilen von links nach rechts. Bei Ereignissen bleiben nicht zutreffende Werte null. `OBJECTS` liefert keine vollständige Transferfolge und erhält insbesondere keine leeren Baskets allein über Objektzeilen.
 
 === INTERLIS Transfer Output
 
-Schreibt einen Envelope-Stream als XTF-Datei.
+Konfigurieren Sie `Data file`, `Models`, `Model dirs`, `Overwrite existing file` und `Event mode`. Default ist Objektmodus (`Event mode` aus). `Options…` enthält dieselbe Validierung vor Veröffentlichung wie der typisierte Writer.
 
-#### Anwendungsfälle
+Im Objektmodus müssen die BIDs zusammenhängend gruppiert sein. Im Ereignismodus muss die Reihenfolge vollständig und gültig sein:
 
-- Schreiben mehrerer Klassen in eine XTF-Datei (über `Append Streams` oder `Merge join`)
-- Verarbeitung von Event-Streams aus `INTERLIS Transfer Input`
-- Erstellen von inkrementellen Transfers
+[source,text]
+----
+START_TRANSFER
+  START_BASKET B1
+    OBJECT ...
+  END_BASKET B1
+  START_BASKET B2
+    OBJECT ...
+  END_BASKET B2
+END_TRANSFER
+----
 
-#### Input-Schema
-
-Das Input-Schema muss die Envelope-Felder enthalten (siehe `INTERLIS Transfer Input`).
-
-#### Modi
-
-[cols="1,2"]
-|===
-| Modus | Beschreibung
-
-| Object (Default)
-| Leitet Transfer-/Basket-Events aus den OBJECT-Rows ab. Baskets werden automatisch gruppiert (nach `_ili_bid`).
-
-| Event
-| Erwartet explizite Event-Rows (START_TRANSFER, START_BASKET, etc.). Die Reihenfolge wird geprüft.
-|===
-
-[CAUTION]
-====
-Im Object-Modus müssen die Input-Rows nach `_ili_bid` sortiert sein (wie beim `INTERLIS Output`). Bei `Event`-Modus muss die Event-Reihenfolge korrekt sein: START_TRANSFER → (START_BASKET → OBJECT* → END_BASKET)* → END_TRANSFER.
-====
+Ein abgeschlossener BID darf nicht erneut eröffnet werden. Verlorene Grenzereignisse, widersprüchliche BIDs oder ein fehlendes `+END_TRANSFER+` führen zu einem Fehler. Die Ausgabe wird erst am erfolgreichen Pipeline-Ende veröffentlicht; siehe <<xtf-schreiben,Ausgabesicherheit>>.
 
 === INTERLIS Object to Row
 
-Projiziert ein `InterlisObject` (aus dem Envelope-Stream) auf typisierte Rows einer bestimmten Klasse.
+`Models`, `Model dirs` und `Class` wählen den Mappingplan. `Object field` ist standardmässig `+_ili_object+`. `+Include _ili_tid+` und `+Include _ili_bid+` sind aktiv; `Append typed fields to envelope fields` ist aus. `Default SRID` ist leer.
 
-#### Anwendungsfälle
-
-- Nach `INTERLIS Transfer Input`: Extrahieren einer bestimmten Klasse aus dem gemischten Stream
-- Typkonvertierung von generischen Envelopes zu spezifischen Rows
-
-#### Konfiguration
-
-- **Object field**: Name des Feldes, das das `InterlisObject` enthält (Standard: `_ili_object`)
-- **Class**: Die INTERLIS-Klasse, auf die projiziert werden soll
-
-[source,text]
-----
-Input (Envelope):
-_ili_event_type | _ili_class                  | _ili_object
-"OBJECT"        | "Model.Topic.Building"      | [IOM-Objekt]
-
-Object to Row (Class = Model.Topic.Building):
-_ili_tid | Name      | Art      | Geometry
-"b1"     | "Rathaus" | "public" | [Polygon]
-----
-
-[TIP]
-====
-Dieser Transform ist das Gegenstück zum `INTERLIS Row to Object`. Zusammen ermöglichen sie die Konvertierung zwischen generischem Envelope-Stream und typisierten Rows.
-====
+Ohne Append liefert der Transform das typisierte Klassenschema. Mit Append bleiben die eingehenden Envelope-Felder erhalten und fachliche Felder werden angefügt. Das Objektfeld steht damit als technischer Träger zur Verfügung. Es werden nur passende Objekte der konkreten Klasse projiziert. Für assoziationsabhängige Projektion kann die erste Ausgabe bis zum Basket-Abschluss warten; `Options…` enthält die Puffer-Einstellungen.
 
 === INTERLIS Row to Object
 
-Wandelt typisierte Rows in `InterlisObject`-Envelopes um.
+`Models`, `Model dirs`, `Class` und `Basket ID field` (`+_ili_bid+`) steuern das inverse Mapping. Die TID kommt aus `+_ili_tid+`. `Source object field (blank = automatic)` und `Operation field (blank = automatic)` können einen Träger beziehungsweise eine Operation ausdrücklich binden. Automatische Erkennung berücksichtigt die technischen Standardfelder.
 
-#### Anwendungsfälle
+Das Ergebnis ist das kanonische Envelope-Schema mit einer `OBJECT`-Zeile. Für Mehrklassenverarbeitung müssen alle Zweige dieses Schema liefern. Ein Quellobjekt ermöglicht Overlay; ohne Träger wird ein Objekt aus projizierten Feldern aufgebaut.
 
-- Vor `INTERLIS Transfer Output`: Mehrere Klassen-Streams in einen gemischten Envelope-Stream umwandeln
-- Regenerieren von Assoziations-Link-Objekten aus geflatteten Feldern
-
-[source,text]
-----
-Input (Building rows):
-_ili_tid | Name      | Geometry
-"b1"     | "Rathaus" | [Polygon]
-
-Row to Object:
-_ili_event_type | _ili_class             | _ili_object
-"OBJECT"        | "Model.Topic.Building" | [IOM-Objekt]
-----
-
-[NOTE]
-====
-Assoziationsattribute (z. B. `Municipality_ref`) werden automatisch wieder in Link-Objekte/Referenzen umgewandelt. Der Transform kennt das Modell und erzeugt die korrekte IOM-Struktur.
-====
-
+[[structure-explode]]
 === INTERLIS Structure Explode
 
-Löst eine mehrwertige Struktur (`LIST OF` oder `BAG OF`) in einzelne Child-Rows auf.
+Der Transform löst primitive oder strukturierte LIST/BAG-Attribute in Kindzeilen auf. Er benötigt ein vollständiges Elternobjekt im `Source object field`, standardmässig `+_ili_source_object+`. Aktivieren Sie dafür im Klasseninput `Keep source object for Structure Explode`.
 
-#### Voraussetzungen
-
-Im Parent-Stream muss das Feld `_ili_source_object` vorhanden sein. Aktivieren Sie dies im `INTERLIS Input` unter _Advanced > Keep source object for Structure Explode_.
-
-#### Konfiguration
-
-[cols="1,2"]
+[cols="2,2,3"]
 |===
-| Parameter | Beschreibung
-
-| Source object field
-| Name des `_ili_source_object`-Feldes
-
-| Parent TID field
-| Name des TID-Feldes des Parents (z. B. `_ili_tid`)
-
-| Structure attribute path
-| Pfad zur Struktur (z. B. `Qualitaeten` oder `Adresse.Kindergeschwister`)
-
-| Parent field
-| Name des `_ili_parent_tid`-Feldes im Output (Standard: `_ili_parent_tid`)
-
-| Index field
-| Name des Index-Feldes (bei LIST: `_ili_index`, bei BAG: optional)
-
-| Child fields
-| Auswahl der auszugebenden Child-Attribute
+| Control | Default | Bedeutung
+| Models / Model dirs / Class | Modellverzeichnisse wie Input; Modelle/Klasse leer | Elternklasse und Modellquelle
+| Structure | leer | Pfad des Mehrfachattributs, auch einer primitiven Sammlung
+| Source object field | `+_ili_source_object+` | Objektträger des Elternobjekts
+| Parent TID field / Parent BID field | `+_ili_tid+` / `+_ili_bid+` | Identität aus der Elternzeile
+| Parent key field | `+_ili_parent_tid+` | Name des Kind-Elternschlüssels
+| Index field | `+_ili_index+` | Name der Position
+| Copy parent fields | leer | Kommagetrennte Elternfelder zusätzlich mitführen
+| Emit parent BID field | an | Kind-BID als `+_ili_parent_bid+` mitführen
+| Emit technical index for BAG | an | Technische BAG-Position ausgeben
+| Options… → Keep child source object | an | Strukturkind als `+_ili_child_object+` erhalten
 |===
 
-[source,text]
-----
-Input (Parent):
-_ili_tid | Name      | _ili_source_object
-"g1"     | "Rathaus" | [IOM-Objekt]
+Kindfelder einer primitiven Sammlung sind `+_ili_parent_tid+`, bei aktiviertem BID zusätzlich `+_ili_parent_bid+`, `+_ili_index+` sowie `+_ili_value+` mit dem Typ des Elements. LIST erhält ihre Reihenfolge; BAG behält Duplikate, hat jedoch keine fachliche Reihenfolge. Eine leere Sammlung erzeugt keine Kindzeile.
 
-Auflösen (Struktur = Qualitaeten):
-_ili_parent_tid | _ili_index | Code   | Beschreibung
-"g1"            | 0          | "Q100" | "Brandschutz geprüft"
-"g1"            | 1          | "Q200" | "Statik geprüft"
-----
+Strukturkinder liefern die projizierten Strukturfelder und bei aktivierter Option `+_ili_child_object+`. Dieser Träger enthält den konkreten Untertyp, unprojizierte Attribute und verschachtelte Sammlungen. Fehlende Träger lassen sich später nicht durch `PRESERVE` rekonstruieren.
 
-[CAUTION]
-====
-Stellen Sie sicher, dass der Transform `distributes=false` hat, wenn derselbe Input auch für `Structure Collect` verwendet wird. Andernfalls werden die Rows aufgeteilt und das Zusammenführen schlägt fehl.
-====
+Die gespeicherte Konfiguration `selectedChildFields` wählt Attributpfade; leer bedeutet alle projizierbaren Felder. Der aktuelle Explode-Dialog hat dafür keinen eigenen Feldauswahl-Control. Das vorbereitete <<beispiel-h,Erhaltungsbeispiel>> enthält die Auswahl `Name` bereits in der `.hpl`-Datei. Der Dialog bewahrt diese Auswahl beim Speichern. Collect bietet die entsprechende Auswahl unter `Options…`.
 
+Explode erzeugt die Kinder einzeln. Das Elternobjekt selbst muss weiterhin vollständig in den Heap passen.
+
+[[structure-collect]]
 === INTERLIS Structure Collect
 
-Führt Child-Rows wieder zur Parent-Struktur zusammen.
+Collect erhält einen Elternstrom und einen Kindstrom. Es gibt pro Elternzeile eine aktualisierte Elternzeile mit Quellobjekt aus. **Der Kindstrom ersetzt die gesamte ausgewählte Sammlung.** Herausgefilterte Kinder werden entfernt; keine Kinder ergeben eine leere Sammlung, sofern die Mindestkardinalität dies erlaubt.
 
-#### Voraussetzungen
-
-- Parent-Stream und Child-Stream müssen beim `Structure Collect` zusammengeführt werden
-- Child-Rows müssen nach `_ili_parent_tid` sortiert sein
-- Bei LIST: zusätzlich nach `_ili_index` sortiert
-
-[source,text]
-----
-Input Parent:
-_ili_tid | Name      | _ili_source_object
-"g1"     | "Rathaus" | [IOM-Objekt]
-
-Input Child:
-_ili_parent_tid | _ili_index | Code   | Beschreibung
-"g1"            | 0          | "Q100" | "Brandschutz geprüft"
-"g1"            | 1          | "Q200" | "Statik geprüft"
-
-Output (Zusammenführen):
-_ili_tid | Name      | _ili_source_object
-"g1"     | "Rathaus" | [aktualisiertes IOM-Objekt mit Qualitaeten]
-----
-
-[IMPORTANT]
-====
-Der `Structure Collect` ersetzt den Strukturinhalt des Parent-Objekts vollständig. Wenn Sie Child-Rows gefiltert haben (z. B. nur Q100 behalten), enthält das Parent-Objekt nach dem Collect nur noch diese gefilterten Einträge.
-====
-
-### INTERLIS Role Join
-
-Fügt Felder der Zielklasse einer Rolle zum Main-Stream hinzu.
-
-#### Funktionsweise
-
-1. Liest den Lookup-Stream (Zielklasse) in einen In-Memory-Cache
-2. Für jede Main-Row: Sucht den Zielobjekt-TID im Cache
-3. Fügt die konfigurierten Felder der Zielklasse hinzu
-
-[source,text]
-----
-Main input (Gebaeude):
-_ili_tid | Name    | Gemeinde_ref
-"g1"     | "Rathaus" | "gem1"
-
-Lookup input (Gemeinde):
-_ili_tid | Name      | BFS_Nummer
-"gem1"   | "Solothurn" | 2549
-
-Output:
-_ili_tid | Name    | Gemeinde_ref | Gemeinde_Name | Gemeinde_BFS_Nummer
-"g1"     | "Rathaus" | "gem1"       | "Solothurn"   | 2549
-----
-
-#### Konfiguration
-
-[cols="1,2"]
+[cols="2,2,3"]
 |===
-| Parameter | Beschreibung
-
-| Main input
-| Name des Main-Input-Transforms
-
-| Lookup input
-| Name des Lookup-Input-Transforms
-
-| Rolle
-| Die Rolle, die aufgelöst werden soll
-
-| Main ref field
-| Das Feld im Main-Stream mit der Referenz-TID (z. B. `Gemeinde_ref`)
-
-| Target TID field
-| Das TID-Feld im Lookup-Stream (Standard: `_ili_tid`)
-
-| Fields to add
-| Welche Felder der Zielklasse hinzugefügt werden sollen
-
-| Prefix
-| Präfix für die hinzugefügten Felder (z. B. `Gemeinde_`)
-
-| Max lookup rows
-| Maximalzahl der Lookup-Rows (Default: 500'000; 0 bedeutet unbegrenzt)
-
-| Fail on missing mandatory reference
-| Ob die Pipeline abbrechen soll, wenn eine mandatory Rolle nicht aufgelöst werden kann
+| Control | Default | Bedeutung
+| Parent input transform / Child input transform | leer | Die beiden direkten Eingangstransforms
+| Parent key field | `+_ili_tid+` | Elternschlüssel
+| Child parent key field | `+_ili_parent_tid+` | Passender Schlüssel der Kindzeile
+| Child index field | `+_ili_index+` | LIST-Position
+| Models / Model dirs / Class / Structure | wie Explode | Gewählte Sammlung der Elternklasse
+| Source object field | `+_ili_source_object+` | Elternobjekt zum Aktualisieren
+| Strict LIST ordering (contiguous indexes) | an | Aufsteigende, lückenlose Positionen ab 0 verlangen
+| Fail on duplicate index | an | Doppelte LIST-Indizes ablehnen
+| Fail on child without parent | an | Kind ohne passende Elternzeile ablehnen
 |===
 
-[WARNING]
-====
-Der `Role Join` liest den Lookup vollständig ein und lagert Puffer und Index bei
-Bedarf auf Disk aus. Ein Überschreiten von `Max lookup rows` ist ein Fehler.
-Die Puffer- und Diskbudgets werden unter `Options` konfiguriert; beide Eingänge
-werden abwechselnd gelesen. Die erste Join-Ausgabe wartet weiterhin auf den
-Abschluss des Lookup-Stroms.
-====
+Unter `Options…` finden Sie neben den Puffereinstellungen:
 
-[NOTE]
-====
-Der Lookup wird nur einmal beim ersten Input-Row geladen. Wenn sich der Lookup-Stream nicht von Anfang an komplett lesen lässt, verwenden Sie `Stream Lookup`.
-====
+[cols="2,2,3"]
+|===
+| Control | Default für neue Konfigurationen | Bedeutung
+| Child attribute paths (comma separated, empty: all) | leer | Projizierte Kindattribute auswählen
+| Collect mode | `PRESERVE` | Strukturkind kopieren und nur projizierte Werte überschreiben
+| Parent basket field | `+_ili_bid+` | BID der Elternzeile
+| Child parent basket field | `+_ili_parent_bid+` | BID der Kind-Elternzuordnung
+|===
 
+`PRESERVE` verlangt ein kompatibles `+_ili_child_object+`. Konkrete zulässige Untertypen, ungewählte Attribute und verschachtelte Sammlungen bleiben erhalten. Fehlende oder inkompatible Carrier sind Fehler. `REBUILD` erzeugt das Strukturkind allein aus den projizierten Feldern; weitere Inhalte und der ursprüngliche Untertyp werden dabei nicht zugesichert. Bei primitiven Sammlungen wird `+_ili_value+` verwendet; ein Kind-Carrier ist dafür nicht erforderlich.
+
+Eltern und Kinder müssen nach demselben Elternschlüssel aufsteigend sortiert sein. Mit BID-Feldern ist dies `(BID, Elternschlüssel)`. Elternschlüssel müssen eindeutig sein. Bei striktem LIST-Modus müssen Kindpositionen innerhalb einer Gruppe zusätzlich aufsteigend und lückenlos sein. Nach dem Filtern können Lücken entstehen: nummerieren Sie die verbleibenden Kinder pro Elternschlüssel ab 0 neu. Bei deaktivierter strikter Reihenfolge sortiert Collect die aktuelle Gruppe nach Index im Spill-Speicher; die Sortierung der Elternschlüssel bleibt Voraussetzung.
+
+Ungültige Indizes, Kardinalitätsverletzungen und mehrdeutige Zuordnungen werden abgelehnt. Das Verhalten für doppelte Indizes und Kinder ohne Eltern richtet sich nach den gleichnamigen Optionen. Die Standardwerte sind strikt.
+
+==== Alte und neue Pipeline-Dateien
+
+Neue Explode-Konfigurationen führen den Kind-Carrier mit; neue Collect-Konfigurationen verwenden `PRESERVE` sowie BID plus Elternschlüssel. Beim Laden alter `.hpl`-Dateien ohne die neuen Optionen gilt das bisherige Verhalten: Explode ohne Kind-Carrier, Collect mit `REBUILD` und bisheriger Schlüsselwahl ohne BID. Das Laden migriert diese Semantik nicht automatisch. Wählen Sie für eine Umstellung die Optionen ausdrücklich und kontrollieren Sie beide Eingangsschemas.
+
+=== INTERLIS Role Join
+
+Role Join ergänzt Zielattribute einer einfachen Assoziationsrolle. Der Dialog enthält `Main input`, `Lookup input`, `Models`, `Model dirs`, `Class`, `Role`, `Main ref field`, `Lookup TID field`, `Output prefix`, `Fields to add` und `Max lookup rows`.
+
+Die Lookup-TID ist standardmässig `+_ili_tid+`. Ein leeres Präfix wird aus dem Rollennamen abgeleitet, etwa `+Gemeinde_+`. `Fields to add` ist eine kommagetrennte Auswahl. `Fail on missing mandatory reference` und `Fail on duplicate lookup TID` sind standardmässig aktiv.
+
+Der Join liest beide Eingänge abwechselnd. Noch nicht verarbeitbare Hauptzeilen werden gepuffert; die erste Ergebniszeile folgt erst nach vollständigem Lookup. Dadurch kann ein gemeinsamer Produzent beide Zweige versorgen. Nutzdaten und Index werden bei Bedarf auf Disk ausgelagert.
+
+`Max lookup rows` begrenzt die Zahl gelesener Lookup-Zeilen auf standardmässig 500'000. Überschreiten ist ein Fehler; `0` erlaubt unbegrenzt viele. Dieser Grenzwert gilt unabhängig vom Speicherbudget. Der Lookup verwendet TIDs: in zusammengeführten Identitätsräumen müssen diese eindeutig sein. Für allgemeine skalare Referenzattribute mit TID/BID prüfen Sie eine entsprechend zusammengesetzte Join-Zuordnung in Ihrer Pipeline.
+
+[[validierung]]
 === INTERLIS Validate
 
-Validiert eine XTF-Datei gegen das INTERLIS-Modell.
+Validate ist ein eigener Dateiinput mit Diagnosezeilen. Es validiert die ganze bestehende Datei einschliesslich zweitem Durchlauf, unter anderem für Referenzen und dateiweite Regeln. Die Ausgabe ist kein Strom der validierten Fachobjekte.
 
-#### Besonderheit: Transform ohne Input
-
-Der `INTERLIS Validate` benötigt **keinen vorherigen Transform**. Er liest direkt eine XTF-Datei und gibt Validierungsfehler als Rows aus.
-
-#### Output-Schema
-
-[cols="1,1,2"]
+[cols="2,2,3"]
 |===
-| Feld | Typ | Bedeutung
-
-| _ili_severity
-| String
-| `Error`, `Warning`, `Info`
-
-| _ili_message
-| String
-| Fehlermeldung
-
-| _ili_source_file
-| String
-| Pfad zur XTF-Datei
-
-| _ili_line
-| Integer
-| Zeilennummer
-
-| _ili_column
-| Integer
-| Spaltennummer
-
-| _ili_model
-| String
-| Modellname
-
-| _ili_topic
-| String
-| Topic-Name
-
-| _ili_bid
-| String
-| Basket-ID
-
-| _ili_class
-| String
-| Klassenname
-
-| _ili_tid
-| String
-| Object-ID
-
-| _ili_attribute_path
-| String
-| Pfad zum Attribut (z. B. `Geometrie`)
-
-| _ili_constraint_name
-| String
-| Name der verletzten Constraint
+| Control | Default | Wirkung
+| Data file | leer | Bestehende XTF-Datei
+| Models / Model dirs | `%DATA` / Standard-Modellverzeichnisse | Modellquelle wie Input
+| Validator config | leer | Optionale lokale **INI**-Konfiguration des Validators
+| Max errors | 10'000 | Fehlergrenze; `0` unbegrenzt
+| Validate attribute/role multiplicity | an | Kardinalitäten prüfen
+| Stop after first error | aus | Vorzeitig stoppen
+| Emit warnings | an | Warnungen als Zeilen ausgeben
+| Emit info findings | aus | Informationen zusätzlich ausgeben
+| Fail the pipeline when errors were found | aus | Nach vollständiger Diagnoseausgabe Pipelinefehler setzen
 |===
 
-#### Konfiguration
+Früher Abbruch oder Fehlerlimit bedeuten unvollständige Validierung und werden mit einer Abschlussdiagnose kenntlich gemacht. Ein erfolgreicher Pipeline-Lauf ohne `Fail the pipeline...` bedeutet daher nicht automatisch, dass die geprüfte Datei gültig ist. Explizite Einstellungen in der INI können Prüfungen beeinflussen.
 
-[cols="1,2"]
-|===
-| Parameter | Beschreibung
-
-| File
-| Pfad zur zu validierenden XTF-Datei
-
-| Models / Model dirs
-| Modellquelle (wie bei INTERLIS Input)
-
-| Validator config
-| Lokale TOML-Konfigurationsdatei für den ilivalidator
-
-| Validate multiplicity
-| Prüft, ob mandatory Attribute/Rollen vorhanden sind
-
-| Max errors
-| Maximale Anzahl Fehler, nach der abgebrochen wird
-
-| Stop on first error
-| Ob nach dem ersten Fehler abgebrochen werden soll
-
-| Output severities
-| Welche Schweregrade ausgegeben werden sollen (Error, Warning, Info)
-|===
-
-[NOTE]
-====
-Der `INTERLIS Validate`-Transform ist ein **Transform ohne Input**. Er wird wie ein Input-Transform in die Pipeline platziert und benötigt keinen eingehenden Hop.
-====
-
-### INTERLIS Enumerations
-
-Listet alle Enumeration-Werte eines Modells als Rows aus.
-
-#### Besonderheit: Transform ohne Input
-
-Wie `INTERLIS Validate` benötigt dieser Transform keinen vorherigen Input.
-
-#### Anwendungsfälle
-
-- Erstellen von Lookup-Tabellen für Enumerationen
-- Dokumentation der erlaubten Werte
-- Mapping-Hilfe: Welche Enum-Werte gibt es im Modell?
-
-#### Output-Schema
-
-[cols="1,1,2"]
-|===
-| Feld | Typ | Bedeutung
-
-| enum_definition
-| String
-| Qualifizierter Name der Enumeration-Definition
-
-| enum_value
-| String
-| Wert des Elements
-
-| enum_path
-| String
-| Vollständiger hierarchischer Pfad
-
-| parent_value
-| String
-| Elternelement (bei verschachtelten Enums)
-
-| depth
-| Integer
-| Tiefe in der Hierarchie (0 = Root)
-
-| is_leaf
-| Boolean
-| Ob das Element ein Blatt ist (keine Kinder)
-|===
-
-[TIP]
-====
-Verwenden Sie diesen Transform, um eine Lookup-Tabelle für Enumerationen zu erstellen. Diese können Sie dann in der Pipeline für Mapping- oder Validierungszwecke verwenden.
-====
-
-=== Kombinationsbeispiel: Mehrere Klassen in eine XTF-Datei schreiben
-
-Sie möchten Gebäude **und** Wege in eine XTF-Datei schreiben:
+Die 13 Diagnosefelder lauten in Reihenfolge:
 
 [source,text]
 ----
-Quelle A (Gebäude):
-INTERLIS Input (Klasse = Building) --> Row to Object -->\
-                                                   +--> Append Streams --> Transfer Output
-Quelle B (Wege):                                    /
-INTERLIS Input (Klasse = Road)     --> Row to Object -->
+_ili_severity, _ili_message, _ili_source_file, _ili_line,
+_ili_column, _ili_model, _ili_topic, _ili_bid, _ili_class,
+_ili_tid, _ili_attribute_path, _ili_constraint_name, _ili_raw_event_type
 ----
 
-Schritte:
+Zeile und Spalte sind Hop-Integer, die anderen Felder Strings. Nicht vom Validator gelieferter Kontext bleibt null. Bei einem Klassenconstraint kann dessen Name in der Meldung stehen, während `+_ili_attribute_path+` leer ist; `+_ili_constraint_name+` muss nicht diesen fachlichen Namen enthalten.
 
-1. Zwei `INTERLIS Input`-Transforms (einer für Gebäude, einer für Wege)
-2. Jeder gefolgt von `INTERLIS Row to Object` (wandelt typisierte Rows in Envelopes um)
-3. `Append Streams` (fügt beide Envelope-Streams zusammen)
-4. `INTERLIS Transfer Output` (schreibt den kombinierten Stream als XTF)
+Aufgeschobene Validate-Fehler werden vor der Veröffentlichung vorbereiteter Writer-Dateien berücksichtigt. Alle Diagnosezeilen können noch bei nachgelagerten Transforms ankommen. Für eine gerade entstehende Ausgabe verwenden Sie stattdessen die Writer-Option `Validate before publication`.
 
-[IMPORTANT]
-====
-Der `Append Streams`-Transform ist ein Standard-Hop-Transform. Er fügt zwei oder mehr Streams zusammen. Achten Sie darauf, dass beide Streams das gleiche Schema haben (die Envelope-Felder).
-====
+=== INTERLIS Enumerations
 
-=== Sammlungen und Kindobjekte erhalten
+Der Datei-unabhängige Modellinput benötigt `Models` und `Model dirs`. Er liefert `+enum_definition+`, `+enum_value+`, `+enum_path+`, `+parent_value+` (String), `depth` (Integer) und `+is_leaf+` (Boolean). So können Sie Enumerationswerte und ihre Hierarchie als Lookup-Tabelle verwenden. `+enum_path+` ist der qualifizierte Wertpfad; Klassenattribute enthalten den Elementpfad ihrer Enumeration.
 
-Explode/Collect bearbeiten auch primitive `BAG/LIST`. Die Kindzeile enthält den
-Elternschlüssel, optional die Basket-ID, `_ili_index` und den typisierten Wert
-`_ili_value`. LIST-Reihenfolge, leere Sammlungen und BAG-Duplikate bleiben erhalten.
-Ein einzelner null-Wert ist kein gültiges Sammlungselement. Die Modellkardinalität
-wird beim Collect geprüft.
-
-Neue Explode-Konfigurationen liefern bei Strukturen zusätzlich
-`_ili_child_object`. Neue Collect-Konfigurationen verwenden im Dialog `Options…`
-den Modus `PRESERVE`: Sie kopieren dieses konkrete Kind und überschreiben nur die
-unter _Child attribute paths_ gewählten Felder (kommagetrennte Modellpfade; leer
-bedeutet alle unterstützten Felder). Dadurch bleiben zulässige Subtypen, weitere
-Attribute und verschachtelte Sammlungen erhalten. Fehlende, abstrakte oder
-inkompatible Carrier werden abgelehnt. `REBUILD` baut den deklarierten Typ aus den
-gewählten Feldern neu auf. Für primitive Sammlungen ist kein Kind-Carrier nötig.
-
-Die ausgewählte Sammlung wird in beiden Modi vollständig durch den Kindstrom
-ersetzt. Ein Filter entfernt Kinder auch aus dem Ergebnisobjekt. Bei strikten
-LIST-Indizes müssen danach die Indizes gegebenenfalls auf 0, 1, … neu vergeben
-werden. Alte `.hpl`-Dateien werden weiterhin als REBUILD ohne neuen Kind-Carrier
-und mit ihrer bisherigen Schlüsselwahl geladen.
-
-Neue Collect-Konfigurationen verwenden `(BID, Elternschlüssel)`: Eltern nach
-`(_ili_bid, _ili_tid)`, Kinder nach `(_ili_parent_bid, _ili_parent_tid)` sortieren.
-Die Schlüssel können in `Options…` geändert werden. Bei strikter Reihenfolge
-müssen auch die Kindindizes aufsteigend sein; sonst sortiert Collect die aktuelle
-LIST-Gruppe im Spill-Speicher. Doppelte Eltern und mehrdeutige Zuordnungen sind
-Fehler. Die Kindprojektion verschachtelter Mehrfachstrukturen ist hier nicht
-vorgesehen; der Kind-Carrier erhält deren Inhalte.
-
+[[puffer]]
 === Puffer und grosse Daten
 
-Input, Object to Row, Role Join und Collect bieten in `Options…`:
+Input, Object to Row, Role Join und Structure Collect haben unter `Options…` dieselben Einstellungen:
 
-[cols="1,1,3"]
+[cols="2,2,3"]
 |===
-| Einstellung | Default | Bedeutung
-| `bufferMemoryMiB` | 64 | Budget für die Puffer eines Transforms
-| `spillDirectory` | leer | Java-Tempverzeichnis; alternativ ein konfigurierbares Verzeichnis
-| `maxSpillMiB` | 0 | Gemeinsame Disk-Obergrenze der Puffer; 0 bedeutet unbegrenzt
+| Control / gespeicherte Option | Default | Bedeutung
+| Buffer memory (MiB) / `bufferMemoryMiB` | 64 | Pufferbudget pro Transform; Teilpuffer teilen dieses Budget
+| Spill directory (empty: system temp) / `spillDirectory` | leer | Java-Tempverzeichnis; alternativ ein beschreibbares Verzeichnis
+| Maximum spill (MiB, 0: unlimited) / `maxSpillMiB` | 0 | Gemeinsame Disk-Obergrenze aller Teilpuffer dieses Transforms; 0 ohne zusätzliche Obergrenze
 |===
 
-Bei Überschreitung des Speicherbudgets wechseln Datensätze und Lookup-Indizes
-auf Disk. Temporäre Daten werden bei Abschluss, Fehler und Stop geschlossen und
-entfernt. Einzelne IOM-Objekte und ihr bearbeitetes Ergebnis müssen weiterhin in
-den Heap passen. Bei Assoziationsauflösung kann die erste Zeile erst nach Ende
-des vollständigen Baskets erscheinen.
+Nutzdaten wechseln automatisch in temporären H2-Speicher. Cursor und temporäre Dateien werden bei normalem Ende, Fehler und Stop geschlossen beziehungsweise entfernt. Das Überschreiten einer gesetzten Disk-Grenze ist ein Fehler.
 
-Role Join bedient beide Eingänge während des Lookup-Aufbaus; Collect bedient
-beide Zweige während der Gruppierung. Ein gemeinsamer Produzent mit kleinen
-Queues kann deshalb weiterliefern. Das Role-Join-Limit zählt Lookup-Eingangszeilen:
-500'000 ist Default, 0 bedeutet unbegrenzt.
+Input/Object to Row können bis Basket-Ende warten; Role Join wartet auf den vollständigen Lookup. Collect koordiniert beide Eingänge und hält die aktuelle Kindgruppe bei Bedarf auf Disk. Es sortiert erforderlichenfalls innerhalb dieser Gruppe, nicht den gesamten unsortierten Eingangsstrom.
 
-Ausführbare Paketbeispiele stehen unter `e2e/pipelines/39-primitive-collections.hpl`,
-`40-child-preserve.hpl`, `41-reference-event-roundtrip.hpl` und `42-child-spill.hpl`.
-Die E2E-Suite liefert ihre Modelle und Transferdateien mit; das Spill-Beispiel
-wird aus der minimalen Fixture mit 600 Kindern erzeugt.
+Das Budget betrifft Puffer. Ein einzelnes IOM-Objekt, seine Geometrien und sein bearbeitetes Ergebnis müssen weiterhin in den Heap passen. Viele kleine Baskets sind deshalb nicht mit einem einzelnen sehr grossen Objekt gleichzusetzen. Für Planung und Messung sind maximale Heap-Belegung, temporärer Diskbedarf und Zeit bis zur ersten Ausgabe relevant.
+
+=== Mehrere Klassen gemeinsam schreiben
+
+Ein typisierter Zweig pro Klasse kann mit Row to Object zurück in dasselbe Envelope-Schema wechseln. Vor einem Transfer Output im Objektmodus müssen zusammengeführte Zeilen nach BID gruppiert werden. Stimmen Identitäten oder Referenzräume nicht überein, müssen sie vorher fachlich abgestimmt werden.
+
+Ein `EVENTS`-Strom benötigt eine gültige Transferfolge. Einfaches Anhängen zweier vollständiger Transfers oder das ungeordnete Zusammenführen ihrer Ereignisse ist dafür ungeeignet. Bewahren Sie Grenzereignisse und Metadaten, oder bauen Sie die gemeinsame Folge ausdrücklich auf.
+
+Die neue Datei wird nach Pipeline-Ende von einer Folgepipeline geprüft. <<beispiel-i,Beispiel I>> zeigt den vollständigen Ereignisweg und einen getrennten Prüflauf.

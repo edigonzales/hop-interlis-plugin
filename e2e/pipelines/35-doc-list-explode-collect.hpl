@@ -43,6 +43,7 @@
     <parentBidKeyFieldName>_ili_parent_bid</parentBidKeyFieldName>
     <indexFieldName>_ili_index</indexFieldName>
     <emitIndexForBag>Y</emitIndexForBag>
+    <keep_child_source_object>Y</keep_child_source_object>
     <distribute>Y</distribute>
     <copies>1</copies>
     <GUI><xloc>350</xloc><yloc>100</yloc></GUI>
@@ -65,6 +66,9 @@
     <strictOrdering>Y</strictOrdering>
     <failOnDuplicateIndex>Y</failOnDuplicateIndex>
     <failOnChildWithoutParent>Y</failOnChildWithoutParent>
+    <collect_mode>PRESERVE</collect_mode>
+    <parent_bid_field>_ili_bid</parent_bid_field>
+    <child_parent_bid_field>_ili_parent_bid</child_parent_bid_field>
     <distribute>N</distribute>
     <copies>1</copies>
     <GUI><xloc>600</xloc><yloc>100</yloc></GUI>

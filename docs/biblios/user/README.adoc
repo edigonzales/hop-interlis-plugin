@@ -15,7 +15,7 @@ Als Quelle dient der Branch `main` dieses Repositories.
 
 Der aktuellste thoth-biblios-Snapshot liegt als Fat-JAR auf
 https://jars.interlis.guru[jars.interlis.guru] (derselbe Mechanismus wie in der
-CI-Pipeline). Java 17 oder neuer wird vorausgesetzt.
+CI-Pipeline). Für denselben Ablauf wie CI verwenden Sie Java 21. Lösen Sie die Snapshot-Version einmal auf und verwenden Sie dieselbe JAR für Build und Sichtprüfung.
 
 [source,bash]
 ----
@@ -30,9 +30,15 @@ for sv in root.findall("versioning/snapshotVersions/snapshotVersion"):
 ')
 curl -fsSL -o "thoth-biblios-${VERSION}-all.jar" "$BASE/thoth-biblios-${VERSION}-all.jar"
 
-# Dokumentation bauen
+# Dokumentation aus dem aktuellen Working Tree bauen
 cd /path/to/hop-interlis-plugin/docs/biblios
-java -jar /path/to/thoth-biblios-*-all.jar build --config biblios.yml
+sed "s|url: https://github.com/edigonzales/hop-interlis-plugin.git|url: file://$(cd ../.. && pwd)|" \
+  biblios.yml > biblios.local.yml
+java -jar /path/to/thoth-biblios-<aufgeloeste-version>-all.jar build \
+  --config biblios.local.yml --use-local-working-tree
+
+# Kapitel, Includes, lokale Links und Pipeline-Verweise prüfen
+python3 ../../scripts/check-user-manual.py build/docs-site
 
 # Ergebnis öffnen
 open build/docs-site/index.html
@@ -51,7 +57,7 @@ cd /path/to/hop-interlis-plugin/docs/biblios
 sed "s|url: https://github.com/edigonzales/hop-interlis-plugin.git|url: file://$(cd ../.. && pwd)|" \
   biblios.yml > biblios.local.yml
 
-java -jar /path/to/thoth-biblios-*-all.jar serve \
+java -jar /path/to/thoth-biblios-<aufgeloeste-version>-all.jar serve \
   --config biblios.local.yml \
   --port 8080 \
   --use-local-working-tree
@@ -83,7 +89,7 @@ Pull Requests wird lediglich geprüft, ob der Build durchläuft.
 | Plugin installieren und verifizieren
 
 | `04-erste-pipeline.adoc`
-| 10-Minuten-Tutorial: XTF → GeoPackage
+| XTF → GeoPackage mit Vector Writer (Vector/Raster erforderlich)
 
 | `05-xtf-lesen.adoc`
 | INTERLIS Input im Detail
@@ -95,7 +101,7 @@ Pull Requests wird lediglich geprüft, ob der Build durchläuft.
 | Transfer I/O, Object↔Row, Explode/Collect, Role Join, Validate
 
 | `08-beispiele.adoc`
-| 6 vollständige Mini-Tutorials
+| 9 vollständige Mini-Tutorials
 
 | `09-troubleshooting.adoc`
 | Häufige Probleme und FAQ
@@ -109,6 +115,10 @@ Pull Requests wird lediglich geprüft, ob der Build durchläuft.
 
 Die Rückwärtskompatibilität zu XTF 2.3 wird separat im versionierten Test-Fixture-Bereich
 des Quellcodes geprüft.
+
+== Abnahme
+
+Die aktuellen Fixture-, Paket- und Renderingprüfungen stehen im https://github.com/edigonzales/hop-interlis-plugin/blob/main/docs/progress/documentation-current.md[Dokumentations-Abnahmebericht]. Historische Phasenberichte behalten ihre damaligen Ergebnisse.
 
 == Sprache
 

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS" xmlns:m="http://www.interlis.ch/xtf/2.4/DemoReferenzen">
+  <ili:headersection>
+    <ili:models>
+      <ili:model>DemoReferenzen</ili:model>
+    </ili:models>
+    <ili:sender>Handbuch</ili:sender>
+  </ili:headersection>
+  <ili:datasection>
+    <m:Daten ili:bid="b1">
+      <m:Ziel ili:tid="z1">
+        <m:Name>internes Ziel</m:Name>
+      </m:Ziel>
+      <m:Objekt ili:tid="o1">
+        <m:Name>verweist</m:Name>
+        <m:Intern ili:ref="z1"/>
+        <m:Extern ili:ref="z2" ili:bid="b2"/>
+      </m:Objekt>
+    </m:Daten>
+    <m:Daten ili:bid="b2">
+      <m:Ziel ili:tid="z2">
+        <m:Name>externes Ziel</m:Name>
+      </m:Ziel>
+    </m:Daten>
+  </ili:datasection>
+</ili:transfer>

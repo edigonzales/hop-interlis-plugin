@@ -203,8 +203,14 @@ run_pipeline "$PROJECT_DIR/e2e/pipelines/39-primitive-collections.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/40-child-preserve.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/41-reference-event-roundtrip.hpl"
 run_pipeline "$PROJECT_DIR/e2e/pipelines/42-child-spill.hpl"
+run_pipeline "$PROJECT_DIR/examples/primitive-collections/primitive-collections.hpl"
+run_pipeline "$PROJECT_DIR/examples/child-preserve/child-preserve.hpl"
+run_pipeline "$PROJECT_DIR/examples/reference-roundtrip/reference-fields.hpl"
+run_pipeline "$PROJECT_DIR/examples/reference-roundtrip/reference-roundtrip.hpl"
+run_pipeline "$PROJECT_DIR/examples/reference-roundtrip/reference-check.hpl"
 if [[ "$RUN_GPKG" == "true" ]]; then
   run_pipeline "$PROJECT_DIR/e2e/pipelines/04-interlis-to-gpkg.hpl"
+  run_pipeline "$PROJECT_DIR/examples/xtf-to-gpkg/xtf-to-gpkg.hpl"
 fi
 
 echo "==> Asserting outputs"

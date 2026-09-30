@@ -1,6 +1,6 @@
 # Java- und Hop-Implementierungsspezifikation
 
-Dieses Dokument ist die implementierungsnahe Kern-Spezifikation. Klassennamen und Methodensignaturen sind als Soll-Architektur zu verstehen. Bei kleinen Anpassungen an tatsächliche Hop-2.18- oder iox-ili-Signaturen darf die Implementierung abweichen, solange Verantwortlichkeiten und Tests erhalten bleiben.
+Dieses Dokument ist die implementierungsnahe Kern-Spezifikation. Klassennamen und Methodensignaturen sind als Soll-Architektur zu verstehen. Bei kleinen Anpassungen an tatsächliche Hop-2.19- oder iox-ili-Signaturen darf die Implementierung abweichen, solange Verantwortlichkeiten und Tests erhalten bleiben.
 
 # 1. Maven-Module und Abhängigkeiten
 
@@ -9,10 +9,10 @@ Dieses Dokument ist die implementierungsnahe Kern-Spezifikation. Klassennamen un
 ```xml
 <properties>
   <maven.compiler.release>21</maven.compiler.release>
-  <hop.version>2.18.1</hop.version>
+  <hop.version>2.19.0</hop.version>
   <iox.ili.version>1.24.4</iox.ili.version>
   <ili2c.version>5.6.8</ili2c.version>
-  <hop.geometry.type.version>0.1.0-SNAPSHOT</hop.geometry.type.version>
+  <hop.geometry.type.version>0.2.0-SNAPSHOT</hop.geometry.type.version>
   <junit.version>5.12.0</junit.version>
   <assertj.version>3.27.3</assertj.version>
 </properties>
@@ -35,26 +35,15 @@ jts-core                     provided
 
 Empfehlung: Modell- und IOM-Logik möglichst Hop-neutral halten; `HopRowSchemaFactory` kann alternativ im transforms-Modul liegen.
 
-## 1.3 `hop-interlis-valuetype`
+## 1.3 Value Type und Transform-Modul
 
-```text
-org.apache.hop:hop-core
-ch.interlis:iox-ili
-```
+`ValueMetaInterlisObject` ist im Transform-JAR registriert; es gibt kein separates
+`hop-interlis-valuetype`-Modul. SWT-Dialoge liegen ebenfalls im Transform-Modul.
 
-`ValueMetaInterlisObject` wird als Advanced-Transporttyp registriert.
-
-## 1.4 `hop-interlis-transforms`
-
-```text
-hop-core
-hop-engine
-hop-ui             provided/compile gemäss bestehendem Plugin-Muster
-hop-interlis-core
-hop-interlis-valuetype
-hop-geometry-type  provided
-jts-core           provided
-```
+`hop-interlis-transforms` verwendet Hop core/engine/ui, Geometry, JTS und H2 als
+`provided` sowie `hop-interlis-core` als eigene Laufzeitabhängigkeit. Das Assembly-
+Modul paketiert Transform-JAR, Core-JAR und INTERLIS-Bibliotheken. Hop, Geometry,
+JTS, H2 und reine Testbibliotheken werden nicht dupliziert.
 
 # 2. Package-Struktur
 
@@ -92,12 +81,9 @@ ch.so.agi.hop.interlis
 
 ```java
 public record InterlisModelRequest(
+    Path dataFile,
     List<String> modelNames,
-    List<String> modelDirectories,
-    String dataFile,
-    String metaConfig,
-    boolean inferModelsFromData,
-    Map<String, String> ili2cSettings) {}
+    List<String> modelDirectories) {}
 ```
 
 `dataFile` darf für `%XTF_DIR`-Auflösung bzw. Model-Inference verwendet werden.
@@ -119,20 +105,14 @@ Modellnamen und nicht bloss den zuletzt eingegebenen Text im Dialog.
 ## 3.3 `InterlisModelService`
 
 ```java
-public final class InterlisModelService {
-
-  public InterlisModelContext load(InterlisModelRequest request)
+public interface InterlisModelService {
+  CompiledInterlisModel compile(ModelSource source, ModelCompileOptions options)
       throws InterlisModelException;
 
-  public InterlisModelContext loadForTransfer(
-      Path transferFile,
-      InterlisModelRequest request)
+  List<String> detectModelNames(Path transferFile)
       throws InterlisModelException;
 
-  public List<String> detectModelNames(Path transferFile)
-      throws InterlisModelException;
-
-  public void clearCache();
+  void clearCache();
 }
 ```
 
@@ -382,12 +362,12 @@ public enum RoleMode {
 ```java
 public final class HopRowSchemaFactory {
 
-  public RowSchemaPlan createPlan(
+  public InterlisRowMappingPlan createPlan(
       InterlisClassDescriptor classDescriptor,
       ProjectionOptions options)
       throws InterlisMappingException;
 
-  public RowMeta createRowMeta(RowSchemaPlan plan);
+  public RowMeta createRowMeta(InterlisRowMappingPlan plan);
 
   IValueMeta createValueMeta(RowFieldPlan fieldPlan);
 
@@ -643,7 +623,7 @@ Keine numerische Konvertierung über `Double` für Decimal.
 Zur Initialisierung existieren:
 
 ```java
-RowSchemaPlan plan;
+InterlisRowMappingPlan plan;
 IRowMeta outputRowMeta;
 InterlisGeometryMapper geometryMapper;
 PrimitiveValueCodec primitiveCodec;
@@ -666,7 +646,7 @@ public final class IomToRowMapper {
 
   public Object[] map(
       InterlisObjectEnvelope envelope,
-      RowSchemaPlan plan)
+      InterlisRowMappingPlan plan)
       throws InterlisMappingException;
 
   Object readField(
@@ -805,7 +785,7 @@ public final class RowToIomMapper {
   public InterlisObjectEnvelope map(
       Object[] row,
       IRowMeta inputRowMeta,
-      RowSchemaPlan plan,
+      InterlisRowMappingPlan plan,
       RowWriteOptions options)
       throws InterlisMappingException;
 }
@@ -816,7 +796,7 @@ public final class RowToIomMapper {
 Vor der ersten Row wird für jedes Plan-Feld der Input-Index bestimmt:
 
 ```java
-public RowInputBinding bind(IRowMeta inputRowMeta, RowSchemaPlan plan)
+public RowInputBinding bind(IRowMeta inputRowMeta, InterlisRowMappingPlan plan)
 ```
 
 Fehlende mandatory Mapping-Felder werden bereits hier gemeldet, nicht erst bei Row 100000.
@@ -825,8 +805,8 @@ Fehlende mandatory Mapping-Felder werden bereits hier gemeldet, nicht erst bei R
 
 ```text
 tid = read configured TID field
-if tid null:
-    tid = oidPolicy.generateOrFail(...)
+if tid null and root is not a non-identifiable association:
+    fail with missing TID context (no generated identifier)
 
 obj = new Iom_jObject(plan.classDescriptor.scopedName, tid)
 
@@ -965,7 +945,7 @@ public interface InterlisTransferWriter extends AutoCloseable {
 
 # 13. Hop Transform Pattern
 
-Alle Transforms folgen dem im bestehenden GeoTools-Plugin etablierten Hop-2.18-Muster:
+Alle Transforms folgen dem im bestehenden GeoTools-Plugin etablierten Hop-2.19-Muster:
 
 ```java
 @Transform(...)
@@ -1010,61 +990,18 @@ public class XDialog extends BaseTransformDialog {
 
 ## 14.2 `InterlisInputMeta`
 
-Persistente Felder:
-
-```java
-@HopMetadataProperty private String fileName;
-@HopMetadataProperty private String modelNames;
-@HopMetadataProperty private String modelDirectories;
-@HopMetadataProperty private String metaConfig;
-@HopMetadataProperty private String className;
-@HopMetadataProperty private String selectedFieldsJson;
-@HopMetadataProperty private boolean includeTid;
-@HopMetadataProperty private boolean includeBid;
-@HopMetadataProperty private boolean includeClassName;
-@HopMetadataProperty private boolean includeTopicName;
-@HopMetadataProperty private String singleStructureMode;
-@HopMetadataProperty private String roleMode;
-@HopMetadataProperty private String defaultSrid;
-@HopMetadataProperty private boolean validate;
-@HopMetadataProperty private String validationConfig;
-```
-
-Methoden:
-
-```java
-public ProjectionOptions projectionOptions();
-public InterlisModelRequest modelRequest(IVariables variables);
-public Optional<Integer> resolvedDefaultSrid(IVariables variables);
-```
-
-### `getFields(...)`
-
-Algorithmus:
+Persistente Konfiguration entspricht dem aktuellen Meta:
 
 ```text
-resolve file/model/class config
-if unresolved variables prevent model load:
-    return without throwing design-time fatal error
-load model context
-find class descriptor
-create RowSchemaPlan
-append each plan.valueMeta to rowMeta
+fileName, modelNames, modelDirectories, className
+includeTid=true, includeBid=true
+includeClassName=false, includeTopicName=false, includeOperation=false
+defaultSrid="", keepSourceObject=false
+sourceObjectFieldName="_ili_source_object"
+bufferMemoryMiB=64, spillDirectory="", maxSpillMiB=0
 ```
 
-Wichtig: Design-Time-Probe-Fehler sollen wie beim GeoTools-Dialog die Pipeline-Datei nicht unöffnbar machen. Runtime bleibt strict.
-
-### `check(...)`
-
-Prüft:
-
-- Datei gesetzt.
-- Format unterstützt.
-- Modell auflösbar, soweit Variablen resolved.
-- Klasse existiert.
-- keine Output-Namenskollision.
-- ausgewählte Properties existieren.
-- Geometry Value Type verfügbar.
+`getFields(...)` und Laufzeit verwenden denselben zentralen Schema-/Mappingplan. Der Plan enthält keine Skalarfelder für primitive oder strukturierte Sammlungen. Probing-Fehler werden als Designzeit-Diagnose behandelt; Laufzeitfehler bleiben strikt. Das Input-Meta bietet keine Inline-Validierung, MetaConfig, editierbare Feldprojektion, Struktur- oder Rollenpolicy.
 
 ## 14.3 `InterlisInputData`
 
@@ -1073,7 +1010,7 @@ public class InterlisInputData extends BaseTransformData {
   boolean initialized;
   InterlisTransferReader reader;
   InterlisModelContext modelContext;
-  RowSchemaPlan schemaPlan;
+  InterlisRowMappingPlan schemaPlan;
   IRowMeta outputRowMeta;
   IomToRowMapper mapper;
   long readObjects;
@@ -1100,17 +1037,11 @@ loop:
         else:
             continue
 
-    if event is DELETE_OBJECT and configured policy emits it:
-        if matching class:
-            map technical fields; user fields null as appropriate
-            putRow(...)
-            return true
-
     otherwise:
         continue
 ```
 
-Dadurch liest der Transform streaming und erzeugt pro `processRow` maximal eine Output-Row.
+Objektoperation DELETE wird innerhalb des OBJECT-Pfads behandelt. Bei erforderlicher Assoziationsauflösung puffert die Runtime den Basket und gibt nach dessen Abschluss einzelne projizierte Zeilen aus; siehe Ressourcen-Lebenszyklus.
 
 # 15. Transform: INTERLIS Output
 
@@ -1120,21 +1051,14 @@ Komfort-Writer für einen normalen typisierten Input-Stream und genau eine konfi
 
 ## 15.2 Meta
 
-```java
-fileName
-modelNames
-modelDirectories
-metaConfig
-className
-basketPolicy
-basketId
-basketIdField
-objectIdField
-operationField
-validate
-validationConfig
-overwrite
+```text
+fileName, modelNames, modelDirectories, className
+basketId="b1", basketIdField="_ili_bid", objectIdField="_ili_tid"
+operationField="", sourceObjectField="", overwrite=false
+validateBeforePublish=false, validationConfigFile=""
 ```
+
+Keine UUID-Erzeugung, Basket-Policy oder Inline-Zeilenvalidierung. Feldbindung erfolgt einmalig anhand der erwarteten Mappingnamen.
 
 ## 15.3 `getFields`
 
@@ -1145,16 +1069,16 @@ Output Writer verändert das Schema normalerweise nicht.
 Beim ersten Input-Row:
 
 1. Modell laden.
-2. RowSchemaPlan für Write erstellen.
+2. InterlisRowMappingPlan für Write erstellen.
 3. Binding gegen `getInputRowMeta()` erstellen.
-4. Writer öffnen.
+4. Writer auf eindeutiger temporärer Zieldatei öffnen.
 5. StartTransfer schreiben.
 6. Basket-Verwaltung initialisieren.
 
 Pro Row:
 
 1. BID bestimmen.
-2. Wenn Basket wechselt und Policy dies erlaubt: bisherigen Basket schliessen, neuen öffnen.
+2. Wenn BID wechselt: bisherigen Basket schliessen, neuen öffnen; bereits abgeschlossene BIDs ablehnen.
 3. Row -> Envelope.
 4. Object/Delete schreiben.
 
@@ -1163,6 +1087,8 @@ Am Ende:
 1. Basket schliessen.
 2. Transfer schliessen.
 3. Writer close.
+4. Optional vollständige temporäre Datei validieren und Ausgabe vorbereiten.
+5. Am erfolgreichen Pipeline-Ende über `InterlisPipelineCompletion` veröffentlichen.
 4. optional Validierung durchführen bzw. integrierten Validator finalisieren.
 
 ## 15.5 Sortieranforderung für mehrere Baskets
@@ -1177,6 +1103,52 @@ later after another basket was closed, the transform fails.
 ```
 
 Eine spätere buffered mode ist möglich, aber nicht Default.
+
+## 15.5 Rückschreiben und Envelope-Projektion
+
+- `InterlisFieldPlan.structurePath` enthält die vorab aufgelösten Einzelstrukturen.
+  Das Schreiben benötigt keine erneute Modellnavigation pro Row.
+- Ein Quellobjekt wird tief kopiert. Projizierte primitive Werte, Geometrien und
+  Referenzen ersetzen den bisherigen Inhalt; `null` entfernt ihn. TID, BID und
+  Reihenfolge einer Referenz werden gemeinsam erneuert. BID/Reihenfolge ohne
+  Referenz-TID sind ungültig. Wiederholtes Overlay erzeugt keine Duplikate.
+- Optionale Einzelstrukturen verschwinden, wenn sie nach dem Overlay vollständig
+  leer sind. Nicht projizierte Inhalte, insbesondere gesammelte BAG/LIST-Werte,
+  bleiben erhalten. Pflichtfelder werden am fertig aufgebauten Objekt geprüft.
+  DELETE enthält nur Identität/Operation und erzeugt keine zusätzlichen Links.
+- `InterlisOutputBindings` bindet fachliche Felder nach Namen und Identitäten
+  nach Konfiguration. `objectIdField` gewinnt vor einem zusätzlichen `_ili_tid`.
+  Ein leeres `basketIdField` verwendet den konstanten Basket; ein benanntes Feld
+  muss existieren. Null-/Leerwerte verwenden den konstanten Ersatzwert.
+  Nicht identifizierbare Assoziationen benötigen kein TID-Feld. Runtime, `check()`
+  und Mapping-Anzeige verwenden diese Bindung.
+- `InterlisObjectToRowOutputPlan` bestimmt Designzeit-Metadaten und Runtime-Werte.
+  Append erhält Eingabefelder und ihre Reihenfolge. Kompatible technische
+  Identitätsfelder werden einmalig übernommen, fachliche Namenskollisionen und
+  inkompatible technische Typen sind Konfigurationsfehler. Gepufferte und direkte
+  Projektion verwenden denselben Aufbau; ohne Append bleibt nur die Klassenprojektion.
+
+## 15.6 Weitere Runtime-Verträge
+
+- `InterlisEnvelopeBindings` bindet Eingangsmetadaten einmalig; unbekannte Events,
+  Operationen, Basket-Werte und falsche Feldtypen sind Fehler mit Zeilenkontext.
+- `InterlisBasketProjectionBuffer` enthält genau einen Basket samt benötigten Links;
+  Input und Object to Row verwenden dieselbe Komponente. Drain leert auch einen
+  Basket, der ausschliesslich Links enthält. Die P1-Kopienregeln bleiben bestehen.
+- Writer sind einmalig verwendbar. Eventmodus verlangt einen vollständigen Transfer
+  einschliesslich END_TRANSFER; EOF ersetzt keinen Abschluss. Flush- und Close-Fehler
+  werden weitergereicht, Close wird auch nach Flush-Fehler versucht. Beim Aufräumen
+  bleibt der ursprüngliche Fehler erhalten; zusätzliche Fehler werden angehängt.
+- Objektmodus verlangt zusammenhängende Baskets und konsistente Topic-/Metadaten.
+- Im Eventmodus muss der Basket-Kontext einer Objektzeile zum geöffneten Basket
+  passen; widersprüchliche BID, Topic oder Basket-Metadaten werden abgelehnt.
+- Structure Collect liest Restkinder auch bei leerem Parent-Stream. Je nach Regel
+  folgt ein Fehler oder vollständiges Leeren mit zusammengefasster Skip-Meldung.
+- DATE und DATETIME werden strikt mit `uuuu` geparst. DATE bleibt UTC-Mitternacht.
+  DATETIME hält die JVM-Zeitzone pro Codec fest, lehnt Sommerzeitlücken ab und nutzt
+  bei Überlappung den früheren Offset. Präzision über Millisekunden wird abgelehnt.
+- Enumerationen umfassen Modell-/Topic-Domains sowie Klassen-, Struktur- und
+  Assoziationsattribute. Benannte Domains haben Vorrang vor konsumierenden Attributen.
 
 # 16. Transform: INTERLIS Transfer Input
 
@@ -1201,6 +1173,11 @@ _ili_operation    String
 _ili_object       INTERLIS Object
 _ili_line         Integer
 _ili_column       Integer
+_ili_basket_consistency String
+_ili_basket_kind        String
+_ili_basket_start_state String
+_ili_basket_end_state   String
+_ili_transfer_metadata String
 ```
 
 `getFields` braucht daher kein konkretes Class-Schema.
@@ -1230,12 +1207,12 @@ Benötigt ein `_ili_object`-Feld vom Typ `INTERLIS Object` oder explizit ausgew�
 ```text
 objectFieldName
 className
-model configuration override optional
-projection options
-selected fields
+modelNames, modelDirectories
+includeTid, includeBid, appendEnvelopeFields, defaultSrid
+bufferMemoryMiB, spillDirectory, maxSpillMiB
 ```
 
-Normalerweise ist der Model Context bereits im Envelope semantisch identifizierbar, aber Design-Time-Schema benötigt eine explizite Model-Konfiguration oder eine zuverlässig auflösbare Transfer-Datei.
+Design-Time und Laufzeit benötigen eine explizite Modellkonfiguration. Ein Envelope-Objektfeld allein liefert kein kompiliertes Klassenmapping.
 
 ## 17.3 getFields
 
@@ -1289,7 +1266,7 @@ Verantwortlich für:
 OBJECT-Zeilen ab (Basket-Gruppierung über `_ili_bid`, explizite Event-Zeilen sind
 ein Fehler); Event Mode schreibt die explizite Sequenz (State-Machine des
 Writers prüft die Reihenfolge). Operationen werden auf das IOM-Objekt übertragen;
-explizite Modellnamen sind Pflicht (der Envelope-Stream trägt keinen Header).
+explizite Modellnamen sind Pflicht; Headersemantik wird getrennt im Envelope-Metadatenfeld transportiert.
 
 ### 19.1 State machine
 
@@ -1336,14 +1313,14 @@ B. `INTERLIS Structure Explode` liest direkt aus einem parallel weitergereichten
 („Keep source object for Structure Explode“) ein technisches Feld
 `_ili_source_object` vom Typ `ValueMetaInterlisObject` hinzu
 (`@ValueMetaPlugin`, `classLoaderGroup="sogeo-geometry"`, Phase-5-AP-5.2 wird damit
-vorgezogen). Das Feld ist im normalen GUI unter „Advanced technical fields“
+vorgezogen). Das Feld ist über die Checkbox „Keep source object for Structure Explode“
 sichtbar; es ist ein Implementierungsdetail des Struktur-Pipelines, kein
 Benutzerdatentyp (`getString()` = XML nur für Debug/Preview, keine verlustbehaftete
 String-Konvertierung).
 
 Damit bleibt der Parent-Stream einfach, ohne alle Strukturen in Java-Listen zu packen.
 
-Hinweis Hop 2.18: Wenn dieselbe Quelle zwei Ausgänge speist (Input → Explode und
+Hinweis Hop 2.19.0: Wenn dieselbe Quelle zwei Ausgänge speist (Input → Explode und
 Input → Collect), verteilt Hop standardmässig Round-Robin
 (`TransformMeta.distributes = true`). Für den Fan-out muss `distributes=false`
 gesetzt sein (GUI: Transform-Eigenschaften), sonst wird der Stream aufgeteilt.
@@ -1357,7 +1334,8 @@ structureAttributePath
 includeParentFields[]
 parentKeyFieldName
 indexFieldName
-flattenNestedSingleStructures
+parentBidField, emitParentBid, parentBidKeyFieldName
+emitIndexForBag, keepChildSourceObject
 selectedChildFields[]
 ```
 
@@ -1365,9 +1343,11 @@ selectedChildFields[]
 
 ```text
 _ili_parent_tid   String
-_ili_parent_key   String optional
+_ili_parent_bid   String if emitParentBid
 _ili_index        Integer for LIST, optional for BAG
-<selected child fields...>
+_ili_value        typed primitive OR <selected structure child fields...>
+_ili_child_object InterlisObject if structure children and keepChildSourceObject
+<copied parent fields...>
 ```
 
 Option `include parent fields` kann z.B. BFS-Nummer mitkopieren, um downstream Joins zu vereinfachen.
@@ -1398,45 +1378,13 @@ else:
 
 # 21. Transform: INTERLIS Structure Collect
 
-Hop-Transforms mit zwei Input-Streams benötigen eine klare Semantik. Für Phase 3 wird der Transform als **sorted merge/streaming collect** spezifiziert.
+Eltern-/Kind-Eingänge werden mit `FairInputReader` koordiniert. Ausstehende Eltern und die aktuelle Kindgruppe nutzen Spill-Speicher. Beide Ströme müssen nach Elternidentität aufsteigend sortiert sein, mit neuen Defaults nach `(BID, Elternschlüssel)`. Strikte LIST-Indizes verlangen zusätzlich eine aufsteigende, lückenlose Folge; sonst wird innerhalb der Gruppe sortiert.
 
-Inputs müssen nach Parent-Key sortiert sein:
+Meta enthält Modellquelle/Klasse, `structureAttributePath`, `sourceObjectField`, `selectedChildFields`, die beiden Eingangstransforms, `parentKeyField`, `childParentKeyField`, `childIndexField`, `parentBidField`, `childParentBidField`, `collectMode`, `strictOrdering`, `failOnDuplicateIndex`, `failOnChildWithoutParent` und Pufferoptionen.
 
-```text
-Parent stream: _ili_tid ascending
-Child stream:  _ili_parent_tid ascending, _ili_index ascending
-```
+Neue Konfigurationen verwenden PRESERVE und BID-Felder; alte XML-Dateien laden REBUILD und die bisherigen Schlüssel. PRESERVE prüft und kopiert `_ili_child_object`, REBUILD erzeugt das Strukturkind aus gewählten Feldern. Primitive Kindzeilen verwenden `_ili_value`. Kardinalität wird nach dem Sammeln geprüft.
 
-Meta:
-
-```text
-parentInputTransform
-childInputTransform
-parentKeyField
-childParentKeyField
-indexField
-structureAttributePath
-strictOrdering
-failOnDuplicateIndex
-failOnChildWithoutParent
-sourceObjectField
-```
-
-Output kann:
-
-- Envelope-Parent mit eingesammelter Struktur sein, oder
-- typed Parent + aktualisiertes `_ili_source_object`.
-
-**Festlegung (Phase 3 umgesetzt):** typed Parent + aktualisiertes
-`_ili_source_object`. Die Envelope-Ausgabe braucht Row-to-Object/Transfer-Output
-und folgt mit Phase 5; bis dahin schreibt der erweiterte `INTERLIS Output`
-(Overlay auf den Träger) den Roundtrip.
-
-Die gesammelte Struktur **ersetzt** immer den Strukturinhalt des Trägers: der
-Child-Strom ist das Ergebnis der Downstream-Transformation, von Filtern entfernte
-Kinder dürfen nicht aus dem Träger wieder auftauchen.
-
-Eine alternative buffered Implementierung kann später hinzukommen.
+Ausgabe ist die Elternzeile mit aktualisiertem `_ili_source_object`. Collect ersetzt die gesamte gewählte Sammlung; gefilterte Kinder dürfen nicht aus dem Elternträger wieder auftauchen. Row to Object beziehungsweise typisierter Output übernimmt den geänderten Carrier als Overlay.
 
 # 22. Transform: INTERLIS Role Join
 
@@ -1455,7 +1403,7 @@ Meta kennt:
 ```text
 mainInputTransform
 lookupInputTransform
-rolePath (Rolle der Main-Klasse)
+mainClassName, roleName (Rolle der Main-Klasse)
 mainReferenceField      (Default <role>_ref)
 lookupTidField          (Default _ili_tid)
 lookupFields[]          (Default: alle Attribute der Zielklasse)
@@ -1465,24 +1413,9 @@ failOnDuplicateTid
 maxLookupRows
 ```
 
-Data:
+Runtime verwendet einen Spill-Lookup statt einer vollständigen Heap-Map sowie einen Spill-Puffer für ausstehende Hauptzeilen. `FairInputReader` bedient beide Eingänge abwechselnd; die erste Ausgabe wartet auf das vollständige Lookup. `maxLookupRows=500000` zählt Eingangszeilen, 0 bedeutet unbegrenzt. Überschreitung und negative Limits scheitern.
 
-```java
-Map<String, Object[]> lookupByTid;
-IRowMeta mainMeta;
-IRowMeta lookupMeta;
-IRowMeta outputMeta;
-int mainRefIndex;
-int lookupTidIndex;
-int[] copiedLookupIndexes;
-```
-
-Lookup wird einmal geladen. Bei Überschreitung `maxLookupRows` wird mit klarer Meldung abgebrochen.
-
-Die Rolle wird über das Modell aufgelöst (Main-Klasse → Rolle → Zielklasse),
-`getFields()` liefert die getypten Zielklassen-Felder (Geometrie als Hop-Geometry).
-Hinweis: Hop 2.18 hat auf `IValueMeta` keinen Attribute-Kanal; die
-INTERLIS-Rollenmetadaten (ili.kind/target/min/max) leben im Plan/Deskriptor.
+Die Rolle wird in der zentralen Modellanalyse aufgelöst. `getFields()` und Laufzeit verwenden dieselbe Auswahl typisierter Zielfelder. Konfigurationsnamen sind `mainClassName` und `roleName`; ein gesonderter `rolePath` ist kein Meta-Feld.
 
 # 23. Transform: INTERLIS Validate
 
@@ -1496,7 +1429,7 @@ Meta:
 ```text
 fileName
 modelNames/modelDirectories
-configFile          (lokale TOML-Config; ilidata/MetaConfig eingeschränkt)
+configFile          (lokale INI-Config; ilidata/MetaConfig eingeschränkt)
 validateMultiplicity
 maxErrors
 stopOnFirstError
@@ -1508,7 +1441,7 @@ Output RowMeta siehe Architektur-Dokument (`InterlisValidationRowLayout`).
 
 Der vollständige Transfer wird validiert; nach `EndTransfer` folgt genau ein
 expliziter `doSecondPass()` (automatischer Zweitdurchlauf deaktiviert). Die
-explizite TOML-Konfiguration bleibt wirksam. Referenzziele, Vorwärtsreferenzen
+explizite INI-Konfiguration bleibt wirksam. Referenzziele, Vorwärtsreferenzen
 und objektübergreifende Constraints werden dadurch geprüft.
 
 Runtime-Zustände: Prüfung → Diagnoseausgabe → Abschluss. Der Meldungsadapter
@@ -1523,10 +1456,7 @@ weitere Zustellung garantieren.
 
 Reader und Validator werden auf jedem Ausgangspfad geschlossen. Fachliche
 Fehler werfen keine Exception und rufen kein `stopAll()` auf. Bei
-`failOnErrors=true` werden zuerst alle Diagnosen ausgegeben. Weil Hop 2.18.1
-auch beim normalen Transform-Abschluss mit positivem Fehlerzähler die übrigen
-Transforms stoppt, setzt ein Pipeline-Abschlusslistener den Fehlerzähler erst
-nach dem Abschluss aller Verbraucher. Technische Fehler bleiben unmittelbare
+`failOnErrors=true` werden zuerst alle Diagnosen ausgegeben. `InterlisPipelineCompletion` berücksichtigt diese Fehler nach dem Abschluss aller Verbraucher und vor jeder vorbereiteten Veröffentlichung. Technische Fehler bleiben unmittelbare
 Pipelinefehler. Das Fehlerschema bleibt bei 13 Feldern.
 
 ## 23.2 Stream mode später
@@ -1543,9 +1473,8 @@ Inputloser Transform (Phase 6 umgesetzt).
 Meta:
 
 ```text
-model configuration
-enumerationFilter optional
-includeNonLeafValues
+modelNames
+modelDirectories
 ```
 
 Output (umgesetzte Feldnamen, siehe `InterlisEnumerationsMeta`):
@@ -1644,21 +1573,17 @@ Runtime:
 
 # 28. Metadata Persistence
 
-Persistente Einstellungen werden mit `@HopMetadataProperty` gespeichert. Komplexe Listen können als verschachtelte Bean-Properties oder, wenn Hop-Metadataserialisierung dies nicht sauber abbildet, als versioniertes JSON-Feld gespeichert werden.
+Persistente Einstellungen werden mit `@HopMetadataProperty` gespeichert.
+`selectedChildFields` ist eine Liste von Attributpfaden in Explode/Collect; ein
+`selectedFieldsJson`-Feld oder eine editierbare Klassenfeldliste existiert im
+aktuellen Plugin nicht.
 
-Für `selectedFieldsJson` gilt:
-
-```json
-{
-  "version": 1,
-  "fields": [
-    {"path":"Name","output":"Name","enabled":true},
-    {"path":"Address.Street","output":"Address_Street","enabled":true}
-  ]
-}
-```
-
-Versionierung ist Pflicht, damit spätere GUI-Erweiterungen alte `.hpl`-Dateien weiter öffnen können.
+Neue Explode-Konfigurationen aktivieren `keep_child_source_object`; neue Collect-
+Konfigurationen verwenden `collect_mode=PRESERVE`, `parent_bid_field=_ili_bid` und
+`child_parent_bid_field=_ili_parent_bid`. Die `loadXml`-Kompatibilität behandelt
+fehlende neue Optionen ausdrücklich als bisherige Semantik: Explode ohne
+Kindträger, Collect REBUILD ohne BID-Schlüssel. Speichern und erneutes Laden müssen
+diese Unterscheidung sowie die Feldprojektion und Pufferoptionen erhalten.
 
 # 29. `check(...)`-Strategie aller Meta-Klassen
 
@@ -1676,7 +1601,7 @@ Beispiele:
 - ERROR: Output-Feldnamen kollidieren.
 - ERROR: `LIST OF` wurde als Flatten angefordert.
 - WARNING: Default SRID gesetzt, aber Modell liefert kein bestätigtes CRS Mapping.
-- WARNING: Validate aus.
+- INFO: Validierung erfolgt über separaten Validate-Transform oder Writer-Option.
 - WARNING: Role Join lookup limit sehr gross.
 - OK: Model loaded, class resolved, 14 fields projected.
 
@@ -1715,6 +1640,65 @@ pipeline stop -> dispose closes reader/writer
 ```
 
 `dispose()` muss idempotent sein.
+
+## 31.1 Puffer- und Ausgabe-Lebenszyklus
+
+`SpillStore<T>` bietet Sequenz, FIFO, eindeutigen Lookup und stabile Sortierung
+über einen privaten Record-Codec. Speicherpayloads und Indizes wechseln gemeinsam
+in eine temporäre H2-Datenbank. `SpillOptions` gehört dem Transform; Teilpuffer
+teilen sich dessen Disk-Obergrenze und erhalten Teilbudgets des Pufferspeichers.
+Defaults: `bufferMemoryMiB=64`, `spillDirectory=""` (Java-Temp), `maxSpillMiB=0`
+(unbegrenzter Diskbedarf). Die diskbasierte Iteration verwendet einzelne Datensätze,
+keine vollständigen Resultsets oder Listen von Datensatz-IDs. Schliessen entfernt
+DB-Dateien und gibt deren Budget frei. Das Budget begrenzt Puffer, nicht die Grösse
+eines einzelnen IOM-Objekts oder dessen bearbeiteten Ergebnisses.
+
+Der Core kennt `RecordCodec`, aber keine Hop-APIs. `HopRowCodec` nutzt Hops binäre
+Value-Meta-Konverter und erhält ARC, XYZ, SRID, Referenzmetadaten und Carrier.
+`BasketEntryCodec` kombiniert den Envelope mit dem binären Kontext der Hop-Zeile.
+Input/Object to Row halten einen Basket bei erforderlicher Linkauflösung zurück,
+projizieren nach dessen Abschluss aber jeweils nur eine Ergebniszeile. Der
+Association-Index trennt Rolle und Besitzerende; widersprüchliche Linkobjekte
+werden abgelehnt. `Batch` ist ein explizit zu schliessender Ressourcenbesitzer.
+
+`FairInputReader` bedient beide begrenzten Rowsets im Wechsel. Während Role Join
+auf das Ende des Lookup-Stroms wartet, puffert er Hauptzeilen über denselben
+Spill-Speicher. Collect puffert ausstehende Eltern und die aktuelle Kindgruppe;
+LIST-Sortierung erfolgt auf Disk, falls das Budget überschritten ist. Die
+Eingangsströme bleiben nach Elternidentität zu sortieren. Explode liefert Kinder
+über einen Cursor einzeln. Das bestehende Role-Join-Limit bleibt 500'000
+Eingangszeilen; 0 bedeutet unbegrenzt, negative Werte sind Fehler.
+
+Beide Hop-Writer verwenden `PreparedXtfOutput`: eindeutige temporäre Datei im
+Zielverzeichnis, vollständiges Transferende, erfolgreiches Schliessen und optional
+Vollvalidierung, dann Vorbereitung. `InterlisPipelineCompletion` veröffentlicht
+am Pipeline-Ende erst nach allen aufgeschobenen Validate-Fehlern und nur ohne
+Stop oder Transformfehler. Fehler beim Veröffentlichen zählen als Pipelinefehler.
+Überschreiben nutzt ATOMIC_MOVE/REPLACE_EXISTING. Ohne Überschreiben wird ein
+Hardlink atomar mit CREATE_NEW-Semantik angelegt; ein konkurrierendes Ziel wird
+nicht ersetzt. Eine nicht unterstützte Operation scheitert ohne unsicheren
+Fallback. Die Garantie gilt pro Datei; mehrere Ziele sind keine gemeinsame
+Dateisystemtransaktion.
+
+`validateBeforePublish=false` bleibt Default. Eine optionale Konfigurationsdatei
+und `InterlisValidationService` ermöglichen Vollvalidierung einschliesslich zweitem
+Durchlauf. Fehler oder unvollständige Validierung verhindern die Veröffentlichung.
+Der Validate-Transform verwendet denselben Dienst und liefert vor dem Pipelinefehler
+weiterhin alle ausgewählten Diagnosezeilen. Wiederholte BIDs werden zentral im
+Core-Writer abgelehnt, auch in Objekt- und Ereignismodus.
+
+Veröffentlichungsfehler werden dem Writer zugerechnet und protokolliert. Der
+Abschluss-Listener wirft dabei keine Exception: Hop 2.19.0 signalisiert
+`waitUntilFinished()` erst nach erfolgreich durchlaufenen Abschluss-Listenern.
+Fehlerzähler und Cleanup müssen daher vor dessen regulärer Rückkehr gesetzt sein.
+
+Für das gepinnte iox-ili 1.24.4 bestehen zwei eng begrenzte Adapter: Der geschützte
+StAX-Ausgang des XTF-2.4-Writers ergänzt ausgelassene externe BIDs anhand des
+aktuellen IOM-Referenzobjekts. Der Reader und Validator entfernen das genau
+identifizierte, zusätzlich erzeugte leere REF-Mitglied einer eigenständigen
+Assoziationsrolle mit BID. Primitive Referenzsammlungen und beliebige fehlerhafte
+Objekte werden dabei nicht normalisiert. Modell- und Transferinterpretation
+verbleiben bei ili2c/iox-ili; die Bibliotheks-Pins bleiben unverändert.
 
 # 31a. Threading-Policy (Phase 8)
 
@@ -1788,52 +1772,6 @@ Bei Schema-Änderungen braucht es Migration in Meta-Klassen oder tolerant lesbar
 - Keine SWT-Abhängigkeit in zentralen Mappern.
 
 
-# P1-Verträge für Rückschreiben und Envelope-Projektion (2026-09-09)
-
-- `InterlisFieldPlan.structurePath` enthält die vorab aufgelösten Einzelstrukturen.
-  Das Schreiben benötigt keine erneute Modellnavigation pro Row.
-- Ein Quellobjekt wird tief kopiert. Projizierte primitive Werte, Geometrien und
-  Referenzen ersetzen den bisherigen Inhalt; `null` entfernt ihn. TID, BID und
-  Reihenfolge einer Referenz werden gemeinsam erneuert. BID/Reihenfolge ohne
-  Referenz-TID sind ungültig. Wiederholtes Overlay erzeugt keine Duplikate.
-- Optionale Einzelstrukturen verschwinden, wenn sie nach dem Overlay vollständig
-  leer sind. Nicht projizierte Inhalte, insbesondere gesammelte BAG/LIST-Werte,
-  bleiben erhalten. Pflichtfelder werden am fertig aufgebauten Objekt geprüft.
-  DELETE enthält nur Identität/Operation und erzeugt keine zusätzlichen Links.
-- `InterlisOutputBindings` bindet fachliche Felder nach Namen und Identitäten
-  nach Konfiguration. `objectIdField` gewinnt vor einem zusätzlichen `_ili_tid`.
-  Ein leeres `basketIdField` verwendet den konstanten Basket; ein benanntes Feld
-  muss existieren. Null-/Leerwerte verwenden den konstanten Ersatzwert.
-  Nicht identifizierbare Assoziationen benötigen kein TID-Feld. Runtime, `check()`
-  und Mapping-Anzeige verwenden diese Bindung.
-- `InterlisObjectToRowOutputPlan` bestimmt Designzeit-Metadaten und Runtime-Werte.
-  Append erhält Eingabefelder und ihre Reihenfolge. Kompatible technische
-  Identitätsfelder werden einmalig übernommen, fachliche Namenskollisionen und
-  inkompatible technische Typen sind Konfigurationsfehler. Gepufferte und direkte
-  Projektion verwenden denselben Aufbau; ohne Append bleibt nur die Klassenprojektion.
-
-## P2: Runtime-Verträge
-
-- `InterlisEnvelopeBindings` bindet Eingangsmetadaten einmalig; unbekannte Events,
-  Operationen, Basket-Werte und falsche Feldtypen sind Fehler mit Zeilenkontext.
-- `InterlisBasketProjectionBuffer` enthält genau einen Basket samt benötigten Links;
-  Input und Object to Row verwenden dieselbe Komponente. Drain leert auch einen
-  Basket, der ausschliesslich Links enthält. Die P1-Kopienregeln bleiben bestehen.
-- Writer sind einmalig verwendbar. Eventmodus verlangt einen vollständigen Transfer
-  einschliesslich END_TRANSFER; EOF ersetzt keinen Abschluss. Flush- und Close-Fehler
-  werden weitergereicht, Close wird auch nach Flush-Fehler versucht. Beim Aufräumen
-  bleibt der ursprüngliche Fehler erhalten; zusätzliche Fehler werden angehängt.
-- Objektmodus verlangt zusammenhängende Baskets und konsistente Topic-/Metadaten.
-- Im Eventmodus muss der Basket-Kontext einer Objektzeile zum geöffneten Basket
-  passen; widersprüchliche BID, Topic oder Basket-Metadaten werden abgelehnt.
-- Structure Collect liest Restkinder auch bei leerem Parent-Stream. Je nach Regel
-  folgt ein Fehler oder vollständiges Leeren mit zusammengefasster Skip-Meldung.
-- DATE und DATETIME werden strikt mit `uuuu` geparst. DATE bleibt UTC-Mitternacht.
-  DATETIME hält die JVM-Zeitzone pro Codec fest, lehnt Sommerzeitlücken ab und nutzt
-  bei Überlappung den früheren Offset. Präzision über Millisekunden wird abgelehnt.
-- Enumerationen umfassen Modell-/Topic-Domains sowie Klassen-, Struktur- und
-  Assoziationsattribute. Benannte Domains haben Vorrang vor konsumierenden Attributen.
-
 ## Einheitliche Feldbindung und Pufferfreigabe
 
 `InterlisFieldBinding` und `InterlisRowBindings` im Transform-Modul lösen Namen,
@@ -1863,68 +1801,4 @@ Nicht verfügbare Schemata erzeugen eine Designzeit-Diagnose; Runtime bindet die
 wirklichen Metadaten jedes Streams. Unaufgelöste Modellproben verhindern nicht
 das Öffnen eines Dialogs.
 
-Der Basket-Puffer hält nur den aktiven Basket. `drain()` liefert einen unabhängigen
-Batch; dessen Lookup hält keine Referenz auf den veränderlichen Puffer. `clear()`
-verwirft Inhalte und Kapazitäten idempotent. Input und Object to Row geben Puffer
-und Ausgabeiteratoren bei EOF beziehungsweise in `dispose()` auch nach Fehler und
-Benutzerabbruch frei. Der Speicherbedarf hängt vom grössten Basket und ausstehenden
-Ausgabezeilen ab; es gibt kein neues Produktionslimit oder Spill-to-disk.
-
-## Prio 1/2: Puffer- und Ausgabe-Lebenszyklus
-
-`SpillStore<T>` bietet Sequenz, FIFO, eindeutigen Lookup und stabile Sortierung
-über einen privaten Record-Codec. Speicherpayloads und Indizes wechseln gemeinsam
-in eine temporäre H2-Datenbank. `SpillOptions` gehört dem Transform; Teilpuffer
-teilen sich dessen Disk-Obergrenze und erhalten Teilbudgets des Pufferspeichers.
-Defaults: `bufferMemoryMiB=64`, `spillDirectory=""` (Java-Temp), `maxSpillMiB=0`
-(unbegrenzter Diskbedarf). Die diskbasierte Iteration verwendet einzelne Datensätze,
-keine vollständigen Resultsets oder Listen von Datensatz-IDs. Schliessen entfernt
-DB-Dateien und gibt deren Budget frei. Das Budget begrenzt Puffer, nicht die Grösse
-eines einzelnen IOM-Objekts oder dessen bearbeiteten Ergebnisses.
-
-Der Core kennt `RecordCodec`, aber keine Hop-APIs. `HopRowCodec` nutzt Hops binäre
-Value-Meta-Konverter und erhält ARC, XYZ, SRID, Referenzmetadaten und Carrier.
-`BasketEntryCodec` kombiniert den Envelope mit dem binären Kontext der Hop-Zeile.
-Input/Object to Row halten einen Basket bei erforderlicher Linkauflösung zurück,
-projizieren nach dessen Abschluss aber jeweils nur eine Ergebniszeile. Der
-Association-Index trennt Rolle und Besitzerende; widersprüchliche Linkobjekte
-werden abgelehnt. `Batch` ist ein explizit zu schliessender Ressourcenbesitzer.
-
-`FairInputReader` bedient beide begrenzten Rowsets im Wechsel. Während Role Join
-auf das Ende des Lookup-Stroms wartet, puffert er Hauptzeilen über denselben
-Spill-Speicher. Collect puffert ausstehende Eltern und die aktuelle Kindgruppe;
-LIST-Sortierung erfolgt auf Disk, falls das Budget überschritten ist. Die
-Eingangsströme bleiben nach Elternidentität zu sortieren. Explode liefert Kinder
-über einen Cursor einzeln. Das bestehende Role-Join-Limit bleibt 500'000
-Eingangszeilen; 0 bedeutet unbegrenzt, negative Werte sind Fehler.
-
-Beide Hop-Writer verwenden `PreparedXtfOutput`: eindeutige temporäre Datei im
-Zielverzeichnis, vollständiges Transferende, erfolgreiches Schliessen und optional
-Vollvalidierung, dann Vorbereitung. `InterlisPipelineCompletion` veröffentlicht
-am Pipeline-Ende erst nach allen aufgeschobenen Validate-Fehlern und nur ohne
-Stop oder Transformfehler. Fehler beim Veröffentlichen zählen als Pipelinefehler.
-Überschreiben nutzt ATOMIC_MOVE/REPLACE_EXISTING. Ohne Überschreiben wird ein
-Hardlink atomar mit CREATE_NEW-Semantik angelegt; ein konkurrierendes Ziel wird
-nicht ersetzt. Eine nicht unterstützte Operation scheitert ohne unsicheren
-Fallback. Die Garantie gilt pro Datei; mehrere Ziele sind keine gemeinsame
-Dateisystemtransaktion.
-
-`validateBeforePublish=false` bleibt Default. Eine optionale Konfigurationsdatei
-und `InterlisValidationService` ermöglichen Vollvalidierung einschliesslich zweitem
-Durchlauf. Fehler oder unvollständige Validierung verhindern die Veröffentlichung.
-Der Validate-Transform verwendet denselben Dienst und liefert vor dem Pipelinefehler
-weiterhin alle ausgewählten Diagnosezeilen. Wiederholte BIDs werden zentral im
-Core-Writer abgelehnt, auch in Objekt- und Ereignismodus.
-
-Veröffentlichungsfehler werden dem Writer zugerechnet und protokolliert. Der
-Abschluss-Listener wirft dabei keine Exception: Hop 2.19.0 signalisiert
-`waitUntilFinished()` erst nach erfolgreich durchlaufenen Abschluss-Listenern.
-Fehlerzähler und Cleanup müssen daher vor dessen regulärer Rückkehr gesetzt sein.
-
-Für das gepinnte iox-ili 1.24.4 bestehen zwei eng begrenzte Adapter: Der geschützte
-StAX-Ausgang des XTF-2.4-Writers ergänzt ausgelassene externe BIDs anhand des
-aktuellen IOM-Referenzobjekts. Der Reader und Validator entfernen das genau
-identifizierte, zusätzlich erzeugte leere REF-Mitglied einer eigenständigen
-Assoziationsrolle mit BID. Primitive Referenzsammlungen und beliebige fehlerhafte
-Objekte werden dabei nicht normalisiert. Modell- und Transferinterpretation
-verbleiben bei ili2c/iox-ili; die Bibliotheks-Pins bleiben unverändert.
+Der Basket-Puffer hält nur den aktiven Basket. `Batch` ist ein explizit zu schliessender Besitzer von Spill-Speicher und Iteratoren; Input/Object to Row projizieren daraus eine Zeile nach der anderen. EOF, Fehler, Stop und `dispose()` geben alle Ressourcen frei.

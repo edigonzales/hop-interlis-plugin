@@ -1,265 +1,287 @@
 == Beispiele
 
-Dieses Kapitel enthält sechs vollständige Mini-Tutorials. Jedes Tutorial besteht aus:
+Die neun Tutorials verwenden minimale lokale INTERLIS-2.4-Modelle und Transfers. Alle Fixtures liegen einmalig unter `docs/biblios/user/examples/`; die Testressourcen übernehmen diese Dateien. Die verlinkten Pipelines werden in der installierten Hop-E2E-Suite direkt ausgeführt.
 
-- Einem minimalen INTERLIS-Modell
-- Einem Beispiel-Transfer (XTF)
-- Einer Pipeline-Beschreibung
-- Dem erwarteten Ergebnis
+=== Vorbereitung und Parameter
 
-Die mitgelieferten Modelle und Transfers sind die kanonischen INTERLIS-2.4-Beispiele. Die
-allgemeine Plugin-Unterstützung für XTF 2.3 und XTF 2.4 bleibt davon unberührt.
+Installieren Sie Hop 2.19.0 mit Java 21 und die kompatiblen Plugin-ZIPs. Für GeoPackage ist zusätzlich Vector/Raster erforderlich. Verwenden Sie eine lokale Pipeline-Run-Konfiguration namens `local`, oder ersetzen Sie `-r local` durch deren Namen. Erstellen Sie ein Ausgabeverzeichnis. `+E2E_INPUT_DIR+` bezeichnet das absolute Fixture-Verzeichnis, `+E2E_OUTPUT_DIR+` das Ausgabeverzeichnis. In den neuen Pipelines sind beide als Parameter deklariert; die älteren E2E-Pipelines verwenden dieselben Namen als Hop-Variablen.
 
-[TIP]
-====
-Alle `.ili`- und `.xtf`-Dateien aus diesem Kapitel liegen unter `docs/biblios/user/examples/` und können per `include::` direkt in die Dokumentation eingebunden werden.
-====
+[source,bash]
+----
+mkdir -p /tmp/interlis-tutorial-output
+"$HOP_HOME/hop-run.sh" -r local \
+  -f examples/primitive-collections/primitive-collections.hpl \
+  -p E2E_INPUT_DIR="$PWD/docs/biblios/user/examples" \
+  -p E2E_OUTPUT_DIR=/tmp/interlis-tutorial-output
+----
 
+Starten Sie Folgeläufe erst nach dem erfolgreichen Ende des schreibenden Laufs. Die XTF-Writer veröffentlichen am Pipeline-Ende. Die Tutorials verwenden ausdrücklich `Overwrite existing file`; prüfen Sie den Ausgabepfad vor dem Lauf.
+
+[[beispiel-a]]
 === Beispiel A: Einfaches Lesen
 
-**Ziel**: Eine XTF-Datei mit Gebäuden lesen und alle Attribute sowie die Geometrie ausgeben.
+*Ziel:* Zwei Gebäude mit Name, Art und Geometrie als typisierte Zeilen lesen.
 
-==== Modell
+==== Lokale Fixture
 
 [source,interlis]
 ----
 include::examples/demo-modell.ili[]
 ----
 
-==== Transfer
-
 [source,xml]
 ----
 include::examples/demo-transfer.xtf[]
 ----
 
-==== Pipeline
+==== Pipeline und Ergebnis
 
-1. `INTERLIS Input` mit `demo-transfer.xtf` und Klasse `DemoBodenbedeckung.Bodenbedeckung.Gebaeude`
-2. `Dummy` (zur Inspektion) oder `Table Output` für GeoPackage
+https://github.com/edigonzales/hop-interlis-plugin/blob/main/e2e/pipelines/33-doc-demo-input.hpl[`e2e/pipelines/33-doc-demo-input.hpl`] liest `DemoBodenbedeckung.Bodenbedeckung.Gebaeude` und schreibt `doc-demo.csv`. `Select values` wandelt nur für diese Textausgabe das Geometry-Feld in seine Textdarstellung um.
 
-==== Ergebnis
+[cols="1,1,2,3,2"]
+|===
+| _ili_tid | _ili_bid | Name | Art | Geometrie
+| g1 | b1 | Rathaus | Oeffentliches_Gebaeude | POLYGON
+| g2 | b1 | Migros | Gewerbegebaeude | POLYGON
+|===
 
-[source,text]
-----
-_ili_tid | _ili_bid | Name      | Art                    | Geometrie
----------|----------|-----------|------------------------|------------------
-"g1"     | "b1"     | "Rathaus" | "Oeffentliches_Gebaeude" | [Polygon]
-"g2"     | "b1"     | "Migros"  | "Gewerbegebaeude"       | [Polygon]
-----
+Für GeoPackage verwenden Sie die Pipeline aus <<erste-pipeline,dem Einstiegskapitel>> mit `Vector Writer`.
 
-[NOTE]
-====
-Dieses Beispiel ist identisch mit dem <<erste-pipeline,Einführungs-Tutorial>>. Es dient als Referenz und Ausgangspunkt für komplexere Beispiele.
-====
+=== Beispiel B: Einwertige Struktur abflachen
 
-=== Beispiel B: Struktur flach abbilden (Flatten)
+*Ziel:* Die Struktur `Adresse` als normale Felder bearbeiten.
 
-**Ziel**: Einwertige Struktur (`Adresse`) als geflattete Felder lesen.
-
-==== Modell
+==== Lokale Fixture
 
 [source,interlis]
 ----
 include::examples/struktur-modell.ili[]
 ----
 
-==== Transfer
-
 [source,xml]
 ----
 include::examples/struktur-transfer.xtf[]
 ----
 
-==== Pipeline
+==== Pipeline und Ergebnis
 
-1. `INTERLIS Input` mit `struktur-transfer.xtf` und Klasse `DemoStruktur.Personen.Person`
-2. Struktur `Adresse` wird automatisch flach abgebildet (Default)
+https://github.com/edigonzales/hop-interlis-plugin/blob/main/e2e/pipelines/34-doc-structure-flatten.hpl[`e2e/pipelines/34-doc-structure-flatten.hpl`] liest `DemoStruktur.Personen.Person` und schreibt `doc-struktur.csv`.
 
-==== Ergebnis
+Das Schema ist `+_ili_tid+`, `+_ili_bid+`, `Name`, `Vorname`, `+Adresse_Strasse+`, `+Adresse_Hausnummer+`, `+Adresse_PLZ+`, `+Adresse_Ort+`. Person `p1` hat Hauptstrasse 42, Person `p2` Bahnhofstrasse 1; beide haben PLZ 4500 und Ort Solothurn. Das Abflachen erfolgt im zentralen Klassenmapping.
 
-[source,text]
-----
-_ili_tid | _ili_bid | Name    | Vorname | Adresse_Strasse   | Adresse_Hausnummer | Adresse_PLZ | Adresse_Ort
----------|----------|---------|---------|-------------------|--------------------|-------------|------------
-"p1"     | "b1"     | "Meier" | "Hans"  | "Hauptstrasse"    | "42"               | "4500"      | "Solothurn"
-"p2"     | "b1"     | "Mueller"| "Anna" | "Bahnhofstrasse"  | "1"                | "4500"      | "Solothurn"
-----
+=== Beispiel C: Struktur-LIST auflösen und sammeln
 
-[TIP]
-====
-Durch das Flattening entstehen aus einer verschachtelten Struktur flache Felder. Das ist nützlich, wenn Sie die Daten in ein relationales Zielsystem (z. B. Datenbanktabelle) schreiben möchten.
-====
+*Ziel:* Beide Qualitäten eines Gebäudes über Kindzeilen zurückschreiben.
 
-=== Beispiel C: LIST/BAG auflösen und zusammenführen
-
-**Ziel**: Mehrwertige Struktur (`Qualitaeten`) als Child-Rows lesen, transformieren und zurückschreiben.
-
-==== Modell
+==== Lokale Fixture
 
 [source,interlis]
 ----
 include::examples/liste-modell.ili[]
 ----
 
-==== Transfer
-
 [source,xml]
 ----
 include::examples/liste-transfer.xtf[]
 ----
 
-==== Pipeline
+==== Pipeline und Ergebnis
 
-. **Auflösen:** `INTERLIS Input` mit `liste-transfer.xtf`
-. **Auflösen:** Aktivieren Sie _Keep source object for Structure Explode_ (Advanced)
-. **Auflösen:** `INTERLIS Structure Explode` mit Struktur `Qualitaeten`
-. **Child-Transform:** Filtern Sie z. B. so, dass nur Qualitäten mit Code `Q100` übrig bleiben
-. **Zusammenführen:** `INTERLIS Structure Collect` (Parent-Stream + Child-Stream)
-. **Schreiben:** `INTERLIS Output`
+https://github.com/edigonzales/hop-interlis-plugin/blob/main/e2e/pipelines/35-doc-list-explode-collect.hpl[`e2e/pipelines/35-doc-list-explode-collect.hpl`] verwendet ausdrücklich das Eltern-Quellobjekt, `Keep child source object`, `PRESERVE` und die Schlüssel `+_ili_bid+`/`+_ili_tid+` sowie `+_ili_parent_bid+`/`+_ili_parent_tid+`.
 
-[source,text]
-----
-Input (Parent):
-_ili_tid | Name     | _ili_source_object
-"g1"     | "Rathaus" | [interlis-object]
+Der Input verteilt jede Elternzeile an den Elternzweig und Explode (Hop-Verteilung auf *kopieren*, nicht abwechselnd verteilen). Explode liefert `+_ili_parent_tid+`, `+_ili_parent_bid+`, `+_ili_index+`, `Code`, `Beschreibung`, `Pruefdatum`, `+_ili_child_object+`. Beide Ströme gehen in Collect; Output verwendet dessen `+_ili_source_object+` als Overlay.
 
-Output (Auflösen):
-_ili_parent_tid | _ili_index | Code   | Beschreibung          | Pruefdatum
-"g1"            | 0          | "Q100" | "Brandschutz geprüft"  | 2024-01-15
-"g1"            | 1          | "Q200" | "Statik geprüft"       | 2024-02-20
+[cols="1,1,1,2"]
+|===
+| Eltern-TID | Eltern-BID | Index | Code
+| g1 | b1 | 0 | Q100
+| g1 | b1 | 1 | Q200
+|===
 
-Nach dem Zusammenführen (Parent):
-_ili_tid | Name     | _ili_source_object
-"g1"     | "Rathaus" | [updated-interlis-object]
-----
+`doc-liste-roundtrip.xtf` enthält beide Qualitäten in dieser Reihenfolge. `doc-liste.csv` enthält die Elternfelder `+_ili_tid+`, `+_ili_bid+`, `Name` mit `g1`, `b1`, `Rathaus`.
 
-[IMPORTANT]
-====
-Der `INTERLIS Structure Collect` ersetzt immer den vollständigen Strukturinhalt des Parent-Objekts. Entfernte Child-Rows (z. B. durch Filterung) verschwinden auch im Output.
-====
+*Variante Filtern:* Nur Q100 behalten entfernt Q200 und lässt Index 0 gültig. Nur Q200 behalten erfordert bei strikter Reihenfolge einen neuen Index 0. Bei allgemeineren Filtern nummerieren Sie die verbliebenen Kinder je `(BID, Elternschlüssel)` ab 0 neu. Collect ersetzt die ganze Sammlung und prüft die Modellkardinalität.
 
-=== Beispiel D: Rolle auflösen
+=== Beispiel D: Eine Rolle auflösen
 
-**Ziel**: Eine einfache Rolle (`Gemeinde`) auflösen und Gemeinde-Attribute zum Gebäude-Stream hinzufügen.
+*Ziel:* Gemeindeattribute an ein Gebäude anfügen.
 
-==== Modell
+==== Lokale Fixture
 
 [source,interlis]
 ----
 include::examples/rolle-modell.ili[]
 ----
 
-==== Transfer
-
 [source,xml]
 ----
 include::examples/rolle-transfer.xtf[]
 ----
 
-==== Pipeline
+==== Pipeline und Ergebnis
 
-1. `INTERLIS Input` mit `rolle-transfer.xtf` und Klasse `DemoRolle.Verwaltung.Gebaeude`
-2. `INTERLIS Role Join`:
-   - Main input: Gebaeude-Stream
-   - Lookup input: Gemeinde-Stream (separater `INTERLIS Input`)
-   - Rolle: `Gemeinde`
-   - Felder hinzufügen: `Name`, `BFS_Nummer`
-   - Präfix: `Gemeinde_`
+https://github.com/edigonzales/hop-interlis-plugin/blob/main/e2e/pipelines/36-doc-role-join.hpl[`e2e/pipelines/36-doc-role-join.hpl`] liest Gebäude und Gemeinden in zwei Klasseninputs. Role Join verwendet `+Gemeinde_ref+`, die Lookup-TID `+_ili_tid+`, die Felder `+Name,BFS_Nummer+` und das Präfix `+Gemeinde_+`.
 
-Im 2.4-Transfer ist die einfache Rolle als eingebettete Referenz am Gebäude codiert. Der
-Role-Join verbirgt diese XTF-Darstellung und verwendet stattdessen das Feld `Gemeinde_ref`.
+`doc-rolle.csv` enthält das Gebäude g1/Rathaus mit `+Gemeinde_ref=gem1+`, `+Gemeinde_Name=Solothurn+` und `+Gemeinde_BFS_Nummer=2549+`. Die Lookup-Nutzdaten können auf Disk wechseln. Das Zeilenlimit ist standardmässig 500'000 und verursacht bei Überschreitung einen Fehler; 0 hebt es auf. Die erste Ausgabe wartet bis zum vollständigen Lookup.
 
-==== Ergebnis
+=== Beispiel E: Kreisbögen zurückschreiben
 
-[source,text]
-----
-_ili_tid | Name    | Gemeinde_ref | Geometrie | Gemeinde_Name | Gemeinde_BFS_Nummer
----------|---------|--------------|-----------|---------------|--------------------
-"g1"     | "Rathaus" | "gem1"       | [Polygon] | "Solothurn"   | 2549
-----
+*Ziel:* Einen ARC durch typisierten Input und Output erhalten.
 
-[TIP]
-====
-Der `INTERLIS Role Join` liest den Lookup-Stream (Gemeinden) in einen In-Memory-Cache. Bei mehr als 500'000 Lookup-Rows wird eine Warnung ausgegeben. Für sehr grosse Referenzdaten sollten Sie stattdessen einen `Stream Lookup`-Transform oder eine Datenbank-Join verwenden.
-====
-
-=== Beispiel E: Roundtrip mit Kreisbögen
-
-**Ziel**: Eine XTF-Datei mit Kreisbögen lesen, unverändert durchreichen und wieder schreiben. Die Bögen müssen erhalten bleiben.
-
-==== Modell
+==== Lokale Fixture
 
 [source,interlis]
 ----
 include::examples/bogen-modell.ili[]
 ----
 
-==== Transfer
-
 [source,xml]
 ----
 include::examples/bogen-transfer.xtf[]
 ----
 
-==== Pipeline
+==== Pipeline und Ergebnis
 
-1. `INTERLIS Input` mit `bogen-transfer.xtf`
-2. Optional: `Select values` (nur um zu zeigen, dass nichts verändert wird)
-3. `INTERLIS Output` mit derselben Modell-/Klassen-Konfiguration
-4. `INTERLIS Validate` zum Prüfen der Ausgabe
+https://github.com/edigonzales/hop-interlis-plugin/blob/main/e2e/pipelines/37-doc-arc-roundtrip.hpl[`e2e/pipelines/37-doc-arc-roundtrip.hpl`] liest `DemoBogen.Verkehr.Strassenachse`, verzweigt für die Textinspektion und schreibt `doc-bogen-roundtrip.xtf`. `doc-bogen.csv` enthält die Kurve als `COMPOUNDCURVE` mit `CIRCULARSTRING`.
 
-==== Ergebnis
+Der Bogen beginnt bei (2600000,1200000), läuft über (2600050,1200050) und endet bei (2600100,1200000). Der ARC-Endpunkt wird nicht noch einmal als identischer gerader Punkt angehängt. In der XTF-Ausgabe bleibt ein `arc`-Element im Geometry-Namespace erhalten. XML-Präfixe und Formatierung sind kein Erhaltungsnachweis; Typ und Kontrollpunkte sind es.
 
-[source,bash]
-----
-# 2.4-Ausgabe des Writers (gekürzt):
-<geom:coord><geom:c1>2600000.0</geom:c1><geom:c2>1200000.0</geom:c2></geom:coord>
-<geom:arc><geom:a1>2600050.0</geom:a1><geom:a2>1200050.0</geom:a2>
-  <geom:c1>2600100.0</geom:c1><geom:c2>1200000.0</geom:c2></geom:arc>
-<geom:coord><geom:c1>2600100.0</geom:c1><geom:c2>1200000.0</geom:c2></geom:coord>
-----
+Für eine zusätzliche Ausgabevalidierung aktivieren Sie am Writer `Options… → Validate before publication` oder validieren die veröffentlichte Datei in einem getrennten Lauf.
 
-[IMPORTANT]
-====
-Wenn Bögen linearisiert würden, erschiene statt <geom:arc> eine Serie von <geom:coord>-Punkten.
-Geprüft werden deshalb Namespace, ARC-Typ und die drei Kontrollpunkte; XML-Präfixe und
-Elementreihenfolge sind nicht Teil der Semantik.
-====
+=== Beispiel F: Diagnosezeilen ausgeben
 
-=== Beispiel F: Validierung
+*Ziel:* Eine absichtlich ungültige Messung erkennen und die Diagnose weiterverarbeiten.
 
-**Ziel**: INTERLIS-Daten validieren und Fehler als Rows ausgeben.
-
-==== Modell
+==== Lokale Fixture
 
 [source,interlis]
 ----
 include::examples/validierung-modell.ili[]
 ----
 
-==== Transfer
-
 [source,xml]
 ----
 include::examples/validierung-transfer.xtf[]
 ----
 
-==== Pipeline
+==== Pipeline und Ergebnis
 
-1. `INTERLIS Validate` mit `validierung-transfer.xtf`
-2. `Table Output` (z. B. CSV oder Datenbanktabelle für Fehlerprotokoll)
+https://github.com/edigonzales/hop-interlis-plugin/blob/main/e2e/pipelines/38-doc-validation.hpl[`e2e/pipelines/38-doc-validation.hpl`] verwendet Validate als Dateiinput und `Text file output` für `doc-validierung.csv`. Die Fixture ist absichtlich ungültig. Genau eine ERROR-Diagnose betrifft Klasse `DemoValidierung.Daten.Messung`, TID `m2`, mit `Temperaturbereich` in der Meldung. Die Quellzeile ist vorhanden; der Attributpfad ist bei diesem Klassenconstraint leer.
+
+Die Pipeline lässt `Fail the pipeline when errors were found` aus, damit das Beispiel erfolgreich ein Fehlerprotokoll erzeugt. Für einen produktiven Abnahmelauf kann diese Option aktiviert werden.
+
+[[beispiel-g]]
+=== Beispiel G: Primitive Sammlungen
+
+*Ziel:* Text-LIST, Zahlen-BAG mit Duplikaten sowie Boolean- und Enum-Listen über typisierte Kindzeilen zurückschreiben.
+
+==== Lokale Fixture
+
+[source,interlis]
+----
+include::examples/sammlungen-modell.ili[]
+----
+
+[source,xml]
+----
+include::examples/sammlungen-transfer.xtf[]
+----
+
+==== Pipeline und Felder
+
+https://github.com/edigonzales/hop-interlis-plugin/blob/main/examples/primitive-collections/primitive-collections.hpl[`examples/primitive-collections/primitive-collections.hpl`] führt vier Explode/Collect-Stufen nacheinander aus. Der Input behält `+_ili_source_object+` und kopiert den Elternstrom je Stufe in Eltern- und Kindzweig. Jede Stufe wählt eines der Attribute `Texte`, `Zahlen`, `Flags`, `Farben`. Collect verwendet ausdrücklich BID plus Elternschlüssel und `PRESERVE`; für primitive Werte ist kein Kindobjekt nötig.
+
+[cols="1,1,2,3"]
+|===
+| Attribut | Typ von `+_ili_value+` | Werte in Indexfolge | Index
+| Texte | String | erster, zweiter | 0, 1
+| Zahlen | Integer | 7, 7, 9 | 0, 1, 2 (technisch für BAG)
+| Flags | Boolean | true, false | 0, 1
+| Farben | String | rot, blau | 0, 1
+|===
+
+Alle Kindzeilen von o1 haben `+_ili_parent_tid=o1+` und `+_ili_parent_bid=b1+`. Das Elternschema enthält nur `+_ili_tid+`, `+_ili_bid+`, `Name` und den optionalen Quellobjektträger; die Sammlungen erscheinen nicht als Skalarfelder.
+
+==== Ergebnis und Varianten
+
+`doc-sammlungen.xtf` enthält beide Elternobjekte. o1 behält alle Werte, die LIST-Reihenfolge und beide Vorkommen von 7. BAG hat keine fachliche Reihenfolge; dieser unveränderte Lauf liefert dieselbe Folge zurück. o2 erzeugt null Kindzeilen und hat nach Collect weiterhin vier leere Sammlungen.
+
+Die Kardinalität jeder Sammlung ist 0..3. Ein viertes Element wird beim Sammeln abgelehnt. Bei Mindestkardinalität 1 wäre ein vollständig leer gefilterter Kindstrom ebenfalls unzulässig. Ändern Sie LIST-Indizes für eine neue Reihenfolge zu einer eindeutigen lückenlosen Folge ab 0 und sortieren Sie die Kindgruppe entsprechend.
+
+[[beispiel-h]]
+=== Beispiel H: Strukturkinder erhalten
+
+*Ziel:* Nur `Name` projizieren, ein Kind entfernen und den konkreten Untertyp mit seinen übrigen Inhalten erhalten.
+
+==== Lokale Fixture
+
+[source,interlis]
+----
+include::examples/erhaltung-modell.ili[]
+----
+
+[source,xml]
+----
+include::examples/erhaltung-transfer.xtf[]
+----
+
+==== Pipeline und Einstellungen
+
+https://github.com/edigonzales/hop-interlis-plugin/blob/main/examples/child-preserve/child-preserve.hpl[`examples/child-preserve/child-preserve.hpl`] liest `DemoErhaltung.Daten.Eltern` mit Quellobjekt. Explode wählt `Kinder`; die gespeicherte Auswahl `selectedChildFields=Name` ist in der vorbereiteten Pipeline enthalten. Der aktuelle Explode-Dialog hat keinen eigenen Auswahl-Control für diese Projektion.
+
+Die Kindzeile hat `+_ili_parent_tid+`, `+_ili_parent_bid+`, `+_ili_index+`, `Name`, `+_ili_child_object+`. `Versteckt`, `Zusatz` und `Details` stehen nicht als bearbeitbare Felder in diesem Kindstrom.
+
+`Filter rows` behält `Name=bleibt` und leitet das andere Kind in einen Dummy-Zweig. Collect verwendet als unmittelbaren Kindinput `Behalten`, als Auswahl `Name`, als Modus `PRESERVE` sowie BID plus Elternschlüssel. Das verbleibende Kind hat bereits Index 0. Output verwendet den Elternträger und validiert die vollständige temporäre Datei vor Veröffentlichung.
+
+==== Erwartete Erhaltung und Entfernung
+
+`doc-erhaltung.xtf` enthält Elternobjekt e1 im Basket b1 und genau ein Kind:
+
+* konkreter Typ `DemoErhaltung.Daten.SpezialKind`;
+* Name `bleibt`;
+* verborgenes Attribut `Versteckt=erhalten`;
+* Untertypattribut `Zusatz=Untertyp`;
+* verschachtelte Detail-LIST mit `innen eins`, `innen zwei` in dieser Reihenfolge.
+
+Das zweite Kind `entfaellt` wird entfernt, obwohl es im ursprünglichen Elternträger vorhanden war. Für das erhaltene Kind kopiert Collect den Kind-Carrier und überschreibt nur Name. Eine Änderung dieses projizierten Feldes lässt die übrigen Inhalte bestehen. `REBUILD` könnte diese Erhaltung nicht aus der blossen Name-Spalte ableiten. Fehlende oder inkompatible Kind-Carrier führen mit `PRESERVE` zu einem Fehler.
+
+[[beispiel-i]]
+=== Beispiel I: Referenzen und sichere Ausgabe
+
+*Ziel:* Referenz-TIDs/BIDs inspizieren und einen vollständigen Transfer validiert veröffentlichen, danach die neue Datei getrennt prüfen.
+
+==== Lokale Fixture
+
+[source,interlis]
+----
+include::examples/referenzen-modell.ili[]
+----
+
+[source,xml]
+----
+include::examples/referenzen-transfer.xtf[]
+----
+
+==== Drei getrennte Läufe
+
+. https://github.com/edigonzales/hop-interlis-plugin/blob/main/examples/reference-roundtrip/reference-fields.hpl[`examples/reference-roundtrip/reference-fields.hpl`]: Klasseninput für `DemoReferenzen.Daten.Objekt` und Ausgabe `doc-referenzen-felder.csv`.
+. https://github.com/edigonzales/hop-interlis-plugin/blob/main/examples/reference-roundtrip/reference-roundtrip.hpl[`examples/reference-roundtrip/reference-roundtrip.hpl`]: `Transfer Input (EVENTS) → Transfer Output (Event mode)` mit `Validate before publication` aktiviert. Ausgabe `doc-referenzen.xtf`.
+. Erst nach erfolgreichem Pipeline-Ende https://github.com/edigonzales/hop-interlis-plugin/blob/main/examples/reference-roundtrip/reference-check.hpl[`examples/reference-roundtrip/reference-check.hpl`] ausführen. Diese Pipeline liest die neue XTF-Datei aus `+E2E_OUTPUT_DIR+` und erzeugt `doc-referenzen-check.csv`.
+
+Die Parameter sind in allen drei Läufen gleich. Wiederholen Sie den oben gezeigten `hop-run.sh`-Aufruf mit dem jeweiligen Pipelinepfad in dieser Reihenfolge.
 
 ==== Ergebnis
 
+Beide CSV-Prüfungen zeigen exakt:
+
 [source,text]
 ----
-_ili_severity | _ili_message                 | _ili_line   | _ili_class                       | _ili_tid
---------------|-----------------------------|-------------|----------------------------------|----------
-"ERROR"       | *enthält Temperaturbereich* | *vorhanden* | "DemoValidierung.Daten.Messung" | "m2"
+_ili_tid;_ili_bid;Name;Intern_ref;Intern_ref_bid;Extern_ref;Extern_ref_bid
+o1;b1;verweist;z1;;z2;b2
 ----
 
-[NOTE]
-====
-Der `INTERLIS Validate`-Transform benötigt keinen vorherigen Transform. Er validiert direkt eine XTF-Datei und gibt Fehler als Rows aus, die Sie weiterverarbeiten können (z. B. in eine Datenbanktabelle für ein Fehlerprotokoll schreiben). Die Zeilennummer und die genaue Meldungsform hängen vom Validator-Input und der Spracheinstellung ab; bei einem Klassen-Constraint steht der fachliche Constraint-Name in der Meldung, während `_ili_attribute_path` leer bleibt.
-====
+Die interne Referenz z1 benötigt keinen Referenz-BID; die externe z2 trägt b2. Null im projizierten TID-Feld entfernt eine Referenz beim inversen Mapping. Ein Referenz-BID ohne TID wird abgelehnt.
+
+Der Ereignis-Roundtrip erhält zusätzlich die Zielobjekte: Basket b1 enthält z1 und o1, Basket b2 enthält z2. Reihenfolge, Namen und Referenzmetadaten werden im Paket-Test verglichen. Ein alleiniger Klassenroundtrip für Objekt würde die Zielklasse nicht mitliefern.
+
+Der Writer validiert die temporäre vollständige Datei einschliesslich zweitem Durchlauf. Erst nach erfolgreichem Abschluss aller Pipeline-Zweige wird veröffentlicht. Bei Fehlern bleibt eine bestehende Ausgabe erhalten. Die separate Prüfpipeline demonstriert den Zeitpunkt, ab dem die neue Datei verfügbar ist.

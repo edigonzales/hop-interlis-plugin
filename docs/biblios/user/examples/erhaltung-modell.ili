@@ -1,0 +1,22 @@
+INTERLIS 2.4;
+MODEL DemoErhaltung (de)
+AT "https://example.org"
+VERSION "2026-09-30" =
+  TOPIC Daten =
+    STRUCTURE Detail =
+      Text : MANDATORY TEXT*40;
+    END Detail;
+    STRUCTURE Kind =
+      Name : MANDATORY TEXT*40;
+      Versteckt : TEXT*40;
+      Details : LIST {0..*} OF Detail;
+    END Kind;
+    STRUCTURE SpezialKind EXTENDS Kind =
+      Zusatz : MANDATORY TEXT*40;
+    END SpezialKind;
+    CLASS Eltern =
+      Name : MANDATORY TEXT*40;
+      Kinder : LIST {0..*} OF Kind;
+    END Eltern;
+  END Daten;
+END DemoErhaltung.

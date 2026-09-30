@@ -37,7 +37,7 @@ Die Architektur muss deshalb INTERLIS-Semantik erhalten, ohne die normale Hop-We
                                 | project / collect
 +-------------------------------+-------------------------------+
 | 3. Mapping layer                                               |
-|    RowSchemaPlan                                               |
+|    InterlisRowMappingPlan                                               |
 |    IomToRowMapper / RowToIomMapper                             |
 |    StructureMapper / AssociationMapper                         |
 +-------------------------------^-------------------------------+
@@ -52,7 +52,7 @@ Die Architektur muss deshalb INTERLIS-Semantik erhalten, ohne die normale Hop-We
 | 1. IO/model layer                                              |
 |    ili2c TransferDescription / model repositories              |
 |    iox-ili IoxReader/IoxWriter                                 |
-|    validation / XTF / ITF later                                |
+|    validation / XTF 2.3 / XTF 2.4                                |
 +---------------------------------------------------------------+
 ```
 
@@ -92,7 +92,7 @@ public enum InterlisEventType {
 }
 ```
 
-Im normalen Objektmodus werden primär `OBJECT` und optional `DELETE_OBJECT` sichtbar. Der vollständige Eventstrom ist Advanced-Funktionalität.
+Der Reader liefert Objekt- und Löschobjekte als `OBJECT`; `_ili_operation=DELETE` unterscheidet Löschoperationen. Der Enumwert `DELETE_OBJECT` ist keine vom Reader ausgegebene zusätzliche Zeilenart. Der vollständige Eventstrom ist Advanced-Funktionalität.
 
 ### 3.3 Object operation
 
@@ -120,6 +120,11 @@ _ili_operation      String
 _ili_object         InterlisObject
 _ili_line           Integer
 _ili_column         Integer
+_ili_basket_consistency String
+_ili_basket_kind        String
+_ili_basket_start_state String
+_ili_basket_end_state   String
+_ili_transfer_metadata String
 ```
 
 Die kanonische **Ausgabe** wird in `InterlisEnvelopeRowLayout` zentral definiert.
@@ -131,51 +136,43 @@ lesbar.
 
 ## 4. Typed row projection
 
-Ein `RowSchemaPlan` beschreibt exakt, wie ein bestimmter INTERLIS-Class-Descriptor auf ein Hop-Row-Schema projiziert wird.
+Ein `InterlisRowMappingPlan` beschreibt exakt, wie ein bestimmter INTERLIS-Class-Descriptor auf ein Hop-Row-Schema projiziert wird.
 
 ```java
-public record RowSchemaPlan(
-    InterlisClassDescriptor classDescriptor,
-    List<RowFieldPlan> fields,
-    StructureProjectionPolicy structurePolicy,
-    RoleProjectionPolicy rolePolicy,
-    boolean includeTid,
-    boolean includeBid,
-    boolean includeClassName,
-    boolean includeTopicName) {
+public record InterlisRowMappingPlan(
+    InterlisPlanRoot root,
+    List<InterlisFieldPlan> fields,
+    List<String> warnings,
+    Integer defaultSrid,
+    Map<String, InterlisAssociationDescriptor> linkResolvedRoles) {
 }
 ```
 
-### 4.1 RowFieldPlan
+`root` bezeichnet eine Klasse oder Assoziation. Die immutable Feldliste legt die
+Ausgabereihenfolge fest; Warnungen beschreiben ausgelassene Mehrfachattribute.
+`linkResolvedRoles` enthält die vorab ermittelten Assoziationen für Linkauflösung.
+Hop-Metadaten werden aus diesem Core-Plan erzeugt; der Core hält kein `IValueMeta`.
+
+### 4.1 InterlisFieldPlan
 
 ```java
-public record RowFieldPlan(
+public record InterlisFieldPlan(
+    int outputIndex,
     String hopFieldName,
-    IValueMeta valueMeta,
-    FieldSource source,
+    InterlisFieldSource source,
     InterlisPropertyPath propertyPath,
-    NullPolicy nullPolicy,
-    ValueConverter converter,
-    Map<String, String> semanticMetadata) {
+    InterlisAttributeDescriptor attributeDescriptor,
+    InterlisRoleDescriptor roleDescriptor,
+    InterlisAssociationDescriptor associationDescriptor,
+    List<InterlisAttributeDescriptor> structurePath) {
 }
 ```
 
-`FieldSource`:
-
-```java
-public enum FieldSource {
-  OBJECT_ID,
-  BASKET_ID,
-  CLASS_NAME,
-  TOPIC_NAME,
-  PRIMITIVE_ATTRIBUTE,
-  GEOMETRY_ATTRIBUTE,
-  FLATTENED_STRUCTURE_ATTRIBUTE,
-  ROLE_REFERENCE,
-  ASSOCIATION_ATTRIBUTE,
-  ORDER_POSITION
-}
-```
+`InterlisFieldSource` unterscheidet technische Identitäten, Klasse/Topic/Operation,
+primitive und Geometrieattribute, abgeflachte Strukturattribute, skalare
+Referenz-TID/-BID, Rollenreferenz-TID/-BID, Rollenreihenfolge und
+Assoziationsattribute. Der Zielindex und die Strukturpfade stehen vor der
+Zeilenverarbeitung fest; Konverter verwenden die zugehörigen Deskriptoren.
 
 ## 5. Model Descriptor Layer
 
@@ -242,7 +239,9 @@ Wichtige Informationen:
 ```text
 name
 scopedName
-kind               PRIMITIVE | ENUM | GEOMETRY
+kind               PRIMITIVE | ENUM | GEOMETRY | REFERENCE | UNSUPPORTED
+collectionKind     SINGLE | BAG | LIST
+referenceTargetClass / referenceExternal (bei REFERENCE)
 mandatory
 cardinality
 iliType
@@ -306,9 +305,10 @@ public record InterlisRoleDescriptor(
 | ENUMERATION | `ValueMetaString` | `String` | vollständiger Enumeration-Elementname |
 | DATE | `ValueMetaDate` oder geeigneter Date-Typ | `Date` | Format exakt definieren |
 | DATETIME | `ValueMetaTimestamp` | Timestamp/Date | Zeitzonenregeln dokumentieren |
+| TIME | `ValueMetaString` | String | Modelliertes Zeitformat erhalten |
 | OID/TID | `ValueMetaString` | `String` | nie numerisch interpretieren |
-| Reference | `ValueMetaString` | `String` | Ziel-TID |
-| BINARY/BLOB falls relevant | `ValueMetaBinary` | `byte[]` | spätere Vollständigkeit |
+| REFERENCE TO (skalar) | zwei `ValueMetaString` | `String` | Ziel-TID und nullable Ziel-BID |
+| Nicht unterstützter Typ | kein stiller Ersatz | — | angeforderter Mappingpfad wird abgelehnt |
 
 Für numerische INTERLIS-Typen ist `BigDecimal` die Default-Wahl. Nur wenn das Modell eindeutig ganzzahlig ist, wird `Long` verwendet.
 
@@ -324,7 +324,7 @@ ili.min=1
 ili.max=1
 ```
 
-Falls die direkte Persistenz benutzerdefinierter Attribute an `IValueMeta` in Hop nicht stabil genug ist, bleibt diese Information in `RowSchemaPlan` und in der Transform-Metakonfiguration. Die Runtime-Korrektheit darf nicht von nicht-standardisierten `IValueMeta`-Properties abhängen.
+Falls die direkte Persistenz benutzerdefinierter Attribute an `IValueMeta` in Hop nicht stabil genug ist, bleibt diese Information in `InterlisRowMappingPlan` und in der Transform-Metakonfiguration. Die Runtime-Korrektheit darf nicht von nicht-standardisierten `IValueMeta`-Properties abhängen.
 
 ## 7. Geometriearchitektur
 
@@ -409,6 +409,19 @@ Regeln:
 3. Ein konfigurierbarer `Default SRID` darf angeboten werden, muss im GUI klar als Override gekennzeichnet sein.
 4. Beim Schreiben ist ein gesetztes SRID nur Metainformation; die Zulässigkeit der Koordinaten wird durch das Modell/Validator bestimmt.
 
+### 7.6 Geometriedimension
+
+Die Koordinatendimension im Attributdescriptor stammt bei Linien, Flächen und
+Multi-Geometrien aus der aufgelösten Koordinatendomäne (`LineType.controlPointDomain`).
+Alias- und Vererbungsketten sowie unterstützte CHLV95-Wrapper verwenden denselben
+Vertrag. Eine unauflösbare Dimension führt bei der Konvertierung zu einer
+verständlichen Diagnose; es gibt keinen stillen 2D-Ersatz.
+
+Gerade 3D-Geometrien verwenden den WKB-Pfad ohne Curve-Container und behalten XYZ.
+2D-Kurven bleiben SQL/MM-Kurven. Die gemeinsame Geometry-Bibliothek unterstützt
+3D-Kurven derzeit weder beim WKB-Lesen noch beim WKB-Schreiben: Ein tatsächlicher
+3D-ARC wird explizit abgelehnt und nie still linearisiert.
+
 ## 8. Mehrere Geometrieattribute
 
 Anders als FME benötigt Hop keine einzige Hauptgeometrie.
@@ -478,58 +491,56 @@ Beim Rückschreiben gilt:
 
 - Sind alle projizierten Strukturfelder `null`, wird die optionale Struktur nicht erzeugt.
 - Ist mindestens eines gesetzt, wird eine Struktur erzeugt.
-- Bei mandatory Struktur führt eine vollständig leere Row je nach Write-Policy zu Fehler oder Validation Error.
+- Bei mandatory Struktur ist eine vollständig leere Row unzulässig; inverse Pflichtprüfungen beziehungsweise vollständige Dateivalidierung melden den Fehler.
 
-## 10. BAG/LIST OF STRUCTURE
+## 10. Primitive und strukturierte BAG/LIST
 
-Mehrwertige Strukturen werden nicht in Felder `Address_1`, `Address_2`, ... expandiert.
+Mehrfachattribute werden im Klassenplan ausgelassen und mit einer Diagnose auf Explode/Collect verwiesen. Der Elternstream führt für Bearbeitung das technische Quellobjekt mit.
 
-### 10.1 Parent-Stream
+Kindzeilen tragen `_ili_parent_tid`, standardmässig `_ili_parent_bid` und `_ili_index`. Primitive Sammlungen verwenden `_ili_value` mit dem Elementtyp; Strukturkinder projizierte Strukturfelder sowie optional `_ili_child_object`. BAG-Duplikate bleiben erhalten, BAG-Indizes sind technisch; LIST-Indizes bestimmen die Reihenfolge.
 
-```text
-_ili_tid | Name | ...
-123      | Meier
-456      | Mueller
-```
+Neue Collect-Konfigurationen verwenden `(BID, Elternschlüssel)` und `PRESERVE`; Eltern- und Kindstrom müssen nach dieser Identität aufsteigend sortiert sein. Alte Dateien behalten die bisherige Schlüsselwahl und REBUILD. Schlüssel werden aus den konfigurierten Feldern gelesen; es gibt keine automatische Erzeugung eines `_ili_parent_key`.
 
-### 10.2 Child-Stream
+Collect ersetzt die gesamte ausgewählte Sammlung. Keine Kindzeilen ergeben eine leere Sammlung, sofern die Modellkardinalität dies erlaubt. Strikte LIST-Indizes sind eindeutig, aufsteigend und lückenlos ab 0. Nicht-strikter Modus sortiert innerhalb der aktuellen Gruppe; er sortiert nicht den gesamten Eingang nach Elternidentität. Optionen für doppelte Indizes und verwaiste Kinder bleiben wirksam.
 
-`INTERLIS Structure Explode` erzeugt:
+### 10.1 Descriptoren, Referenzen und Kind-Erhaltung
 
-```text
-_ili_parent_tid | _ili_index | Street          | Number
-123         | 0          | Main Street     | 10
-123         | 1          | Station Street  | 4
-456         | 0          | Village Road    | 22
-```
+Die Deskriptoren unterscheiden primitive Werte, Geometrien, Strukturen, echte
+`REFERENCE TO`-Attribute und nicht unterstützte Typen. Kardinalität und LIST/BAG
+werden vor dem Auflösen eines Typalias gelesen; Alias-Ketten bleiben berücksichtigt.
+Referenzattribute tragen Zielklasse und External-Eigenschaft. Die Abbildung erzeugt
+`<Pfad>_ref` und nullable `<Pfad>_ref_bid`, auch in abgeflachten Strukturen. Eine
+BID ohne TID scheitert; null entfernt die projizierte Referenz. Rollen bleiben ein
+separater Mappingfall. Nicht unterstützte angeforderte Typen werden mit qualifiziertem
+Attribut- und Typkontext abgelehnt und erhalten keinen TEXT-Konverter.
 
-Für `LIST` ist `_ili_index` semantisch relevant und muss erhalten bleiben.
+Mehrwertige primitive Attribute erscheinen nicht im skalaren Klassenplan.
+Explode/Collect erzeugen bzw. verbrauchen dafür `_ili_value` mit dem passenden
+Hop-Typ sowie Elternschlüssel, optionaler BID und `_ili_index`. BAG-Duplikate und
+LIST-Reihenfolge bleiben erhalten. Kardinalität wird nach dem Sammeln geprüft;
+null als einzelnes Sammlungselement ist unzulässig. Die Klassenprojektion weist
+auf diesen separaten Pfad hin. Ein Quellobjekt-Overlay erhält ausgelassene Sammlungen.
+Mehrwertige Referenzattribute sind kein unterstützter Explode/Collect-Pfad.
 
-Für `BAG` ist Reihenfolge fachlich nicht relevant. Das Plugin darf für stabilen Roundtrip intern dennoch einen Index mitführen; im GUI wird dieser als optional/technisch markiert.
+Strukturkinder können `_ili_child_object` mitführen. `PRESERVE` kopiert das konkrete
+Kindobjekt und überschreibt ausschliesslich die ausgewählten Kindattribute;
+`REBUILD` erzeugt den deklarierten Strukturtyp aus diesen Feldern. Die erlaubten
+konkreten Typen werden einschliesslich Vererbung, abstrakten Typen und Composition-
+Restrictions vorab ermittelt. Fehlende oder inkompatible Carrier scheitern im
+Erhaltungsmodus. Subtypattribute und verschachtelte Sammlungen bleiben im Carrier
+bestehen; eine zusätzliche Projektion verschachtelter Mehrfachstrukturen ist nicht
+Teil dieses Ausbaus.
 
-### 10.3 Parent identity
+Collect ersetzt die gesamte ausgewählte Sammlung. Gefilterte Kinder verschwinden;
+bei strikten LIST-Indizes müssen verbleibende Kinder gegebenenfalls neu nummeriert
+werden. Neue Konfigurationen ordnen Eltern über `(BID, Elternschlüssel)` zu und
+prüfen leere Schlüssel, doppelte Eltern, Sortierung und verwaiste Kinder. Alte
+Dateien behalten ihre bisherige Schlüsselwahl und den Neuaufbau ohne Kind-Carrier.
 
-Wenn die Parent-Klasse eine TID besitzt, ist `_ili_parent_tid` Default.
-
-Für nicht-identifizierbare Parent-Kontexte bzw. intern verschachtelte Strukturen braucht der Exploder zusätzlich eine Runtime-Korrelation:
-
-```text
-_ili_parent_key
-```
-
-Diese wird vom Plugin deterministisch pro Parent-Row erzeugt und ist nur für Pipeline-internes Collect nötig. Sie darf nicht als INTERLIS-OID ausgegeben werden.
-
-### 10.4 Collect
-
-`INTERLIS Structure Collect` erhält:
-
-```text
-Parent stream  ----\
-                  +--> collect by _ili_tid/_ili_parent_key --> enriched parent/envelope
-Child stream   ----/
-```
-
-LIST wird nach `_ili_index` sortiert. Fehlende oder doppelte Indizes sind Fehler, sofern `strict order` aktiv ist.
+Die drei Erhaltungszusagen sind verschieden: Projektion bearbeitet ausgewählte
+Felder; Overlay erhält zusätzlich unprojizierte Objektinhalte; der vollständige
+Ereignisstrom erhält die unterstützten Transfer- und Basket-Metadaten. Keine dieser
+Zusagen bedeutet byte-identisches XML oder Unterstützung aller INTERLIS-Typen.
 
 ## 11. Rollen und einfache Assoziationen
 
@@ -574,7 +585,7 @@ owner_share
 owner_since
 ```
 
-Das ist eine Komfortprojektion. Intern weiss `RowSchemaPlan`, dass `share` und `since` Assoziationsattribute und nicht Attribute der Zielklasse sind.
+Das ist eine Komfortprojektion. Intern weiss `InterlisRowMappingPlan`, dass `share` und `since` Assoziationsattribute und nicht Attribute der Zielklasse sind.
 
 **Transfer-Realität (Phase 4 verifiziert):** Attributierte Assoziationen werden in XTF immer als **separate Link-Objekte** übertragen; embedded REF-Elemente tragen keine Attribute. Die geflatteten Felder werden deshalb aus dem Link-Objekt aufgelöst: `INTERLIS Input` puffert die Link-Objekte pro Basket und emittiert Klassenzeilen am Basket-Ende. Beim Schreiben erzeugt `INTERLIS Output` das Link-Objekt aus den geflatteten Feldern (`<role>_ref` + Attribute) zusätzlich zur Klassenzeile.
 
@@ -661,7 +672,7 @@ municipality_BfsNo
 ```
 
 Der Join schlägt Schlüssel und Felder modellgetrieben vor. Der Lookup wird vor
-der ersten Join-Ausgabe vollständig eingelesen; Prio 1/2 lagert Nutzdaten und
+der ersten Join-Ausgabe vollständig eingelesen; der aktuelle Speicher lagert Nutzdaten und
 Index oberhalb des Pufferbudgets auf Disk aus. Beide Eingänge werden abwechselnd
 gelesen, damit ein gemeinsamer Produzent auch bei kleinen Hop-Queues weiterläuft.
 `maxLookupRows` bleibt eine zusätzliche Schutzgrenze (Default 500'000; 0 ohne
@@ -721,16 +732,7 @@ Dies ist für Mapping- und GUI-Pipelines nützlich.
 
 ## 16. OID/TID
 
-Regeln:
-
-- TIDs werden immer als String transportiert.
-- Keine implizite Neunummerierung bei XTF.
-- Writer unterstützt Policy:
-  - `REQUIRE_INPUT`
-  - `GENERATE_UUID`
-  - später modellabhängige Generatoren.
-- `GENERATE_UUID` ist nur zulässig, wenn die Modell-OID-Domain dies erlaubt.
-- Unique-OID-Check kann beim Reader/Writer optional aktiviert werden.
+TIDs werden als String transportiert und müssen vor dem Writer bereitstehen. Klassenobjekte und identifizierbare Assoziationen benötigen eine TID; bei nicht identifizierbaren Assoziationen ist sie optional. Der aktuelle Writer hat keine UUID-Erzeugung oder Missing-TID-Policy. Identifikatoren müssen zum modellierten OID-/Identitätsraum passen. Eindeutigkeit und Referenzgültigkeit werden mit vollständiger Dateivalidierung geprüft; technische Schlüsselprüfungen ersetzen diese nicht.
 
 ## 17. Baskets
 
@@ -750,61 +752,21 @@ _ili_topic
 
 Damit kann ein Transfer mit mehreren Baskets gelesen und gruppiert verarbeitet werden.
 
-### 17.2 Writer Basket policy
+### 17.2 Writer-Basket-Zuordnung
 
-```java
-public enum BasketWritePolicy {
-  FROM_FIELD,
-  SINGLE_BASKET,
-  GROUP_BY_BID
-}
-```
+Der typisierte Writer verwendet `basketIdField` (Default `_ili_bid`) und `basketId` (Default `b1`). Eine leere beziehungsweise nicht nutzbare Feld-BID verwendet den Default. Es gibt keine separate Basket-Policy-Auswahl. BID-Wechsel schliessen den aktiven Basket. Wiederholte abgeschlossene BIDs werden in typisiertem, generischem Objekt- und Ereignismodus zentral abgelehnt. Alle Zeilen derselben BID müssen zusammenhängend vorliegen; eine lexikografische BID-Reihenfolge ist keine Voraussetzung.
 
-`FROM_FIELD`/`GROUP_BY_BID` sind im normalen Row Writer praktisch identisch; `SINGLE_BASKET` erlaubt einen festen konfigurierten BID.
+### 17.3 Basket-Metadaten
 
-### 17.3 Basket metadata
-
-Spätere Phase:
-
-```text
-_ili_bid
-_ili_topic
-_ili_basket_start_state
-_ili_basket_end_state
-_ili_consistency
-_ili_domains
-```
-
-Diese Informationen gehören in einen separaten Basket-Metadatastream oder in Event-Envelopes, nicht in jede normale Business-Row, sofern nicht explizit gewünscht.
+Das generische Envelope-Schema führt `_ili_basket_consistency`, `_ili_basket_kind`, `_ili_basket_start_state` und `_ili_basket_end_state` mit. Ein Ereignisstrom kann leere Baskets und ihre Grenzereignisse erhalten. Normale Business-Zeilen tragen standardmässig nur TID/BID.
 
 ## 18. Delete Objects / Incremental Transfer
 
-Advanced mode muss `DELETE_OBJECT` repräsentieren können.
+Löschobjekte erscheinen als `OBJECT` mit Operation `DELETE`. Im typisierten Input ist `_ili_operation` optional aktivierbar; es gibt keine Auswahl Ignore/Emit/Fail. Der inverse Mapper berücksichtigt Operation und Identität und verlangt für DELETE keine normalen Pflichtattribute. Bei inkrementeller Verarbeitung muss die Operation bis zum Writer mitgeführt und gebunden werden.
 
-Minimaler Row:
+## 19. Unterstützte Erhaltung im Ereignismodus
 
-```text
-_ili_event_type = DELETE_OBJECT
-_ili_class
-_ili_tid
-_ili_bid
-_ili_operation = DELETE
-```
-
-Das normale `INTERLIS Input` kann per Option entscheiden:
-
-```text
-Delete objects:
-(*) Ignore
-( ) Emit as rows with _ili_operation=DELETE
-( ) Fail if encountered
-```
-
-Default zunächst: `Emit`, wenn die ausgewählte Klasse betroffen ist; der Benutzer verliert damit keine Information unbemerkt.
-
-## 19. Lossless/Event mode
-
-Advanced `INTERLIS Transfer Input` kann später zwei Modi bieten:
+`INTERLIS Transfer Input` bietet zwei Modi:
 
 ### OBJECTS
 
@@ -835,15 +797,39 @@ Der Event-Modus ist für:
 
 Normale Benutzer brauchen ihn nicht.
 
+### 19.1 Erhaltungsgrenzen und Quellobjekt-Overlay
+
+Ein vollständiger Eventstrom erhält unterstützte Headersemantik (Sender, Kommentar,
+Modelleinträge), Basket-Metadaten, Objektinhalte und Operationen. Objektmodus erzeugt
+Header und Transfergrenzen und übernimmt vorhandene Basket-Metadaten. Es besteht
+keine Zusicherung identischer XML-Bytes, Formatierung oder Reihenfolge von
+Header-Modelleinträgen. Nicht unterstützte Headerobjekte werden im Descriptor
+gekennzeichnet und beim Event-Schreiben mit einer Diagnose abgelehnt.
+
+iox-ili 1.24.4 ersetzt beim Lesen von XTF 2.3 OID-Space-Namen durch künstliche Namen.
+Originalnamen sind über diese API nicht rekonstruierbar; der Descriptor kennzeichnet
+diesen Verlust ausdrücklich. XTF-2.4-Ausgabe unterstützt keine OID-Spaces. Ein
+Erhaltungsversprechen für diese Fälle ist ausgeschlossen; der Event-Writer lehnt
+sie ab. Ein Versionswechsel zwischen Header und kompiliertem Modell wird ebenfalls
+abgelehnt.
+
+`Row to Object` bindet optional ein Quellobjekt und eine Operation. Leere
+Feldkonfiguration erkennt `_ili_source_object` (alternativ `_ili_object`) und
+`_ili_operation`, sofern vorhanden. Explizite Feldnamen müssen existieren und den
+passenden Typ haben. Explizite Operation hat Vorrang, danach Quellobjektoperation,
+sonst NONE. Es gelten die P1-Overlay- und DELETE-Regeln. Ausgabeobjekte sind eigene
+Kopien; geteilte Eingangsobjekte bleiben unverändert.
+
+Die Auswahl eines tiefen Blatts traversiert Elternstrukturen, ohne Geschwister
+mit auszuwählen. Auswahl einer Struktur umfasst alle unterstützten Nachfahren.
+Strukturpfade werden im Plan aufgelöst. Klassenprojektion und Strukturprojektion
+verwenden dieselben Auswahlregeln.
+
 ## 20. Validierung
 
-Validierung ist in drei Stellen möglich:
+Validierung erfolgt über den separaten Dateiinput `INTERLIS Validate` oder in beiden Writern mit `validateBeforePublish`. Der Klasseninput bietet keine Inline-Validierung. Beide Pfade verwenden `InterlisValidationService` und vollständige Dateivalidierung einschliesslich zweitem Durchlauf. Validator-Konfiguration ist INI.
 
-1. `INTERLIS Input` optional während Read.
-2. `INTERLIS Output` optional vor/bei Write.
-3. separater `INTERLIS Validate` Transform.
-
-Der separate Transform ist wichtig, damit ETL-Pipelines Validierung als eigene fachliche Stufe modellieren können.
+Die Writer validieren die temporäre abgeschlossene Datei. Publikation erfolgt erst am erfolgreichen Pipeline-Ende; Diagnose-Fehler des Validate-Transforms werden vorher berücksichtigt. Eine Folgepipeline kann erst danach die neue Zieldatei lesen. Die Dateisystemgarantie gilt pro Datei.
 
 ### 20.1 Fehlerdatenmodell
 
@@ -910,13 +896,13 @@ Einige Mappings können lenient sein, aber Defaults bleiben sicher:
 ## 22. Performance-Grundsätze
 
 - Modelle werden pro Konfiguration kompiliert und gecacht.
-- `RowSchemaPlan` wird einmal pro Transform initialisiert.
+- `InterlisRowMappingPlan` wird einmal pro Transform initialisiert.
 - Feldpositionen werden einmal bestimmt, nicht pro Row über Namen gesucht.
 - Converter werden im Plan vorkompiliert.
 - Geometry-WKB-Converter dürfen wiederverwendbare Helfer nutzen, sofern thread-safe.
 - Reader bleibt streaming; niemals gesamtes XTF in Memory laden.
 - `Structure Explode` arbeitet rowweise.
-- `Structure Collect` benötigt je nach Pipelineform Pufferung; Phase 3 dokumentiert Speichergrenzen.
+- `Structure Collect` puffert ausstehende Eltern und die aktuelle Kindgruppe bei Bedarf auf Disk; das einzelne Ergebnisobjekt muss in den Heap passen.
 - `Role Join` puffert den vollständigen Lookup mit Spill und konfigurierbarer Schutzgrenze.
 
 ## 23. Threading
@@ -950,85 +936,3 @@ ItfInterlisTransferReader
 ```
 
 Die Typed Mapping Layer bleibt damit weitgehend identisch. ITF-spezifische Linetable-/AREA-Logik sitzt am IO-Rand.
-
-
-
-## P1-Präzisierung der Geometriedimension (2026-09-09)
-
-Die Koordinatendimension im Attributdescriptor stammt bei Linien, Flächen und
-Multi-Geometrien aus der aufgelösten Koordinatendomäne (`LineType.controlPointDomain`).
-Alias- und Vererbungsketten sowie unterstützte CHLV95-Wrapper verwenden denselben
-Vertrag. Eine unauflösbare Dimension führt bei der Konvertierung zu einer
-verständlichen Diagnose; es gibt keinen stillen 2D-Ersatz.
-
-Gerade 3D-Geometrien verwenden den WKB-Pfad ohne Curve-Container und behalten XYZ.
-2D-Kurven bleiben SQL/MM-Kurven. Die gemeinsame Geometry-Bibliothek unterstützt
-3D-Kurven derzeit weder beim WKB-Lesen noch beim WKB-Schreiben: Ein tatsächlicher
-3D-ARC wird explizit abgelehnt und nie still linearisiert.
-
-## P2: Erhaltung und Projektion
-
-Ein vollständiger Eventstrom erhält unterstützte Headersemantik (Sender, Kommentar,
-Modelleinträge), Basket-Metadaten, Objektinhalte und Operationen. Objektmodus erzeugt
-Header und Transfergrenzen und übernimmt vorhandene Basket-Metadaten. Es besteht
-keine Zusicherung identischer XML-Bytes, Formatierung oder Reihenfolge von
-Header-Modelleinträgen. Nicht unterstützte Headerobjekte werden im Descriptor
-gekennzeichnet und beim Event-Schreiben mit einer Diagnose abgelehnt.
-
-iox-ili 1.24.4 ersetzt beim Lesen von XTF 2.3 OID-Space-Namen durch künstliche Namen.
-Originalnamen sind über diese API nicht rekonstruierbar; der Descriptor kennzeichnet
-diesen Verlust ausdrücklich. XTF-2.4-Ausgabe unterstützt keine OID-Spaces. Ein
-Erhaltungsversprechen für diese Fälle ist ausgeschlossen; der Event-Writer lehnt
-sie ab. Ein Versionswechsel zwischen Header und kompiliertem Modell wird ebenfalls
-abgelehnt.
-
-`Row to Object` bindet optional ein Quellobjekt und eine Operation. Leere
-Feldkonfiguration erkennt `_ili_source_object` (alternativ `_ili_object`) und
-`_ili_operation`, sofern vorhanden. Explizite Feldnamen müssen existieren und den
-passenden Typ haben. Explizite Operation hat Vorrang, danach Quellobjektoperation,
-sonst NONE. Es gelten die P1-Overlay- und DELETE-Regeln. Ausgabeobjekte sind eigene
-Kopien; geteilte Eingangsobjekte bleiben unverändert.
-
-Die Auswahl eines tiefen Blatts traversiert Elternstrukturen, ohne Geschwister
-mit auszuwählen. Auswahl einer Struktur umfasst alle unterstützten Nachfahren.
-Strukturpfade werden im Plan aufgelöst. Klassenprojektion und Strukturprojektion
-verwenden dieselben Auswahlregeln.
-
-## Prio 1/2: Erhaltende Sammlungen und Referenzattribute
-
-Die Deskriptoren unterscheiden primitive Werte, Geometrien, Strukturen, echte
-`REFERENCE TO`-Attribute und nicht unterstützte Typen. Kardinalität und LIST/BAG
-werden vor dem Auflösen eines Typalias gelesen; Alias-Ketten bleiben berücksichtigt.
-Referenzattribute tragen Zielklasse und External-Eigenschaft. Die Abbildung erzeugt
-`<Pfad>_ref` und nullable `<Pfad>_ref_bid`, auch in abgeflachten Strukturen. Eine
-BID ohne TID scheitert; null entfernt die projizierte Referenz. Rollen bleiben ein
-separater Mappingfall. Nicht unterstützte angeforderte Typen werden mit qualifiziertem
-Attribut- und Typkontext abgelehnt und erhalten keinen TEXT-Konverter.
-
-Mehrwertige primitive Attribute erscheinen nicht im skalaren Klassenplan.
-Explode/Collect erzeugen bzw. verbrauchen dafür `_ili_value` mit dem passenden
-Hop-Typ sowie Elternschlüssel, optionaler BID und `_ili_index`. BAG-Duplikate und
-LIST-Reihenfolge bleiben erhalten. Kardinalität wird nach dem Sammeln geprüft;
-null als einzelnes Sammlungselement ist unzulässig. Die Klassenprojektion weist
-auf diesen separaten Pfad hin. Ein Quellobjekt-Overlay erhält ausgelassene Sammlungen.
-Mehrwertige Referenzattribute sind kein unterstützter Explode/Collect-Pfad.
-
-Strukturkinder können `_ili_child_object` mitführen. `PRESERVE` kopiert das konkrete
-Kindobjekt und überschreibt ausschliesslich die ausgewählten Kindattribute;
-`REBUILD` erzeugt den deklarierten Strukturtyp aus diesen Feldern. Die erlaubten
-konkreten Typen werden einschliesslich Vererbung, abstrakten Typen und Composition-
-Restrictions vorab ermittelt. Fehlende oder inkompatible Carrier scheitern im
-Erhaltungsmodus. Subtypattribute und verschachtelte Sammlungen bleiben im Carrier
-bestehen; eine zusätzliche Projektion verschachtelter Mehrfachstrukturen ist nicht
-Teil dieses Ausbaus.
-
-Collect ersetzt die gesamte ausgewählte Sammlung. Gefilterte Kinder verschwinden;
-bei strikten LIST-Indizes müssen verbleibende Kinder gegebenenfalls neu nummeriert
-werden. Neue Konfigurationen ordnen Eltern über `(BID, Elternschlüssel)` zu und
-prüfen leere Schlüssel, doppelte Eltern, Sortierung und verwaiste Kinder. Alte
-Dateien behalten ihre bisherige Schlüsselwahl und den Neuaufbau ohne Kind-Carrier.
-
-Die drei Erhaltungszusagen sind verschieden: Projektion bearbeitet ausgewählte
-Felder; Overlay erhält zusätzlich unprojizierte Objektinhalte; der vollständige
-Ereignisstrom erhält die unterstützten Transfer- und Basket-Metadaten. Keine dieser
-Zusagen bedeutet byte-identisches XML oder Unterstützung aller INTERLIS-Typen.

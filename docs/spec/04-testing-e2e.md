@@ -847,16 +847,21 @@ Die wichtigsten Benutzerpfade werden als echte `.hpl`-Pipelines eingecheckt.
 
 ```text
 e2e/pipelines/
-├── 01-xtf-to-csv.hpl
-├── 02-xtf-to-geopackage.hpl
-├── 03-geopackage-to-xtf.hpl
-├── 04-xtf-roundtrip.hpl
-├── 05-structure-list-explode.hpl
-├── 06-structure-list-collect.hpl
-├── 07-role-join.hpl
-├── 08-validation-errors.hpl
-├── 09-multiple-geometries.hpl
-└── 10-curves-roundtrip.hpl
+├── 02-interlis-input-to-csv.hpl
+├── 03-interlis-input-structures.hpl
+├── 04-interlis-to-gpkg.hpl
+├── 05-xtf-roundtrip.hpl
+├── 07-structures-roundtrip.hpl
+├── 11-association-rows-roundtrip.hpl
+├── 13-generic-transfer-roundtrip.hpl
+├── 17-validate.hpl
+├── 33-doc-demo-input.hpl
+└── weitere Regressions- und Handbuchpipelines
+examples/
+├── primitive-collections/primitive-collections.hpl
+├── child-preserve/child-preserve.hpl
+├── reference-roundtrip/reference-{fields,roundtrip,check}.hpl
+└── xtf-to-gpkg/xtf-to-gpkg.hpl
 ```
 
 Diese Pipelines erfüllen zwei Zwecke:
@@ -865,6 +870,18 @@ Diese Pipelines erfüllen zwei Zwecke:
 2. manuell öffnende Demonstrationsbeispiele für Entwickler und Benutzer.
 
 ---
+
+## 20.2 Ausführbare Handbuch-Tutorials
+
+Kanonische INTERLIS-2.4-Fixtures liegen einmalig unter `docs/biblios/user/examples/` und werden als Testressourcen übernommen. `DocsExamplesTest` kompiliert alle neun Modelle, prüft vollständige Validierung der acht gültigen Transfers sowie die absichtlich ungültige Validierungsfixture, und vergleicht dokumentierte Eltern-, primitive Kind-, Carrier- und Referenzschemas.
+
+`scripts/run-e2e.sh` führt die sechs bisherigen Handbuchpipelines 33–38 und die neuen Dateien direkt unter `examples/` aus: primitive-collections, child-preserve, reference-fields, reference-roundtrip, reference-check und xtf-to-gpkg. Legacy-Regressionspipelines bleiben separat erhalten. Das LIST-Handbuchbeispiel verwendet ausdrücklich Kind-Carrier, PRESERVE und BID plus Elternschlüssel.
+
+`scripts/check-doc-examples-output.py` vergleicht BAG-Duplikate, LIST-Reihenfolge, leere Sammlungen, konkreten verbleibenden Untertyp, unprojizierte Attribute, verschachtelte Liste, Objekt-/Basket-Zuordnung und Referenz-TIDs/BIDs. Die Referenzausgabe wird mit Dateivalidierung vorbereitet und erst in einer getrennten Pipeline erneut gelesen. GeoPackage wird auf Attribute, Geometriemetadaten, SRID und sämtliche Polygonkoordinaten gegen das kanonische Fixture geprüft; `REQUIRE_VECTOR_RASTER_E2E=true` macht beide GeoPackage-Pfade verpflichtend.
+
+Das Handbuch wird mit einer einmal aufgelösten thoth-biblios-JAR und `--use-local-working-tree` aus dem aktuellen Checkout gerendert. Dieselbe Version dient der Sichtprüfung bei breitem/schmalem Fenster. Kapitel, Tabellen, Codeblöcke, Includes, Inhaltsverzeichnis und interne/externe Beispielverweise sind Abnahmepunkte. Ausgeführte Prüfungen und Renderer-Version stehen in `docs/progress/documentation-current.md`; historische Berichte behalten ihre damaligen Ergebnisse.
+
+`python3 scripts/check-user-manual.py docs/biblios/build/docs-site` prüft alle zehn Kapitel und neun Tutorials, eindeutige Anker, interne Verweise, aufgelöste Includes, unveränderte Code-Literale sowie lokale Assets und Repository-Ziele der zwölf Pipeline-Links. Externe Websites werden dabei nicht abgerufen. Die Browser-Sichtprüfung ergänzt diesen strukturellen Test.
 
 # 21. E2E mit `hop-run`
 
@@ -1115,6 +1132,31 @@ Erwartung:
 
 ---
 
+## 27.1 Semantik-, Spill- und Ausgaberegressionen
+
+`HopIli_Collections_V1` und die minimale gültige 2.4-Fixture prüfen primitive
+Text-/Zahl-/Boolean-/Enum-Sammlungen, Aliase, echte Referenzattribute, Struktur-
+Untertypen, Composition-Restrictions und verschachtelte Listen. Regressionen
+prüfen leere Sammlungen, Duplikate, Reihenfolge, Kardinalität, null, Carrier-Fehler,
+Overlay und das Entfernen von Kindern. XML-Tests verwenden auch den tatsächlichen
+Hop-Metadatenserializer und unterscheiden alte und neue Konfigurationen.
+
+Zwei separate JVM-Läufe unter `-Xmx128m` puffern jeweils einen Basket und einen
+Lookup mit mehr als 256 MiB serialisierten Daten. Der Consumer akkumuliert keine
+Ergebniszeilen. Gemessen werden Dauer, beobachteter maximaler Heap, temporärer
+Diskbedarf und Zeit bis zur ersten Ausgabe. Pipeline-Tests mit Queuegrössen 1/2
+prüfen gemeinsame Produzenten, langsame Konsumenten und identische Eltern-TIDs
+in verschiedenen Baskets. Codec-Tests erzwingen Spill und prüfen ARC, XYZ, SRID,
+Referenzmetadaten und verschachtelte Carrier.
+
+Ausgaberegressionen prüfen atomare Veröffentlichung, konkurrierendes Anlegen,
+Mapping-, Close-, Validierungs-, Stop- und späte Zweigfehler sowie vollständige
+Validate-Diagnosen vor dem Pipelinefehler. Paket-E2E 39–42 prüfen Sammlungs-
+Roundtrips, Kind-Erhaltung, externe BIDs im Ereignisstrom mit Dateivalidierung
+und 600 grosse Strukturkinder bei 1 MiB Pufferbudget. H2 muss dabei über Hops
+JDBC-Classloader erreichbar sein. Die bisherigen Paketpipelines einschliesslich
+Vector/Raster-GeoPackage bleiben Pflichtteil der Abnahme.
+
 # 28. GUI-Tests
 
 SWT-GUI-Automation ist vergleichsweise fragil. Deshalb wird GUI-Logik so weit wie möglich aus SWT-Klassen herausgezogen.
@@ -1309,7 +1351,7 @@ Java:
 Hop-Baseline:
 
 ```text
-2.18.1   (zentral im Parent-POM gepinnt, Property hop.version)
+2.19.0   (zentral im Parent-POM gepinnt, Property hop.version)
 ```
 
 Später kann zusätzlich eine Compatibility-Matrix eingeführt werden:
@@ -1774,28 +1816,3 @@ Verbraucher prüfen Erfolg, Mappingfehler, Abbruch und idempotentes Aufräumen.
 Paket-E2E 29–32 prüfen umgeordnete Explode-/Collect- und Join-Streams sowie fehlende
 konfigurierte Felder und falsche Schlüsseltypen. Die Fehlerfälle verlangen Exit 1
 und eine konkrete Bindungsdiagnose. Alle bisherigen Paket-Pipelines bleiben aktiv.
-
-## Prio 1/2-Abnahme
-
-`HopIli_Collections_V1` und die minimale gültige 2.4-Fixture prüfen primitive
-Text-/Zahl-/Boolean-/Enum-Sammlungen, Aliase, echte Referenzattribute, Struktur-
-Untertypen, Composition-Restrictions und verschachtelte Listen. Regressionen
-prüfen leere Sammlungen, Duplikate, Reihenfolge, Kardinalität, null, Carrier-Fehler,
-Overlay und das Entfernen von Kindern. XML-Tests verwenden auch den tatsächlichen
-Hop-Metadatenserializer und unterscheiden alte und neue Konfigurationen.
-
-Zwei separate JVM-Läufe unter `-Xmx128m` puffern jeweils einen Basket und einen
-Lookup mit mehr als 256 MiB serialisierten Daten. Der Consumer akkumuliert keine
-Ergebniszeilen. Gemessen werden Dauer, beobachteter maximaler Heap, temporärer
-Diskbedarf und Zeit bis zur ersten Ausgabe. Pipeline-Tests mit Queuegrössen 1/2
-prüfen gemeinsame Produzenten, langsame Konsumenten und identische Eltern-TIDs
-in verschiedenen Baskets. Codec-Tests erzwingen Spill und prüfen ARC, XYZ, SRID,
-Referenzmetadaten und verschachtelte Carrier.
-
-Ausgaberegressionen prüfen atomare Veröffentlichung, konkurrierendes Anlegen,
-Mapping-, Close-, Validierungs-, Stop- und späte Zweigfehler sowie vollständige
-Validate-Diagnosen vor dem Pipelinefehler. Paket-E2E 39–42 prüfen Sammlungs-
-Roundtrips, Kind-Erhaltung, externe BIDs im Ereignisstrom mit Dateivalidierung
-und 600 grosse Strukturkinder bei 1 MiB Pufferbudget. H2 muss dabei über Hops
-JDBC-Classloader erreichbar sein. Die bisherigen Paketpipelines einschliesslich
-Vector/Raster-GeoPackage bleiben Pflichtteil der Abnahme.

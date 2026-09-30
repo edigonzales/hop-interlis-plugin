@@ -1,336 +1,69 @@
-== XTF schreiben: Der INTERLIS Output-Transform
+[[xtf-schreiben]]
+== XTF schreiben: INTERLIS Output
 
-Der `INTERLIS Output`-Transform schreibt typisierte Hop-Rows als INTERLIS-XTF-Datei. Er ist das Gegenstück zum `INTERLIS Input`-Transform und ermöglicht den Roundtrip der projizierten Inhalte. Ein Quellobjekt-Overlay erhält weitere Objektinhalte.
+`INTERLIS Output` schreibt typisierte Zeilen einer konkreten INTERLIS-Klasse. Der Writer bindet Felder über die Namen des zentralen Mappingplans. Für mehrere Klassen und explizite Transferereignisse dient Transfer Output.
 
-[TIP]
-====
-Der `INTERLIS Output` schreibt _eine Klasse pro Transform_. Wenn Sie mehrere Klassen in eine XTF-Datei schreiben möchten, verwenden Sie den `INTERLIS Transfer Output`-Transform mit dem `INTERLIS Row to Object`-Transform (siehe <<erweiterte-transforms>>).
-====
+=== Dialog und Zuordnung
 
-=== Dialog-Übersicht
-
-[source,text]
-----
-+================================================================================+
-| INTERLIS Output                                                                |
-+================================================================================+
-| Transform name [ Gebäude schreiben                                       ]     |
-|                                                                                 |
-| Target                                                                          |
-| XTF file       [ ${PROJECT_HOME}/out/buildings.xtf                     ] ...   |
-| Existing file  [ Fail if exists                                       v]      |
-|                                                                                 |
-| Model                                                                           |
-| Models         [ DemoBodenbedeckung                                    ]      |
-| Model dirs     [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ]      |
-| Class          [ DemoBodenbedeckung.Bodenbedeckung.Gebaeude           v]      |
-|                                                                                 |
-| Identity                                                                        |
-| TID field      [ _ili_tid                                              v]      |
-| Missing TID    [ Fail                                                 v]      |
-|                                                                                 |
-| Basket                                                                          |
-| Policy         [ From field                                           v]      |
-| BID field      [ _ili_bid                                              v]      |
-| Fixed BID      [ b1                                                    ]      |
-|                                                                                 |
-| Field mapping                                                                   |
-| +--------------------------------------------------------------------------+   |
-| | INTERLIS property      | Input field          | Required | Status         |   |
-| | Art                     | Art                  | no       | OK             |   |
-| | Name                    | Name                 | no       | OK             |   |
-| | Geometrie               | Geometrie            | yes      | Geometry       |   |
-| +--------------------------------------------------------------------------+   |
-| [ Get incoming fields ] [ Auto-map by name ]                                   |
-|                                                                                 |
-| > Validation                                                                    |
-| > Advanced                                                                      |
-|                                                                                 |
-|                                                     [ OK ] [ Cancel ]           |
-+================================================================================+
-----
-
-=== Zieldatei
-
-- **XTF file**: Pfad zur Ausgabedatei. Variablen wie `${PROJECT_HOME}` werden aufgelöst.
-- **Existing file**: Was passiert, wenn die Datei bereits existiert?
-  - `Fail`: Pipeline bricht ab
-  - `Overwrite`: Datei wird überschrieben
-
-=== Modell und Klasse
-
-Die Modell-Konfiguration ist identisch zum `INTERLIS Input` (siehe <<xtf-lesen, Abschnitt Modellquelle konfigurieren>>).
-
-Die Klasse muss mit dem Input-Schema übereinstimmen. Der Transform prüft zur Laufzeit, ob die Input-Felder mit den INTERLIS-Attributen kompatibel sind.
-
-=== Identität: TID
-
-Jedes INTERLIS-Objekt benötigt eine eindeutige TID.
-
-==== TID-Feld
-
-Wählen Sie das Input-Feld, das die TID enthält:
-
-[source,text]
-----
-TID field [ _ili_tid  v]
-----
-
-Standardmässig wird `_ili_tid` verwendet. Falls Sie die TID in einem anderen Feld haben, können Sie es hier auswählen.
-
-==== Missing TID
-
-Was passiert, wenn ein Input-Row keine TID hat?
-
-[cols="1,2"]
+[cols="2,2,3"]
 |===
-| Option | Verhalten
-
-| Fail
-| Pipeline bricht ab (Default)
-
-| Generate UUID
-| Automatisch eine UUID als TID generieren (nur wenn das Modell dies erlaubt)
+| Control | Default | Bedeutung
+| XTF file | leer | Endgültige XTF-Zieldatei.
+| Overwrite existing file | aus | Vorhandenes Ziel nach erfolgreichem Abschluss atomar ersetzen.
+| Models | leer | Explizite Modellnamen; mit `;` trennen.
+| Model dirs | Standard-Modellverzeichnisse | Lokale Modelle oder Repositories; siehe Input.
+| Class | leer | Voll qualifizierte Zielklasse.
+| Object ID field | `+_ili_tid+` | String-Feld mit Objekt-TID.
+| BID field | `+_ili_bid+` | Feld mit Basket-ID; leer für den Default-BID.
+| Default BID | `b1` | Basket-ID, wenn kein nutzbarer BID-Feldwert vorliegt.
+| Source object field | leer | Technisches Quellobjekt für Overlay.
+| Operation field | leer | Optionales Feld mit `NONE`, `INSERT`, `UPDATE`, `DELETE`.
 |===
 
-[CAUTION]
-====
-Die Option _Generate UUID_ ist nur zulässig, wenn das INTERLIS-Modell eine UUID-kompatible OID-Domain verwendet (z. B. `INTERLIS.UUIDOID`). Bei anderen OID-Domains bricht die Pipeline ab.
-====
+Die Vorschau zeigt erwartete Zuordnungen. Felder mit anderen Namen müssen vorher umbenannt werden. Der Writer erzeugt keine Objekt-UUIDs; stellen Sie passende TIDs vor dem Writer bereit. Klassenobjekte und identifizierbare Assoziationen benötigen eine TID; nicht identifizierbare Assoziationen dürfen ohne TID geschrieben werden. Datentypen, Referenzen und Kardinalitäten müssen zum Modell passen.
 
-=== Basket-Handling
+=== Baskets zusammenhängend liefern
 
-Baskets organisieren Objekte thematisch. Der `INTERLIS Output` unterstützt mehrere Basket-Policies:
+Beim BID-Wechsel wird der bisherige Basket geschlossen und der nächste begonnen. Alle Zeilen einer BID müssen zusammenhängend eintreffen. `B1 → B2 → B1` wird als Wiederverwendung eines abgeschlossenen Baskets abgelehnt. Eine lexikografische Sortierung ist nicht vorgeschrieben; Gruppierung nach BID genügt.
 
-[cols="1,2"]
-|===
-| Policy | Verhalten
+Bei mehreren Kopien oder zusammengeführten Zweigen ist die Ankunftsreihenfolge nicht automatisch gruppiert. Stellen Sie diese Voraussetzung vor dem Writer her. Datei-Writer laufen mit genau einer Transform-Kopie.
 
-| From field (Default)
-| Die BID wird aus einem Input-Feld gelesen (z. B. `_ili_bid`). Objekte mit derselben BID werden im selben Basket geschrieben.
+=== Projektion oder Quellobjekt-Overlay
 
-| Single basket
-| Alle Objekte werden in einen einzigen Basket mit fester BID geschrieben.
+Ohne `Source object field` erzeugt der Writer ein Objekt aus den gemappten Feldern. Mit Quellobjekt kopiert er dieses und überschreibt die projizierten Werte. So können ausgelassene Sammlungen oder nicht ausgewählte Inhalte erhalten bleiben.
 
-| Group by BID
-| Ähnlich wie _From field_, aber mit expliziter Gruppierungslogik.
-|===
+Ein null-Wert überschreibt das projizierte Attribut; bei Referenzen entfernt null die Referenz. `+<Pfad>_ref_bid+` ohne `+<Pfad>_ref+` ist ein Fehler. Referenzen werden als echte IOM-Referenzen geschrieben. Die richtige TID/BID muss zum Zielobjekt und zum Modell passen.
+
+Mehrfachattribute werden vor dem Writer mit Collect in das Eltern-Quellobjekt zurückgeführt. Collect ersetzt die gewählte Sammlung vollständig. Für Strukturkinder steuert `PRESERVE` beziehungsweise `REBUILD`, welche nicht projizierten Inhalte erhalten bleiben; siehe <<structure-collect,Collect>>.
+
+=== Vorbereiten, prüfen und veröffentlichen
+
+Beide Writer schreiben zunächst eine eindeutige temporäre XTF-Datei im Zielverzeichnis. Transferabschluss und Schliessen müssen erfolgreich sein. Die endgültige Datei wird erst am erfolgreichen Pipeline-Ende veröffentlicht, nachdem auch aufgeschobene Validate-Fehler berücksichtigt wurden.
+
+Mapping-, Schreib-, Close-, Validierungsfehler, ein späterer Zweigfehler oder Stop verhindern die Veröffentlichung. Eine bestehende Ausgabe bleibt erhalten. Veröffentlichungsfehler zählen als Pipelinefehler.
+
+Mit Überschreiben wird das Ziel atomar ersetzt. Ohne Überschreiben wird es atomar ohne Ersetzungsrecht angelegt; ein inzwischen angelegtes Ziel verursacht einen Fehler. Unterstützt das Dateisystem die nötige Operation nicht, scheitert der Lauf. Die Atomarität gilt pro Datei: mehrere Writer bilden keine gemeinsame Dateisystemtransaktion.
 
 [IMPORTANT]
 ====
-**Sortierung bei mehreren Baskets**: Bei `From field` oder `Group by BID` muss der Input-Stream nach BID sortiert sein. Wenn derselbe BID nach einem anderen Basket wieder erscheint, bricht die Pipeline ab, da XTF keine verschachtelten Baskets erlaubt.
-
-Fehlerbeispiel:
-----
-Input: b1, b1, b2, b1  <-- FEHLER: b1 erscheint nach b2 erneut
-Input: b1, b1, b2, b2  <-- OK: gruppiert nach BID
-----
+Eine neue XTF-Datei kann erst nach Pipeline-Ende gelesen werden. Verwenden Sie `Validate before publication` für die Prüfung vor Veröffentlichung und eine getrennte Folgepipeline zum erneuten Lesen. Ein Reader-Zweig derselben Pipeline kann dafür die alte Datei sehen oder an einer noch fehlenden Datei scheitern.
 ====
 
-=== Feld-Mapping
+=== Validierung vor Veröffentlichung
 
-Die Tabelle zeigt die Zuordnung zwischen INTERLIS-Attributen und Input-Feldern:
+Im Writer öffnet `Options…` folgende Einstellungen:
 
-[source,text]
-----
-+--------------------------------------------------------------------------+
-| INTERLIS property | Input field | Required | Status                      |
-|--------------------------------------------------------------------------|
-| Art               | Art         | no       | OK                          |
-| Name              | Name        | no       | OK                          |
-| Geometrie         | Geometrie   | yes      | Geometry check passed       |
-| Adresse.Strasse   | Adresse_Str | no       | OK                          |
-+--------------------------------------------------------------------------+
-----
+[cols="2,2,3"]
+|===
+| Control | Default | Wirkung
+| Validate before publication | aus | Vollständige temporäre Datei einschliesslich zweitem Validierungsdurchlauf prüfen.
+| Validation configuration | leer | Optionaler Pfad zu einer Validator-INI-Datei.
+|===
 
-Spalten:
+Ein Fehler oder eine unvollständige Validierung verhindert die Veröffentlichung. Diese Option erzeugt keinen separaten Diagnose-Zeilenstrom. Zum Auswerten von Diagnosezeilen verwenden Sie `INTERLIS Validate` für eine vorhandene Datei.
 
-- **INTERLIS property**: Das Attribut im INTERLIS-Modell
-- **Input field**: Das zugeordnete Hop-Feld aus dem Input-Stream
-- **Required**: Ob das Attribut im Modell mandatory ist
-- **Status**: Kompatibilitätsprüfung (z. B. Typ-Check für Geometrie)
+=== Erhaltung nachweisen
 
-#### Auto-map by name
+Wählen Sie den passenden Weg: einfache Projektion für einzelne Attribute, Overlay für Objektänderungen mit Erhaltung des Rests, `EVENTS` für einen vollständigen unterstützten Transfer. Prüfen Sie das Ergebnis anhand der Inhalte, die der Workflow erhalten soll: IDs, Basket-Zugehörigkeit, Referenzen, Werte, Reihenfolgen, Untertypen, Geometrie und Metadaten.
 
-Der Button **Auto-map by name** versucht, Input-Felder automatisch zuzuordnen:
-
-1. Exakte Übereinstimmung des gespeicherten Pfads
-2. Exakte Übereinstimmung des Hop-Feldnamens
-3. Default-Flatten-Name (z. B. `Adresse_Strasse`)
-4. Case-insensitive als Fallback (nur Vorschlag)
-
-[TIP]
-====
-Nach dem Auto-Mapping sollten Sie die Zuordnung prüfen, insbesondere bei komplexen Strukturen oder umbenannten Feldern.
-====
-
-=== Strukturen zurückschreiben
-
-#### Einwertige Strukturen (Flatten)
-
-Wenn Sie Strukturen als geflattete Felder eingelesen haben (z. B. `Adresse_Strasse`, `Adresse_Nummer`), werden sie automatisch wieder in Strukturen zurückverwandelt:
-
-- Alle geflatteten Felder, die zum gleichen Struktur-Attribut gehören, werden zusammengeführt.
-- Wenn mindestens ein Feld nicht null ist, wird die Struktur erzeugt.
-- Wenn alle Felder null sind und die Struktur optional ist, wird keine Struktur erzeugt.
-
-[source,text]
-----
-Input:
-_ili_tid | Name | Adresse_Strasse | Adresse_Nummer | Adresse_PLZ | Adresse_Ort
-"p1"     | Meier| Hauptstrasse    | 42             | 4500        | Solothurn
-
-Output-IOM:
-<Demo:Person xmlns:Demo="http://www.interlis.ch/xtf/2.4/Demo"
-             xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS"
-             ili:tid="p1">
-  <Demo:Name>Meier</Demo:Name>
-  <Demo:Adresse>
-    <Demo:Strasse>Hauptstrasse</Demo:Strasse>
-    <Demo:Hausnummer>42</Demo:Hausnummer>
-    <Demo:PLZ>4500</Demo:PLZ>
-    <Demo:Ort>Solothurn</Demo:Ort>
-  </Demo:Adresse>
-</Demo:Person>
-----
-
-#### Mehrwertige Strukturen (LIST/BAG)
-
-Für `LIST OF`/`BAG OF` müssen Sie die Struktur vor dem Schreiben zusammenführen:
-
-1. Lesen Sie die Parent-Rows und Child-Rows (z. B. via `INTERLIS Structure Explode`)
-2. Transformieren Sie die Child-Rows nach Bedarf
-3. Führen Sie sie mit `INTERLIS Structure Collect` zusammen
-4. Schreiben Sie das Ergebnis mit `INTERLIS Output`
-
-Pipeline:
-
-[source,text]
-----
-INTERLIS Input (Parent)
-  |
-  +--> INTERLIS Structure Explode --> [Child-Transformations] --> INTERLIS Structure Collect
-  |                                                                         |
-  +-------------------------------------------------------------------------+
-                                    |
-                                    v
-                            INTERLIS Output
-----
-
-[IMPORTANT]
-====
-Die Child-Rows müssen nach `_ili_parent_tid` und `_ili_index` (bei LIST) sortiert sein, damit der `INTERLIS Structure Collect` sie korrekt zuordnen kann.
-====
-
-=== Assoziationen zurückschreiben
-
-Komplexe Assoziationen (m:n, attributiert) werden automatisch als Link-Objekte zurückgeschrieben, wenn das Input-Schema die entsprechenden `_ref`-Felder enthält.
-
-Beispiel:
-
-[source,text]
-----
-Input:
-_ili_tid | person_ref | organisation_ref | Share | Since
-"a1"     | "p1"       | "o1"             | 50    | 2020-01-01
-
-Output-IOM:
-<Demo:Association xmlns:Demo="http://www.interlis.ch/xtf/2.4/Demo"
-                  xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS"
-                  ili:tid="a1">
-  <Demo:person ili:ref="p1"/>
-  <Demo:organisation ili:ref="o1"/>
-  <Demo:Share>50</Demo:Share>
-  <Demo:Since>2020-01-01</Demo:Since>
-</Demo:Association>
-----
-
-[NOTE]
-====
-Attributierte Assoziationen werden in XTF immer als separate Link-Objekte geschrieben, nie als Embedded Links mit Attributen.
-====
-
-=== Roundtrip
-
-Der vollständige Roundtrip testet die Qualität der Abbildung:
-
-[source,text]
-----
-XTF-Datei --[INTERLIS Input]--> Rows --[Transformationen]--> Rows --[INTERLIS Output]--> XTF-Datei
-----
-
-Was muss im Roundtrip erhalten bleiben:
-
-- Alle Attributwerte (inkl. Präzision bei Dezimalzahlen)
-- Alle Geometrien (inkl. Kreisbögen)
-- Alle TIDs und BIDs
-- Struktur-Inhalte (auch LIST-Ordnung)
-- Rollen/Referenzen
-- Basket-Zugehörigkeit
-
-Sie können den Roundtrip testen, indem Sie:
-
-1. Eine XTF-Datei mit `INTERLIS Input` lesen
-2. Die Rows unverändert (oder minimal transformiert) an `INTERLIS Output` weitergeben
-3. Die Ausgabe-XTF mit der Original-XTF vergleichen (z. B. mit `diff` oder ilivalidator)
-
-[source,bash]
-----
-# Beispiel: XTF validieren
-$ java -jar ilivalidator.jar original.xtf
-$ java -jar ilivalidator.jar output.xtf
-----
-
-[TIP]
-====
-Für vollständige Roundtrip-Tests empfiehlt es sich, `ilivalidator` zu verwenden. Wenn beide Dateien validieren und die Objektanzahl übereinstimmt, ist der Roundtrip erfolgreich.
-====
-
-=== Validierung
-
-Optional kann die Ausgabe-XTF nach dem Schreiben validiert werden:
-
-[source,text]
-----
-v Validation
-  [x] Validate generated transfer
-  
-  Validator config [                                      ] [...]
-  
-  [x] Validate attribute/role multiplicity
-  [ ] Stop after first error
-  Max errors [ 10000                                     ]
-----
-
-[CAUTION]
-====
-Die Validierung nach dem Schreiben erfordert einen zusätzlichen Lesedurchlauf. Bei grossen Dateien kann dies die Gesamtzeit deutlich erhöhen.
-====
-
-=== Performance-Tipps
-
-- **Batching**: Der Transform puffert Objekte und schreibt sie effizient.
-- **Sortierung**: Sortieren Sie vor dem Output nach BID, falls Sie mehrere Baskets haben.
-- **Geometrie**: Das Plugin verwendet vorkompilierte WKB-Converter pro Transform-Instanz.
-- **TID-Cache**: Bei UUID-Generierung wird ein Cache verwendet, um Duplikate zu vermeiden.
-
-=== Veröffentlichung erst nach Pipeline-Erfolg
-
-Beide INTERLIS-Writer schreiben zunächst in eine eindeutige temporäre XTF-Datei
-im Zielverzeichnis. Erst nach vollständigem Transferende, erfolgreichem Schliessen
-und erfolgreichem Pipeline-Abschluss wird diese veröffentlicht. Mappingfehler,
-Close-Fehler, Stop und spätere Fehler anderer Zweige erhalten eine bisherige
-Ausgabe. Der Validate-Transform darf seine Diagnosezeilen vollständig ausgeben;
-sein aufgeschobener Fehler verhindert trotzdem die Veröffentlichung.
-
-`Overwrite` ersetzt das Ziel atomar. Ohne Überschreiben wird es atomar angelegt;
-ein während des Laufs entstandenes Ziel wird nicht ersetzt. Unterstützt das
-Dateisystem die notwendige Operation nicht, scheitert der Lauf. Die Garantie
-gilt pro Datei; mehrere Ausgaben bilden keine gemeinsame Dateisystemtransaktion.
-
-In `Options…` aktiviert `Validate before publish` eine vollständige Prüfung der
-temporären Datei einschliesslich zweitem Validierungsdurchlauf. Default ist aus;
-eine optionale Validierungskonfigurationsdatei kann angegeben werden. Fehler oder
-unvollständige Validierung verhindern die Veröffentlichung. Reihenfolgen wie
-`B1 → B2 → B1` werden in typisierter Ausgabe, Objekt- und Ereignismodus abgelehnt;
-Objekte eines Baskets müssen zusammenhängend geliefert werden.
+Der Ereignisweg kann unterstützte Transfermetadaten erhalten; nicht erhaltbare Headerinformationen führen zu einem Fehler. iox-ili 1.24.4 ersetzt beim Lesen von XTF 2.3 OID-Space-Namen durch künstliche Namen; XTF-2.4-Ausgabe unterstützt keine OID-Spaces. Der Ereignis-Writer lehnt solche nicht erhaltbaren Fälle ab. Ein byteweiser XML-Vergleich eignet sich nicht als fachlicher Nachweis.

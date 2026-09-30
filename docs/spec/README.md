@@ -36,36 +36,41 @@ Row to Object
 INTERLIS Transfer Output
 ```
 
+Der aktuelle Bedienumfang steht im [deutschen Benutzerhandbuch](../biblios/user/master.adoc).
+[Prio 1/2](../progress/prio-1-2.md) und die
+[Dokumentationsabnahme](../progress/documentation-current.md) halten tatsächlich ausgeführte
+Prüfungen fest. Historische Phasenberichte bleiben zeitgebundene Nachweise.
+
 ## Dokumente
 
-1. [`00-overview.md`](00-overview.md)  
+1. [`00-overview.md`](00-overview.md)
    Zielbild, Scope, Transform-Katalog, Modulstruktur, Architekturprinzipien und Gesamtphasen.
 
-2. [`01-architecture-data-model.md`](01-architecture-data-model.md)  
+2. [`01-architecture-data-model.md`](01-architecture-data-model.md)
    INTERLIS-zu-Hop-Datenmodell, Klassen, Attribute, Geometrien, Strukturen, Assoziationen, Vererbung, Baskets, OIDs und Advanced/Event Mode.
 
-3. [`02-java-hop-implementation.md`](02-java-hop-implementation.md)  
+3. [`02-java-hop-implementation.md`](02-java-hop-implementation.md)
    Konkrete Java-Klassen und Methoden, Hop-Plugin-Interfaces, `IRowMeta`-Erzeugung, Mapping-Pläne sowie der exakte `IomObject -> Object[]`- und inverse Algorithmus.
 
-4. [`03-gui-ux.md`](03-gui-ux.md)  
-   GUI-/UX-Spezifikation mit ASCII-Mockups für Model Browser, Input/Output, Structures, Associations, Role Join, Validation und Advanced Mode.
+4. [`03-gui-ux.md`](03-gui-ux.md)
+   Aktuelle Dialogcontrols und Defaults, asynchrone Modellprobe, Options-Dialoge, alte/neue Konfigurationssemantik und GUI-Abnahme.
 
-5. [`04-testing-e2e.md`](04-testing-e2e.md)  
+5. [`04-testing-e2e.md`](04-testing-e2e.md)
    Testpyramide, Testmodelle, Mapper-/Geometry-/Structure-/Association-Tests, echte Hop-Pipeline-Integration, `hop-run`-E2E, Distribution- und Release-Smoke-Tests.
 
-6. [`05-roadmap-phases.md`](05-roadmap-phases.md)  
+6. [`05-roadmap-phases.md`](05-roadmap-phases.md)
    Umsetzungsphasen mit vertikalen Arbeitspaketen und Definition of Done. Phase 1 ist bewusst bereits ein vorzeigbarer `INTERLIS Input` mit guter GUI.
 
-7. [`06-development-deployment.md`](06-development-deployment.md)  
+7. [`06-development-deployment.md`](06-development-deployment.md)
    Maven-/Classloader-/Packaging-Konzept, lokale Ein-Befehl-Installation, Hop-GUI-Restart, E2E-Scripts, CI und Releaseprozess.
 
-8. [`AGENTS.md`](AGENTS.md)  
+8. [`AGENTS.md`](../../AGENTS.md)
    Persistente Arbeitsregeln für Coding-Agents: Java/SDKMAN, Maven, Architektur-Invarianten, Tests, E2E, Logging und Completion Criteria.
 
-9. [`STARTPROMPT.md`](STARTPROMPT.md)  
+9. [`STARTPROMPT.md`](../../STARTPROMPT.md)
    Startprompt für einen Coding-Agenten. Er zwingt die Umsetzung auf Phase 0 und danach den vorzeigbaren Phase-1-Vertikalschnitt.
 
-10. [`.sdkmanrc.example`](.sdkmanrc.example)  
+10. [`.sdkmanrc.example`](../../.sdkmanrc.example)
     Vorlage für ein projektlokal gepinntes JDK. Vor Verwendung auf einen tatsächlich installierten SDKMAN-Identifier anpassen und als `.sdkmanrc` ablegen.
 
 ## Wichtigste Architekturentscheidungen
@@ -116,8 +121,10 @@ mit stabiler Row-Struktur.
 STRUCTURE 0..1 / 1
     -> standardmässig flatten
 
-LIST/BAG OF STRUCTURE
+primitive und strukturierte LIST/BAG
     -> INTERLIS Structure Explode / Collect
+    -> _ili_value oder Strukturfelder + optional _ili_child_object
+    -> PRESERVE / REBUILD beim Sammeln
 ```
 
 `LIST` erhält eine explizite Reihenfolge.
@@ -132,7 +139,7 @@ komplexe / m:n / n-äre Assoziation
     -> eigener Row-Stream
 
 ORDERED
-    -> _ili_order_pos
+    -> <role>_order_pos
 ```
 
 `INTERLIS Role Join` nutzt die Modellinformation, damit Benutzer nicht manuell Foreign-Key-Felder zusammensuchen müssen.
@@ -163,34 +170,12 @@ Damit werden Kreisbögen nicht bereits beim INTERLIS-Input implizit linearisiert
 
 ### Gute GUI ist Teil der Architektur
 
-Die normalen Transforms verstecken IOM-/XTF-Transferdetails und zeigen stattdessen:
-
-- Models,
-- Topics,
-- Classes,
-- Attributes,
-- Structures,
-- Roles,
-- Geometry types,
-- Cardinalities.
-
-Beispiel:
-
-```text
-+------------------------------------------------------------+
-| Model browser                                              |
-+------------------------------------------------------------+
-| v DMAV...                                                  |
-|   v Bodenbedeckung                                         |
-|     v Gebaeude                                             |
-|       [x] Art                         TEXT                  |
-|       [x] Geometrie                   SURFACE               |
-|       v Adresse                       STRUCTURE 0..1         |
-|         [x] Strasse                                        |
-|         [x] Nummer                                         |
-|       -> Gemeinde                     ROLE {1}              |
-+------------------------------------------------------------+
-```
+Die vorhandenen Dialoge bieten Modellquelle, Klassenauswahl und tabellarische
+Schema-/Mappingvorschau. Der Statusbereich zeigt Modellprobe und Fehler, ohne das
+Öffnen eines gespeicherten Dialogs zu verhindern. `Options…` enthält seltene
+Ressourcen-, Erhaltungs- oder Validierungseinstellungen. Ein editierbarer
+Modellbaum mit Attribut-Checkboxen und ein Mehrklassen-Assistent sind keine
+aktuellen Controls; die [GUI-Spezifikation](03-gui-ux.md) nennt den Bedienumfang.
 
 ## Empfohlene Lieferfolge
 
@@ -216,7 +201,7 @@ Phase 5  Advanced Envelope + Transfer I/O
 Phase 6  Validation + Enums + Basket/Operations + UX
    |
    v
-Phase 7  ITF / INTERLIS 1
+Phase 7  ITF / INTERLIS 1 (bewusst nicht unterstützt)
    |
    v
 Phase 8  Hardening + Performance + Compatibility
@@ -247,4 +232,3 @@ Hop GUI neu starten
 ## Verbindliche Qualitätsregel
 
 Keine Phase gilt als abgeschlossen, wenn nur Java-Unit-Tests grün sind. Für zentrale Benutzerpfade sind echte Hop-Pipeline- und `hop-run`-E2E-Tests vorgesehen.
-

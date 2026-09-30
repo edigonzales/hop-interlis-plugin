@@ -1,463 +1,55 @@
 [[xtf-lesen]]
-== XTF lesen: Der INTERLIS Input-Transform
+== XTF lesen: INTERLIS Input
 
-Der `INTERLIS Input`-Transform ist das zentrale Werkzeug zum Lesen von XTF-Dateien. Er erzeugt typisierte Hop-Rows aus den Objekten einer einzelnen INTERLIS-Klasse.
+`INTERLIS Input` liest XTF 2.3 oder 2.4 und liefert typisierte Zeilen einer konkreten Klasse. Andere Klassen werden übersprungen. Für einen gemeinsamen Strom aller Klassen verwenden Sie Transfer Input.
 
-[TIP]
-====
-Wenn Sie den gesamten Transfer (mehrere Klassen) als Event-Stream lesen möchten, verwenden Sie stattdessen den `INTERLIS Transfer Input`-Transform (siehe <<erweiterte-transforms>>).
-====
+=== Datei, Modell und Klasse
 
-=== Dialog-Übersicht
-
-[source,text]
-----
-+================================================================================+
-| INTERLIS Input                                                                 |
-+================================================================================+
-| Transform name  [ Gebäude lesen                                          ]     |
-|                                                                                 |
-| Source                                                                          |
-| Data file       [ ${PROJECT_HOME}/data/buildings.xtf                   ] ...   |
-| Models          [ %DATA                                                v]      |
-| Model dirs      [ %XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch ] ...   |
-| Meta config     [                                                      ] ...   |
-|                                                                                 |
-| Model status [ Model loaded: 1 model, 1 class                              ]   |
-|                                                                                 |
-| Class                                                                           |
-| [ Model.Topic.Building                                                v ]      |
-| [ Reload ]                                                                      |
-|                                                                                 |
-| Output fields                                                                   |
-| +--------------------------------------------------------------------------+   |
-| | Use | INTERLIS property       | Hop field              | Type            |   |
-| |-----+--------------------------+------------------------+-----------------|   |
-| | [x] | @TID                     | _ili_tid               | String          |   |
-| | [x] | @BID                     | _ili_bid               | String          |   |
-| | [x] | Name                     | Name                   | String(100)     |   |
-| | [x] | Geometry                 | Geometry               | Geometry        |   |
-| +--------------------------------------------------------------------------+   |
-|                                                                                 |
-| v Structures and relationships                                                  |
-|   Address {0..1}          (*) Flatten  ( ) Keep object   Prefix [Address_]      |
-|   Qualities LIST {0..*}   -> Use "INTERLIS Structure Explode" downstream        |
-|   Municipality -> {1}     [x] Output reference as Municipality_ref              |
-|                                                                                 |
-| > Validation                                                                    |
-| > Advanced                                                                      |
-|                                                                                 |
-|                                                     [ OK ] [ Cancel ]           |
-+================================================================================+
-----
-
-=== Modellquelle konfigurieren
-
-Der Transform benötigt das INTERLIS-Modell, um das Schema der zu lesenden Klasse zu kennen. Es gibt mehrere Möglichkeiten, das Modell bereitzustellen:
-
-==== Modelle aus der Transferdatei (%DATA)
-
-Die einfachste Option: `Models = %DATA`. Das Plugin liest den Transfer-Header und ermittelt die verwendeten Modelle automatisch.
-
-[NOTE]
-====
-`%DATA` funktioniert nur, wenn die XTF-Datei den Modellnamen im Header enthält (das ist bei INTERLIS 2 immer der Fall).
-====
-
-==== Modelle explizit angeben
-
-Sie können den Modellnamen direkt angeben (ohne `.ili`-Endung):
-
-[source,text]
-----
-Models: DMAVTYM_20151130LV95
-----
-
-Mehrere Modelle trennen Sie mit Semikolon. Kommas werden aus Gründen der
-Rückwärtskompatibilität ebenfalls akzeptiert:
-
-[source,text]
-----
-Models: ModellA;ModellB;ModellC
-----
-
-[source,text]
-----
-Models: ModellA,ModellB
-----
-
-==== Modellverzeichnisse
-
-Das Plugin sucht Modelle in den angegebenen Verzeichnissen. Sie können mehrere Verzeichnisse mit Semikolon trennen:
-
-[source,text]
-----
-Model dirs: %XTF_DIR;/home/user/ilimodels;https://models.interlis.ch;https://models.geo.admin.ch
-----
-
-Spezielle Platzhalter:
-
-[cols="1,2"]
+[cols="2,2,3"]
 |===
-| Platzhalter | Bedeutung
-
-| `%XTF_DIR`
-| Verzeichnis der XTF-Datei (nützlich, wenn Modell und Daten im gleichen Ordner liegen)
-
-| `%DATA`
-| Modellnamen aus dem Header der XTF-Datei ableiten
-
-| `HTTP(S)-URL`
-| INTERLIS-Modellrepository (wird automatisch heruntergeladen und gecacht)
+| Dialogfeld | Default | Verwendung
+| Data file | leer | Lokaler Pfad zur XTF-Datei; Hop-Variablen sind möglich.
+| Models | `%DATA` | Modelle aus dem Transferheader erkennen oder Modellnamen mit `;` trennen.
+| Model dirs | Standardmodellquelle (siehe unten) | Lokale Verzeichnisse und Repository-URLs, getrennt durch `;`.
+| Class | leer | Voll qualifizierter Name `Modell.Topic.Klasse`.
+| Default SRID | leer | Optionale SRID-Kennung für erzeugte Geometrien.
+| Source object field | `+_ili_source_object+` | Feldname für das optional mitgeführte Quellobjekt.
 |===
 
-Der Standardwert ist `%XTF_DIR;https://models.interlis.ch;https://models.geo.admin.ch`.
-`%XTF_DIR` ist dabei nur eine praktische lokale Quelle, keine Einschränkung.
-Sie können beliebige lokale Modellverzeichnisse und mehrere HTTP(S)-Repositories
-angeben. Ein Eintrag wie `${MODEL_DIR}` ist eine normale Hop-Variable und
-wird vor der Modellauflösung aufgelöst.
-
-[IMPORTANT]
-====
-**Modell-Repositories** werden über HTTP(S) aufgelöst. Das Plugin lädt `ilimodels.xml` herunter und legt Modelle lokal in einem Cache ab. Bei Netzwerkproblemen erscheint eine klare Fehlermeldung mit Vorschlägen (Offline-Modus, lokales Override).
-====
-
-Die Suche verwendet zusätzlich die `ilisite.xml`-Verknüpfungen der
-Repositories. Dadurch werden verbundene Parent- und Tochter-Repositories wie
-`models.kgk-cgc.ch` oder `geo.so.ch` automatisch berücksichtigt; sie müssen
-nicht als eigene statische Default-Einträge angegeben werden.
-
-=== Klasse auswählen
-
-Nach erfolgreicher Modellprobe wird das Klassen-Dropdown mit allen
-transferierbaren Klassen und Assoziationen befüllt. Das Klassenfeld darf bis
-dahin leer bleiben; der Status meldet dann sinngemäss: _Modell geladen – bitte
-Klasse auswählen_. Es wird keine Klasse automatisch ausgewählt. Die Schema
-Preview wird erst nach einer konkreten Auswahl erzeugt. Assoziationen erscheinen
-im Dropdown mit dem Zusatz `(association)`;
-intern wird weiterhin ihr vollständiger INTERLIS Scoped Name gespeichert.
-Technische Modelle (`TYPE`, `REFSYSTEM`, `SYMBOLOGY`) werden für die
-Klassenauswahl ausgeblendet, bleiben für die Auflösung von Imports aber
-Bestandteil des kompilierten Modells.
-
-Der aktuell implementierte Dialog verwendet dafür eine editierbare Combo-Box.
-Der vollständige modale Modellbrowser mit Baum und Filter ist in der
-Spezifikation vorgesehen, aber noch ein separates GUI-Arbeitspaket.
-
-[source,text]
-----
-+------------------------------------------------------+
-| Select INTERLIS class                                |
-+------------------------------------------------------+
-| Filter [ building________________________ ]           |
-|                                                      |
-| Model.Topic.Building                                  |
-| Model.Topic.Road                                      |
-| Model.Topic.Water                                     |
-|                                                      |
-| Selected: Model.Topic.Building                         |
-| Properties: 4 fields, 1 geometry                       |
-+------------------------------------------------------+
-----
-
-[NOTE]
-====
-Die aktuelle Klassenauswahl ist eine editierbare Combo-Box. Die Icons und die
-Baumansicht des vollständigen Modellbrowsers gehören zu einem späteren
-GUI-Arbeitspaket.
-====
-
-=== Projected Hop schema
-
-Nach der Auswahl einer Klasse zeigt der Dialog das geplante Hop-Schema in einer
-read-only Tabelle _Projected Hop schema_. Die Spalten sind:
-
-[cols="1,2,1"]
-|===
-| Spalte | Bedeutung | Editierbar?
-
-| Field
-| Name des erzeugten Hop-Felds
-| Nein
-
-| Hop type
-| Tatsächlicher Hop-Datentyp, z.B. `String`, `Integer`, `Date` oder `Geometry`
-| Nein
-
-| Source
-| INTERLIS-Attribut, technische Quelle oder Rollen-/Strukturpfad
-| Nein
-|===
-
-Die Tabelle besitzt horizontales und vertikales Scrolling. Lange Scoped Names
-werden nicht abgeschnitten, sondern können horizontal gelesen werden.
-
-Warnungen erscheinen in einem separaten Hinweisbereich unterhalb der
-Konfiguration und nicht als Tabellenzeilen. Beispielsweise wird dort erklärt,
-wenn eine mehrwertige Struktur nicht Teil des skalaren Row-Schemas ist und mit
-`INTERLIS Structure Explode` weiterverarbeitet werden muss.
-
-Der Modellstatus steht als normale Formularzeile in einem eigenen, nicht-modalen
-Bereich zwischen `Model dirs` und `Class`. Das Label ist wie die übrigen
-Formularlabels ausgerichtet; die rechteckige Statusfläche liegt bündig in der
-Feldspalte. Es gibt kein Zusatzsymbol und keine separate Überschrift. Die Farbe unterscheidet
-Information, Erfolg, Warnung und Fehler; lange Meldungen werden umgebrochen.
-Der Dialog bleibt auch bei einer fehlgeschlagenen Preview geöffnet.
+Die Standardmodellquelle besteht aus `+%XTF_DIR+`, https://models.interlis.ch und https://models.geo.admin.ch, im Eingabefeld durch `;` getrennt.
 
-Die Werte in der Spalte `Source` werden in der kanonischen INTERLIS-/`ili2c`-Darstellung angezeigt. Dazu gehört beispielsweise `FORMAT Year"-"Month"-"Day`; die Anführungszeichen werden von der Anzeige nicht entfernt.
+`+%XTF_DIR+` bezeichnet das Verzeichnis der Transferdatei. `%DATA` ermittelt Modellnamen, nicht die Modelltexte: `.ili`-Dateien und ihre Imports müssen über die Modellverzeichnisse verfügbar sein. Für Offline-Läufe setzen Sie `Model dirs` auf lokale Verzeichnisse, wie in den Tutorials.
 
-=== Felder neu einlesen (Get fields)
+Eine noch nicht aufgelöste Variable oder fehlende Datei kann die Vorschau verhindern. Der Dialog bleibt geöffnet und zeigt eine Diagnose. Setzen Sie die benötigten Variablen und verwenden Sie `Reload model` zum erneuten Laden; damit wird auch der kompilierte Modellcache invalidiert.
 
-Der Button **Get fields** liest das aktuelle INTERLIS-Modell neu ein und erzeugt den Default-Plan.
+=== Technische Felder und Vorschau
 
-[CAUTION]
-====
-Wenn Sie Feldnamen manuell angepasst haben, erscheint ein Dialog:
+Unter `Reserved fields` sind `+_ili_tid+` und `+_ili_bid+` standardmässig aktiv. `+_ili_class+`, `+_ili_topic+` und `+_ili_operation+` sind standardmässig deaktiviert. Aktivieren Sie die Operation für inkrementelle Transfers. Löschobjekte benötigen eine Verarbeitung, die ihre Operation berücksichtigt; sie enthalten nicht die normalen fachlichen Attributwerte.
 
-[source,text]
-----
-Refresh fields from model?
-(*) Preserve matching custom output names
-( ) Reset all output names to defaults
-----
+Die Schema-Vorschau zeigt den vorberechneten Mappingplan. Einwertige Strukturen werden abgeflacht, etwa zu `+Adresse_Strasse+`. Die konkrete Klasse enthält ihre geerbten Attribute. Der Dialog stellt keinen wählbaren Vererbungs- oder Flatten-Modus bereit.
 
-Wählen Sie _Preserve_, um Ihre manuellen Namen zu behalten.
-====
+Mehrwertige Attribute werden mit einem Hinweis auf Explode/Collect ausgelassen. Das gilt auch für primitive LIST/BAG. Skalare Referenzattribute liefern `+<Pfad>_ref+` und `+<Pfad>_ref_bid+`. Einfache Assoziationsrollen liefern ihre Rollenreferenzen; komplexe Assoziationen haben einen eigenen Zeilentyp.
 
-=== Strukturen konfigurieren
+=== Quellobjekt mitführen
 
-#### Einwertige Strukturen (0..1, 1)
+Aktivieren Sie `Keep source object for Structure Explode`, wenn Sie Sammlungen mit Explode lesen oder unprojizierte Objektinhalte später per Overlay erhalten möchten. Das technische Feld enthält dann das vollständige INTERLIS-Objekt. Im Writer muss dasselbe Feld als `Source object field` eingetragen werden.
 
-Strukturen mit Kardinalität `0..1` oder `1` werden standardmässig _geflattet_:
+Ohne Quellobjekt erhalten Sie eine einfache Projektion. Ein Klasseninput mit Quellobjekt erhält weiterhin nur die ausgewählte Klasse; Header, vollständige Basket-Metadaten und andere Klassen benötigen den Ereignisweg.
 
-[source,text]
-----
-Address {0..1}
-  (*) Flatten to fields
-  ( ) Keep as INTERLIS Object [Advanced]
-  Prefix [ Address_ ]
-----
+=== Geometrien
 
-Mit dem Präfix `Address_` entstehen Felder wie:
+Jedes unterstützte Geometrieattribut erzeugt ein eigenes Geometry-Feld. Kreisbögen bleiben über SQL/MM-WKB und den gemeinsamen Geometry-Typ erhalten. Gerade XYZ-Geometrien sind unterstützt; echte 3D-Kurven werden abgelehnt.
 
-[source,text]
-----
-Address_Street     String
-Address_Number     String
-Address_PLZ        String
-Address_Ort        String
-----
+`Default SRID` setzt eine Kennung und führt keine Koordinatentransformation durch. Eine leere Einstellung ist keine Zusage einer bestimmten EPSG-Kennung. Kontrollieren Sie Modell und Daten vor dem Setzen.
 
-[NOTE]
-====
-Das Flattening erfolgt rekursiv bis zu einer konfigurierbaren Maximal-Tiefe. Bei Namenskollisionen wird gewarnt.
-====
+=== Puffer und Ausgabezeitpunkt
 
-==== Mehrwertige Strukturen (LIST/BAG)
+`Options…` öffnet `Buffer memory (MiB)` (64), `Spill directory (empty: system temp)` (leer: Java-Tempverzeichnis) und `Maximum spill (MiB, 0: unlimited)` (0: ohne zusätzliche Obergrenze).
 
-Strukturen mit `LIST OF` oder `BAG OF` können nicht in eine einzelne Row geflattet werden:
+Normale Objekte werden fortlaufend gelesen. Bei bestimmten attributierten Assoziationen muss der vollständige Basket für die Linkauflösung vorliegen. Er wird bei Bedarf auf Disk ausgelagert. Erst nach Basket-Abschluss werden die betroffenen Zeilen einzeln projiziert und ausgegeben. Widersprüchliche Linkobjekte führen zu einem Fehler.
 
-[source,text]
-----
-Qualities : LIST {0..*} OF Quality
+Das Pufferbudget ist keine JVM-Heap-Obergrenze: ein einzelnes IOM-Objekt und sein bearbeitetes Ergebnis müssen in den Heap passen. Details und dieselben Einstellungen für andere Transforms stehen unter <<puffer,Puffer und grosse Daten>>.
 
-This property cannot be represented as a fixed set of scalar fields.
+=== Daten validieren
 
-[x] Keep source object for downstream Structure Explode
-
-Suggested next transform:
-    INTERLIS Structure Explode
-----
-
-Optionen:
-
-- **Keep source object**: Das rohe INTERLIS-Objekt wird als technisches Feld `_ili_source_object` im Output-Stream mitgeführt.
-- Ohne Keep source object: Die Struktur wird im Output-Stream nicht berücksichtigt (die Parent-Row enthält kein Feld für die Struktur).
-
-=== Rollen konfigurieren
-
-==== Einfache Rollen
-
-Eine Rolle mit Kardinalität `0..1` oder `1` wird als Referenzfeld dargestellt:
-
-[source,text]
-----
-Municipality -> Municipality {1}
-
-[x] Output reference
-    Field name [ Municipality_ref ]
-
-[x] Output external basket reference if present
-    Field name [ Municipality_ref_bid ]
-----
-
-Das Feld `Municipality_ref` enthält die TID des referenzierten Gemeinde-Objekts.
-
-[NOTE]
-====
-Wenn das Feld `Municipality_ref_bid` vorhanden ist, bedeutet dies, dass das referenzierte Objekt in einem anderen Basket liegt.
-====
-
-==== Komplexe Rollen
-
-Rollen mit Kardinalität `0..*` oder `1..*` werden automatisch als eigene Row-Typen behandelt und erscheinen nicht als Option im `INTERLIS Input`-Dialog für die Hauptklasse. Verwenden Sie stattdessen den `INTERLIS Transfer Input` oder lesen Sie die Assoziation als eigene Klasse.
-
-=== Geometrie
-
-#### Mehrere Geometrieattribute
-
-INTERLIS-Klassen können mehrere Geometrieattribute haben:
-
-[source,interlis]
-----
-CLASS RoadElement =
-  Axis : POLYLINE;
-  Footprint : SURFACE;
-END RoadElement;
-----
-
-Im Hop-Schema erscheinen beide als gleichwertige `Geometry`-Felder:
-
-[source,text]
-----
-_ili_tid    String
-Axis        Geometry
-Footprint   Geometry
-----
-
-[IMPORTANT]
-====
-Anders als FME gibt es in Hop _keine Hauptgeometrie_. Bei der Weiterverarbeitung (z. B. GeoPackage Writer) müssen Sie explizit das gewünschte Geometrie-Feld auswählen.
-====
-
-==== Kreisbögen
-
-Das Plugin behandelt Kreisbögen verlustfrei:
-
-- `POLYLINE WITH (ARCS)` → `CompoundCurve` mit `CircularString`-Segmenten
-- `SURFACE/AREA WITH (ARCS)` → `CurvePolygon` mit `CircularString`-Ringen
-
-[NOTE]
-====
-Die Bögen bleiben erhalten, weil das Plugin Geometrien über SQL/MM WKB konvertiert (nicht über klassische JTS-Abbildung, die linearisieren würde).
-====
-
-==== SRID
-
-- Das Plugin setzt die SRID nur, wenn eine eindeutige Zuordnung zwischen INTERLIS-Koordinatensystem und EPSG-Code vorliegt.
-- Ohne Zuordnung bleibt die SRID `0`.
-- Sie können einen _Default SRID_ konfigurieren (z. B. `2056` für CH1903+/LV95).
-
-[source,text]
-----
-Advanced > Default SRID [ 2056 ]
-[ ] Force default SRID even if model CRS mapping is available
-----
-
-=== Baskets
-
-Jedes Objekt gehört zu einem Basket. Der `INTERLIS Input` fügt automatisch `_ili_bid` hinzu.
-
-**Mehrere Baskets**: Falls die XTF-Datei mehrere Baskets enthält, erhalten alle Objekte ihre jeweilige BID.
-
-**Gruppierung**: Verwenden Sie `_ili_bid` zum Filtern oder Gruppieren in der Pipeline.
-
-[source,text]
-----
-+-----------------------------------------------------------+
-| _ili_tid | _ili_bid | Name      | ...                     |
-+----------+----------+-----------+-------------------------+
-| g1       | b1       | Rathaus   | ...                     |
-| g2       | b1       | Migros    | ...                     |
-| g3       | b2       | Schule    | ...                     |
-+-----------------------------------------------------------+
-----
-
-=== Vererbung
-
-Bei Vererbung (`EXTENDS`) werden alle effektiven Attribute flach in die Row aufgelöst:
-
-[source,interlis]
-----
-CLASS BaseObject =
-  CreatedAt : DATE;
-END BaseObject;
-
-CLASS Building EXTENDS BaseObject =
-  Name : TEXT*100;
-  Geometry : SURFACE;
-END Building;
-----
-
-Hop-Row für `Building`:
-
-[source,text]
-----
-_ili_tid    String
-CreatedAt   Date
-Name        String
-Geometry    Geometry
-----
-
-[NOTE]
-====
-`_ili_class` zeigt den tatsächlichen Objekttyp an. Dies ist nützlich, wenn die XTF-Datei Objekte verschiedener Subklassen enthält, die alle in ein `Building`-Schema passen.
-====
-
-=== DELETE und UPDATE
-
-Bei inkrementellen Transfers können Objekte DELETE- oder UPDATE-Markierungen tragen:
-
-[source,text]
-----
-<Demo:Class xmlns:Demo="http://www.interlis.ch/xtf/2.4/Demo"
-            xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS"
-            ili:tid="g1" ili:operation="DELETE"/>
-----
-
-Optionen im Dialog:
-
-[source,text]
-----
-Advanced > Delete objects
-  (*) Emit matching deletes with _ili_operation=DELETE
-  ( ) Ignore
-  ( ) Fail
-----
-
-- **Emit**: Das Objekt wird als Row ausgegeben mit `_ili_operation="DELETE"`. Die anderen Felder sind `null`.
-- **Ignore**: DELETE-Objekte werden übersprungen.
-- **Fail**: Die Pipeline bricht bei DELETE-Objekten ab.
-
-[CAUTION]
-====
-Im Default-Modus (_Emit_) werden auch DELETE-Objekte als Rows ausgegeben. Filtern Sie sie bei Bedarf in der Pipeline heraus, bevor Sie sie in ein Zielsystem schreiben.
-====
-
-=== Validierung
-
-Der `INTERLIS Input` kann Daten während des Lesens validieren:
-
-[source,text]
-----
-v Validation
-  [ ] Validate while reading
-  
-  Validator config [                                      ] [...]
-  Meta config      [                                      ] [...]
-  
-  [x] Validate attribute/role multiplicity
-  Error handling [ Fail transform                        v]
-----
-
-Optionen:
-
-- **Validate while reading**: Aktiviert die Validierung mit `ilivalidator`.
-- **Validator config**: Pfad zu einer TOML-Konfigurationsdatei für den Validator.
-- **Validate multiplicity**: Prüft, ob mandatory Attribute/Rollen vorhanden sind.
-- **Error handling**: `Fail transform` (Pipeline bricht ab) oder `Log warnings` (Fehler werden geloggt, Pipeline läuft weiter).
-
-[NOTE]
-====
-Für eine separate Validierungsstufe in der Pipeline verwenden Sie den `INTERLIS Validate`-Transform (siehe <<erweiterte-transforms>>).
-====
+Die modellbasierte Projektion ersetzt keine vollständige Transferprüfung. Verwenden Sie den separaten `INTERLIS Validate`-Transform für eine bestehende Datei. Beim Schreiben kann `Validate before publication` die temporäre Ausgabe prüfen. <<validierung,Die Validierungsanleitung>> beschreibt Optionen und Diagnosefelder.

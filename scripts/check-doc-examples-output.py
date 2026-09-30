@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
-"""Verify the packaged Hop pipelines for the six documentation examples."""
+"""Verify semantic results of the packaged handbook tutorials."""
 
 import csv
+import os
+import sqlite3
+import struct
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -89,5 +92,82 @@ error = errors[0]
 require("Temperaturbereich" in error[1], f"doc-validierung constraint message missing: {error}")
 require(error[8:10] == ["DemoValidierung.Daten.Messung", "m2"], f"doc-validierung context missing: {error}")
 require(error[10] == "", f"doc-validierung class constraint must not have attribute path: {error}")
+
+def transfer(name, model):
+    root = ET.parse(output_dir / name).getroot()
+    require(root.tag == f"{{{XTF24}}}transfer", f"{name}: expected XTF 2.4")
+    return root, {"m": f"http://www.interlis.ch/xtf/2.4/{model}", "ili": XTF24}
+
+
+collections, ns = transfer("doc-sammlungen.xtf", "DemoSammlungen")
+objects = collections.findall(".//m:Objekt", ns)
+require([obj.get(f"{{{XTF24}}}tid") for obj in objects] == ["o1", "o2"], "collection parent identities")
+require(collections.find(".//m:Daten", ns).get(f"{{{XTF24}}}bid") == "b1", "collection basket")
+for attr, expected in {"Texte": ["erster", "zweiter"], "Zahlen": ["7", "7", "9"],
+                       "Flags": ["true", "false"], "Farben": ["rot", "blau"]}.items():
+    values = [node.text for node in objects[0].findall(f"m:{attr}", ns)]
+    require(values == expected, f"collection {attr}: {values}, expected {expected}")
+    require(not objects[1].findall(f"m:{attr}", ns), f"empty collection {attr} was populated")
+
+preserved, ns = transfer("doc-erhaltung.xtf", "DemoErhaltung")
+parent = preserved.find(".//m:Eltern", ns)
+require(parent.get(f"{{{XTF24}}}tid") == "e1", "preserved parent TID")
+require(preserved.find(".//m:Daten", ns).get(f"{{{XTF24}}}bid") == "b1", "preserved basket")
+children = parent.findall("m:Kinder/*", ns)
+require(len(children) == 1, f"filtered child was not removed: {len(children)} children")
+child = children[0]
+require(child.tag == f"{{{ns['m']}}}SpezialKind", f"concrete subtype lost: {child.tag}")
+for attr, value in {"Name": "bleibt", "Versteckt": "erhalten", "Zusatz": "Untertyp"}.items():
+    require(child.findtext(f"m:{attr}", namespaces=ns) == value, f"preserved {attr}")
+require([n.text for n in child.findall("m:Details/m:Detail/m:Text", ns)] == ["innen eins", "innen zwei"], "nested LIST contents/order")
+
+references, ns = transfer("doc-referenzen.xtf", "DemoReferenzen")
+baskets = references.findall("ili:datasection/m:Daten", ns)
+require([b.get(f"{{{XTF24}}}bid") for b in baskets] == ["b1", "b2"], "reference basket order/IDs")
+require([[n.get(f"{{{XTF24}}}tid") for n in b] for b in baskets] == [["z1", "o1"], ["z2"]], "reference object/basket membership")
+obj = baskets[0].find("m:Objekt", ns)
+require(obj.findtext("m:Name", namespaces=ns) == "verweist", "reference object value")
+for attr, tid, bid in [("Intern", "z1", None), ("Extern", "z2", "b2")]:
+    node = obj.find(f"m:{attr}", ns)
+    require(node.get(f"{{{XTF24}}}ref") == tid and node.get(f"{{{XTF24}}}bid") == bid, f"{attr} TID/BID changed")
+require([b.findtext("m:Ziel/m:Name", namespaces=ns) for b in baskets] == ["internes Ziel", "externes Ziel"], "reference targets lost")
+expected_refs = [["_ili_tid", "_ili_bid", "Name", "Intern_ref", "Intern_ref_bid", "Extern_ref", "Extern_ref_bid"],
+                 ["o1", "b1", "verweist", "z1", "", "z2", "b2"]]
+for name in ["doc-referenzen-felder.csv", "doc-referenzen-check.csv"]:
+    require(csv_rows(name) == expected_refs, f"reference typed inspection {name}: {csv_rows(name)}")
+
+def polygon_coordinates(blob):
+    require(isinstance(blob, bytes) and blob[:2] == b"GP", "GeoPackage geometry header missing")
+    header_order = "<" if blob[3] & 1 else ">"
+    require(struct.unpack_from(header_order + "i", blob, 4)[0] == 2056, "GeoPackage geometry SRID changed")
+    envelope_sizes = {0: 0, 1: 32, 2: 48, 3: 48, 4: 64}
+    envelope_type = (blob[3] >> 1) & 7
+    require(envelope_type in envelope_sizes, "invalid GeoPackage envelope")
+    offset = 8 + envelope_sizes[envelope_type]
+    order = "<" if blob[offset] == 1 else ">"
+    geometry_type, rings = struct.unpack_from(order + "II", blob, offset + 1)
+    require((geometry_type, rings) == (3, 1), "expected one-ring 2D polygon")
+    count = struct.unpack_from(order + "I", blob, offset + 9)[0]
+    require(len(blob) == offset + 13 + count * 16, "invalid polygon coordinate payload")
+    return [struct.unpack_from(order + "dd", blob, offset + 13 + i * 16) for i in range(count)]
+
+
+gpkg = output_dir / "doc-gebaeude.gpkg"
+if gpkg.exists():
+    with sqlite3.connect(gpkg) as connection:
+        columns = connection.execute("select column_name,srs_id,geometry_type_name from gpkg_geometry_columns where table_name='gebaeude'").fetchall()
+        require(len(columns) == 1 and columns[0][1:] == (2056, "POLYGON"), f"tutorial GeoPackage geometry metadata: {columns}")
+        rows = connection.execute('select _ili_tid,_ili_bid,Name,Art,"' + columns[0][0] + '" from gebaeude order by _ili_tid').fetchall()
+        require([r[:4] for r in rows] == [("g1", "b1", "Rathaus", "Oeffentliches_Gebaeude"), ("g2", "b1", "Migros", "Gewerbegebaeude")], f"tutorial GeoPackage attributes: {[r[:4] for r in rows]}")
+        fixture = Path(__file__).resolve().parents[1] / "docs/biblios/user/examples/demo-transfer.xtf"
+        expected_polygons = [
+            [(float(c.findtext(f"{{{GEOM}}}c1")), float(c.findtext(f"{{{GEOM}}}c2")))
+             for c in polygon.findall(f".//{{{GEOM}}}coord")]
+            for polygon in ET.parse(fixture).getroot().iter(f"{{{GEOM}}}surface")
+        ]
+        require([polygon_coordinates(r[4]) for r in rows] == expected_polygons,
+                "tutorial GeoPackage polygon coordinates/order changed")
+elif os.environ.get("REQUIRE_VECTOR_RASTER_E2E") == "true":
+    raise SystemExit("required documentation GeoPackage output missing")
 
 print("Documentation example E2E outputs are valid")

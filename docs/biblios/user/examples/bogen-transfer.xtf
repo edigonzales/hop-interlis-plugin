@@ -22,10 +22,6 @@
               <geom:c1>2600100.0</geom:c1>
               <geom:c2>1200000.0</geom:c2>
             </geom:arc>
-            <geom:coord>
-              <geom:c1>2600100.0</geom:c1>
-              <geom:c2>1200000.0</geom:c2>
-            </geom:coord>
           </geom:polyline>
         </DemoBogen:Geometrie>
       </DemoBogen:Strassenachse>

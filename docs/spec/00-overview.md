@@ -1,9 +1,14 @@
 # hop-interlis-plugin – Gesamtspezifikation
 
 Status: Entwurf für Implementierung  
-Zielplattform: Apache Hop 2.18.1, Java 21  
+Zielplattform: Apache Hop 2.19.0, Java 21
 Primärformat Phase 1–4: INTERLIS 2 XTF 2.3/2.4  
 Spätere Erweiterung: INTERLIS 1 ITF, vollständiger Event-/Basket-Modus, zusätzliche Komfortfunktionen
+
+Aktueller Stand: [Benutzerhandbuch](../biblios/user/master.adoc),
+[Prio-1/2-Abnahme](../progress/prio-1-2.md) und
+[Dokumentations-Abnahme](../progress/documentation-current.md). Zielbild- und
+Später-Markierungen beschreiben keine zusätzlichen aktuellen Dialogoptionen.
 
 ## 1. Ziel
 
@@ -22,7 +27,7 @@ Hop:
 INTERLIS object --> generic INTERLIS envelope --> typed Hop row
                     |                         |
                     |                         `-- stable IRowMeta per stream
-                    `-- advanced/lossless backbone
+                    `-- supported-preservation backbone
 ```
 
 Die zwei Ebenen sind absichtlich getrennt:
@@ -45,12 +50,12 @@ Das Plugin muss:
 - Kreisbögen und SQL/MM-Curve-Geometrien im XTF-Pfad verlustfrei erhalten.
 - Vererbung korrekt auflösen und für ETL-Zwecke standardmässig als vollständiges flaches Row-Schema anbieten.
 - `STRUCTURE 0..1` / `STRUCTURE 1` komfortabel flatten können.
-- `BAG/LIST OF STRUCTURE` als Child-Rows auflösen und wieder zusammenführen können.
+- primitive und strukturierte `BAG/LIST` als Child-Rows auflösen und wieder zusammenführen können.
 - einfache Rollen als Referenzfelder darstellen.
 - komplexe bzw. m:n-Assoziationen als eigene Rows/Streams behandeln.
 - `ORDERED` und `LIST`-Reihenfolgen erhalten.
 - Basket-Informationen mindestens über `_ili_bid` verfügbar machen.
-- einen Advanced/Event-Modus für Start/End Transfer, Start/End Basket, Object, Delete Object vorbereiten und später vollständig bereitstellen.
+- den vorhandenen Ereignismodus für Transfer-/Basket-Grenzen und Objekte bereitstellen; Delete wird als OBJECT mit Operation DELETE transportiert.
 - INTERLIS-Validierung über iox-ili/ilivalidator-nahe APIs integrieren.
 - eine gute Hop-GUI bieten: Model Browser, Schema Preview, sinnvolle Defaults, klare Hinweise für Strukturen und Rollen.
 - lokale Entwicklung, Build, Installation und Neustart von Hop mit einem Befehl ermöglichen.
@@ -77,22 +82,16 @@ Die Spezifikation orientiert sich an den bereits vorhandenen Plugins:
 - `edigonzales/hop-geometry-type-plugin`
 - `edigonzales/hop-vector-raster-plugin`
 
-Der aktuelle Vector/Raster-Plugin-Parent verwendet:
+Verwandte Plugin-Versionen werden anhand ihrer tatsächlichen POMs und der
+getesteten ZIP-Kombination geprüft. Sie sind kein zweiter Versions-Pin dieses
+Repositories; den gemeinsamen Geometry-Typ liefern beide getrennt paketierten
+Plugins aus derselben Classloader-Gruppe.
+
+Für `hop-interlis-plugin` ist die Ziel-Baseline **Apache Hop 2.19.0** (Java 21):
 
 ```text
-Java             17
-Apache Hop       2.17.0
-GeoTools         35.0
-JTS              1.20.0
-JUnit            5.12.0
-AssertJ          3.27.3
-```
-
-Für `hop-interlis-plugin` ist die Ziel-Baseline **Apache Hop 2.18.1** (Java 21):
-
-```text
-Java             21       <- Hop 2.18-Artefakte sind Java-21-Bytecode
-Apache Hop       2.18.1   <- verbindliche Baseline, zentral im Parent-POM gepinnt
+Java             21       <- Hop 2.19-Artefakte sind Java-21-Bytecode
+Apache Hop       2.19.0   <- verbindliche Baseline, zentral im Parent-POM gepinnt
 iox-ili          1.24.4
 ili2c            5.6.8
 ```
@@ -102,14 +101,14 @@ Module beziehen ihre Hop-Artefakte (`hop-core`, `hop-engine`, Test-Transforms) v
 Ein Versionswechsel erfolgt nur über diese eine Stelle plus die unten referenzierten
 Spezifikationsstellen; es darf keinen zweiten hartkodierten Hop-Versionswert im Projekt geben.
 
-Für INTERLIS wird als initialer Baseline-Stand vorgeschlagen:
+Die INTERLIS-Kombination ist verbindlich gepinnt:
 
 ```text
 iox-ili          1.24.4
 ili2c            5.6.8
 ```
 
-Diese Kombination wird aktuell auch im ili2db-Umfeld verwendet. Versionen sind zentral im Parent-POM zu verwalten und regelmässig separat zu aktualisieren.
+Zusätzlich gelten iox-api 1.0.3 und ehibasics 1.4.1. Versionen werden zentral im Parent-POM verwaltet und nur auf ausdrücklichen Auftrag geändert.
 
 ### 4.1 Classloader-Vorgabe
 
@@ -195,9 +194,9 @@ Eine spätere Aufteilung in weitere Module ist möglich, aber für den Start nic
 |---|---|---:|
 | INTERLIS Input | XTF lesen und genau eine Klasse als normale Rows ausgeben | sehr hoch |
 | INTERLIS Output | normale Rows einer konfigurierten Klasse als XTF schreiben | sehr hoch |
-| INTERLIS Validate | Datei oder Envelope-Stream validieren | hoch |
-| INTERLIS Structure Explode | BAG/LIST-Struktur in Child-Rows zerlegen | hoch |
-| INTERLIS Structure Collect | Child-Rows wieder als Strukturwerte sammeln | hoch |
+| INTERLIS Validate | XTF-Datei vollständig validieren | hoch |
+| INTERLIS Structure Explode | Primitive oder strukturierte BAG/LIST in Kindzeilen zerlegen | hoch |
+| INTERLIS Structure Collect | Kindzeilen als vollständige Sammlung zurückführen (PRESERVE/REBUILD) | hoch |
 | INTERLIS Role Join | modellbewusster Join über eine Rolle | mittel |
 | INTERLIS Enumerations | Enumerationswerte eines Modells als Rows ausgeben | mittel |
 
