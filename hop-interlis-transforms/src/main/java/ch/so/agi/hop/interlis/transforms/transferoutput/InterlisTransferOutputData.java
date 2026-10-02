@@ -11,6 +11,7 @@ public class InterlisTransferOutputData extends BaseTransformData {
   public ch.so.agi.hop.interlis.core.io.InterlisBasketMetadata currentBasketMetadata;
   public ch.so.agi.hop.interlis.transforms.mapping.InterlisEnvelopeBindings envelopeBindings;
 
+  ch.so.agi.hop.interlis.core.io.InterlisEventWriter eventWriter;
   boolean initialized;
   InterlisTransferWriter writer;
   String currentBid;

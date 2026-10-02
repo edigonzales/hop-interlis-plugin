@@ -1802,3 +1802,34 @@ wirklichen Metadaten jedes Streams. Unaufgelöste Modellproben verhindern nicht
 das Öffnen eines Dialogs.
 
 Der Basket-Puffer hält nur den aktiven Basket. `Batch` ist ein explizit zu schliessender Besitzer von Spill-Speicher und Iteratoren; Input/Object to Row projizieren daraus eine Zeile nach der anderen. EOF, Fehler, Stop und `dispose()` geben alle Ressourcen frei.
+
+## Prio 3: Implementierungsbausteine
+
+- `InterlisMappedInput` / `InterlisFieldAssignment`: persistierte Eingangstabelle
+  mit Klassenziel, technischen Feldbindungen und expliziten Attributzuordnungen.
+- `MappedClassPlan`: Initialisierungszeit-Projektion, Prüfung und Reindizierung;
+  `InterlisFieldBinding` bindet je physischem RowSet mit strikter Typprüfung.
+- `MappedInputStreams` / `MappedInputReader`: INFO-Streams mit getrennten Schemas,
+  Namensnachführung bei Umbenennung, faire nichtblockierende RowSet-Abfrage.
+- `GroupedObjectStore`: gemeinsamer auslagerbarer Basketindex und Objektpuffer.
+- `MappedSinkSession`: Modellinitialisierung, Single-copy-Prüfung, temporärer
+  Writer, optionale Vollvalidierung und pipelineweite Publikationskoordination.
+- `InterlisPatchPlan`: vorberechnete Teiländerungen über `IomFieldWriter`.
+- `InterlisUpdateRunner`: Patchindex, Original-Snapshot, Volltransfer-Replay und
+  Prüfung nicht zuordenbarer bzw. doppelter Patches; kein Model-Introspecting je Row.
+- `UpdateReference`: begrenztes, versioniertes Base64url/Binärformat; Dekodierung
+  ohne Java-Objektdeserialisierung. Kanonischer IOM-Fingerprint je Elternobjekt.
+- `InterlisEventWriter`: gemeinsame Ereignisimplementierung für Update und
+  Transfer Output. `PreparedXtfOutput` kann eine Vorbedingung unmittelbar vor der
+  Publikation nochmals prüfen (Originaldatei weiterhin unverändert).
+
+Input persistiert `selectFields` getrennt von `selectedFields`: false bzw. fehlend
+bedeutet bisherige vollständige Projektion; true mit leerer Liste bedeutet nur
+aktivierte technische Felder und optional Quellobjekt. Explode persistiert
+`emit_update_reference`: neue Defaults true, fehlendes XML-Feld false. Der
+Herkunftsschlüssel wird nach den Kind-/Quellobjektfeldern und vor zusätzlichen
+Elternfeldern angefügt. Die neue Plugin-ID lautet `INTERLIS_UPDATE`.
+
+Neue Dateisinks bleiben Single-copy. Beliebig viele vorgelagerte Kopien sind
+zulässig. Keine neue Bibliothek, kein geänderter INTERLIS-/Hop-/CI-Pin und keine
+ilitransformer-Abhängigkeit sind dafür erforderlich.

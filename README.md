@@ -16,6 +16,13 @@ cover primitive collections, child preservation and references with safe output;
 [documentation acceptance](docs/progress/documentation-current.md) records the checks.
 
 
+**Prio 3:** `INTERLIS Output` accepts separately mapped, typed class inputs and
+groups their baskets with disk spill. `INTERLIS Update` applies selected object
+and structure patches to a complete original transfer. Input field selection
+and Explode provenance keep the pipelines small; validation and atomic publication
+protect the output. See [examples](examples/README.md#prio-3-direct-writer-and-selective-updates)
+and [the acceptance report](docs/progress/prio-3.md).
+
 **Prio 1/2 hardening:** primitive BAG/LIST through the existing Explode/Collect
 transforms; scalar reference attributes with TID/BID; explicit child PRESERVE/REBUILD
 modes; automatic H2 spill for basket, lookup and child buffers; fair multi-input
@@ -210,7 +217,7 @@ For installed E2E, compatible prebuilt ZIPs can replace the sibling builds throu
 | Module | Purpose |
 |---|---|
 | `hop-interlis-core` | Model compilation, schema descriptors (classes, structures, associations), enumeration extraction, transfer reader/writer, canonical envelope + validation row layouts, basket metadata, mapping plans, structure plans/explode/collect, geometry mapper. No SWT, no Hop runtime. |
-| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`, `INTERLIS Output`, `INTERLIS Structure Explode`, `INTERLIS Structure Collect`, `INTERLIS Role Join`, `INTERLIS Transfer Input`, `INTERLIS Object to Row`, `INTERLIS Row to Object`, `INTERLIS Transfer Output`, `INTERLIS Validate`, `INTERLIS Enumerations`), `InterlisObject` value type. |
+| `hop-interlis-transforms` | Hop transforms and dialogs (`INTERLIS Input`, `INTERLIS Output`, `INTERLIS Update`, `INTERLIS Structure Explode`, `INTERLIS Structure Collect`, `INTERLIS Role Join`, `INTERLIS Transfer Input`, `INTERLIS Object to Row`, `INTERLIS Row to Object`, `INTERLIS Transfer Output`, `INTERLIS Validate`, `INTERLIS Enumerations`), `InterlisObject` value type. |
 | `assemblies/assemblies-hop-interlis` | Installable plugin ZIP. |
 
 ## License

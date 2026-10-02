@@ -36,6 +36,15 @@ public class InterlisOutput extends BaseTransform<InterlisOutputMeta, InterlisOu
 
   @Override
   public boolean processRow() throws HopException {
+    if (meta.getMode() == InterlisOutputMeta.Mode.MAPPED_INPUTS) {
+      try {
+        MappedOutputWriter.run(this, meta);
+      } catch (Exception e) {
+        throw new HopException("INTERLIS multiclass output failed: " + e.getMessage(), e);
+      }
+      setOutputDone();
+      return false;
+    }
     Object[] row = getRow();
     if (row == null) {
       finishWriting();

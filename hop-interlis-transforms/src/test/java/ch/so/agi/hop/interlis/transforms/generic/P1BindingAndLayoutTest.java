@@ -35,6 +35,8 @@ class P1BindingAndLayoutTest {
   InterlisOutputMeta output() {
     var meta = new InterlisOutputMeta();
     meta.setDefault();
+    meta.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
+    meta.setValidateBeforePublish(false);
     meta.setFileName("result.xtf");
     meta.setModelNames("HopIli_P1_V1");
     meta.setModelDirectories(TestData.path("/models").toString());

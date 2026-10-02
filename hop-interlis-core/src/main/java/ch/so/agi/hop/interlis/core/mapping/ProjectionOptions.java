@@ -30,7 +30,41 @@ public record ProjectionOptions(
     Integer defaultSrid,
     Set<String> selectedPropertyPaths,
     boolean includeRoleRefBid,
-    boolean flattenAssociationAttributes) {
+    boolean flattenAssociationAttributes,
+    boolean explicitSelection) {
+
+  /** Legacy empty selections mean all fields. Explicit selection also permits no attributes. */
+  public ProjectionOptions(
+      boolean includeTid,
+      boolean includeBid,
+      boolean includeClassName,
+      boolean includeTopicName,
+      boolean includeOperation,
+      boolean includeInheritedProperties,
+      String structureSeparator,
+      Integer defaultSrid,
+      Set<String> selectedPropertyPaths,
+      boolean includeRoleRefBid,
+      boolean flattenAssociationAttributes) {
+    this(
+        includeTid,
+        includeBid,
+        includeClassName,
+        includeTopicName,
+        includeOperation,
+        includeInheritedProperties,
+        structureSeparator,
+        defaultSrid,
+        selectedPropertyPaths,
+        includeRoleRefBid,
+        flattenAssociationAttributes,
+        false);
+  }
+
+  public static ProjectionOptions selected(Set<String> paths) {
+    return new ProjectionOptions(
+        true, true, false, false, false, true, "_", null, paths, true, true, true);
+  }
 
   public static ProjectionOptions defaults() {
     return new ProjectionOptions(
@@ -77,7 +111,7 @@ public record ProjectionOptions(
   }
 
   public boolean isPropertySelected(String dottedPath) {
-    if (selectedPropertyPaths.isEmpty()) {
+    if (selectedPropertyPaths.isEmpty() && !explicitSelection) {
       return true;
     }
     // Selecting a structure selects all flattened fields below it.

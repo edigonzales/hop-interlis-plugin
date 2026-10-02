@@ -44,6 +44,8 @@ class OutputPublicationTest {
   InterlisOutputMeta writer(Path target) {
     var writer = new InterlisOutputMeta();
     writer.setDefault();
+    writer.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
+    writer.setValidateBeforePublish(false);
     writer.setFileName(target.toString());
     writer.setOverwrite(true);
     writer.setModelNames("HopIli_Collections_V1");

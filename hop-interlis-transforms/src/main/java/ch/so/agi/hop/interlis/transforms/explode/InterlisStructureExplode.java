@@ -60,6 +60,22 @@ public class InterlisStructureExplode
       if (!(carrier instanceof IomObject source))
         throw new HopException("Missing INTERLIS source object for parent " + parentKey(parentRow));
       try {
+        if (meta.isEmitUpdateReference()) {
+          Object bid = data.bindings.bid().read(parentRow);
+          Object tid = data.bindings.tid().read(parentRow);
+          if (bid == null
+              || bid.toString().isBlank()
+              || tid == null
+              || tid.toString().isBlank()
+              || !tid.toString().equals(source.getobjectoid())
+              || !data.plan.parentClass().scopedName().equals(source.getobjecttag()))
+            throw new HopException(
+                "Structure update reference requires the original class, BID and TID");
+          data.pendingBid = bid.toString();
+          data.pendingTid = tid.toString();
+          data.pendingFingerprint =
+              ch.so.agi.hop.interlis.core.update.UpdateReference.fingerprint(source);
+        }
         data.pendingChildren = data.exploder.cursor(source, data.plan);
       } catch (Exception e) {
         throw new HopException(
@@ -84,6 +100,16 @@ public class InterlisStructureExplode
       values.add(childValue);
     }
     if (meta.isKeepChildSourceObject() && !data.plan.primitive()) values.add(child.source());
+    if (meta.isEmitUpdateReference())
+      values.add(
+          new ch.so.agi.hop.interlis.core.update.UpdateReference(
+                  data.plan.parentClass().scopedName(),
+                  data.pendingBid,
+                  data.pendingTid,
+                  res(meta.getStructureAttributePath()),
+                  child.index(),
+                  data.pendingFingerprint)
+              .encode());
     for (var field : data.bindings.parentFields()) {
       values.add(parentRow[field.sourceIndex()]);
     }

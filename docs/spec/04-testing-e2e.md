@@ -1816,3 +1816,22 @@ Verbraucher prüfen Erfolg, Mappingfehler, Abbruch und idempotentes Aufräumen.
 Paket-E2E 29–32 prüfen umgeordnete Explode-/Collect- und Join-Streams sowie fehlende
 konfigurierte Felder und falsche Schlüsseltypen. Die Fehlerfälle verlangen Exit 1
 und eine konkrete Bindungsdiagnose. Alle bisherigen Paket-Pipelines bleiben aktiv.
+
+
+## Prio 3: zusätzliche Abnahme
+
+`Prio3PipelineTest` prüft heterogene INFO-Eingänge, Safe Mode mit RowSet-Grösse 1,
+mehrere physische Transform-Kopien, Objekt-/Struktur-/primitive Patches,
+unbekannte/doppelte/veraltete Schlüssel, mandatory/null, Herkunftspositionen,
+Symlink-/Hardlink-Gleichheit und Publikation nach späten Fehlern/Stop bzw.
+Originaländerungen. `Prio3MetadataTest` prüft echte Hop-XML-Serialisierung,
+Legacy-Defaults, technische Leerprojektion, Umbenennung/Entfernung und tiefe
+Dialogkopien. Core-Tests prüfen kanonische Schlüssel und erzwungenes Grouping-Spill.
+
+Die Paket-Pipelines 43–48 ergänzen Mehrklassenexport mit Eingangskopien und Baskets,
+selektives XYZ-Update, Explode→Update mit 600 Strukturkindern (1-MiB-Puffer),
+ARC-Erhaltung, fehlgeschlagene Veröffentlichung bei ungültigem Herkunftsschlüssel
+und primitive LIST-Updates. `check-e2e-output.py` vergleicht auch nicht geänderte
+Inhalte und bereinigte Temporärdateien. Eine interaktive SWT-Abnahme bleibt
+zusätzlich erforderlich; tatsächlich ausgeführte Prüfungen werden im
+Prio-3-Abnahmeprotokoll erfasst.

@@ -30,6 +30,15 @@ Die Schema-Vorschau zeigt den vorberechneten Mappingplan. Einwertige Strukturen 
 
 Mehrwertige Attribute werden mit einem Hinweis auf Explode/Collect ausgelassen. Das gilt auch für primitive LIST/BAG. Skalare Referenzattribute liefern `+<Pfad>_ref+` und `+<Pfad>_ref_bid+`. Einfache Assoziationsrollen liefern ihre Rollenreferenzen; komplexe Assoziationen haben einen eigenen Zeilentyp.
 
+=== Fachfelder auswählen
+
+`Fields…` unterscheidet alle Felder von ausgewählten Feldern. Bei expliziter leerer
+Auswahl bleiben nur aktivierte technische Felder und optional das Quellobjekt.
+So kann eine Update-Pipeline beispielsweise nur TID, BID und Name lesen oder für
+Explode nur TID, BID und Quellobjekt bereitstellen. Nicht ausgewählte Geometrien
+werden dabei nicht konvertiert. Bestehende Konfigurationen lesen weiterhin alle
+bisher projizierten Felder.
+
 === Quellobjekt mitführen
 
 Aktivieren Sie `Keep source object for Structure Explode`, wenn Sie Sammlungen mit Explode lesen oder unprojizierte Objektinhalte später per Overlay erhalten möchten. Das technische Feld enthält dann das vollständige INTERLIS-Objekt. Im Writer muss dasselbe Feld als `Source object field` eingetragen werden.

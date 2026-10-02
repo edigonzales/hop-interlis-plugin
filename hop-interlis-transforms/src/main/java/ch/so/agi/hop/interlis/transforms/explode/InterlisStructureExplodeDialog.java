@@ -36,6 +36,7 @@ import org.eclipse.swt.widgets.Text;
  */
 public class InterlisStructureExplodeDialog extends BaseTransformDialog {
 
+  private final InterlisStructureExplodeMeta original;
   private final InterlisStructureExplodeMeta input;
   private final InterlisStructureExplodeDialogController controller =
       new InterlisStructureExplodeDialogController();
@@ -68,7 +69,8 @@ public class InterlisStructureExplodeDialog extends BaseTransformDialog {
       InterlisStructureExplodeMeta transformMeta,
       PipelineMeta pipelineMeta) {
     super(parent, variables, transformMeta, pipelineMeta);
-    this.input = transformMeta;
+    this.original = transformMeta;
+    this.input = (InterlisStructureExplodeMeta) transformMeta.clone();
   }
 
   @Override
@@ -123,6 +125,41 @@ public class InterlisStructureExplodeDialog extends BaseTransformDialog {
     fdAdvanced.top = new FormAttachment(0, margin);
     advanced.setLayoutData(fdAdvanced);
     fdTransformName.right = new FormAttachment(advanced, -margin);
+    Button fieldSelection = new Button(shell, SWT.PUSH);
+    fieldSelection.setText("Fields…");
+    var fdFields = new FormData();
+    fdFields.right = new FormAttachment(advanced, -margin);
+    fdFields.top = new FormAttachment(0, margin);
+    fieldSelection.setLayoutData(fdFields);
+    fdTransformName.right = new FormAttachment(fieldSelection, -margin);
+    fieldSelection.addListener(
+        SWT.Selection,
+        e -> {
+          syncMetaFromWidgets();
+          var snapshot = (InterlisStructureExplodeMeta) input.clone();
+          snapshot.setSelectedChildFields(List.of());
+          var vars = ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator.snapshot(variables);
+          var selection =
+              ch.so.agi.hop.interlis.transforms.mapping.ui.FieldSelectionDialog.open(
+                  shell,
+                  input.getSelectedChildFields() != null
+                      && !input.getSelectedChildFields().isEmpty(),
+                  (input.getSelectedChildFields() == null
+                      ? List.of()
+                      : input.getSelectedChildFields()),
+                  false,
+                  () ->
+                      snapshot
+                          .tryStructurePlan(vars)
+                          .orElseThrow(
+                              () -> new IllegalStateException("Select a class and structure first"))
+                          .plan()
+                          .childFields());
+          if (selection != null) {
+            input.setSelectedChildFields(selection.paths());
+            refreshStructureComboAndPreview();
+          }
+        });
     advanced.addListener(
         SWT.Selection,
         e -> {
@@ -130,6 +167,11 @@ public class InterlisStructureExplodeDialog extends BaseTransformDialog {
               shell,
               variables,
               List.of(
+                  new Option(
+                      "Emit structure update reference",
+                      Boolean.toString(input.isEmitUpdateReference()),
+                      v -> input.setEmitUpdateReference(Boolean.parseBoolean(v)),
+                      List.of("true", "false")),
                   new Option(
                       "Keep child source object",
                       Boolean.toString(input.isKeepChildSourceObject()),
@@ -357,7 +399,9 @@ public class InterlisStructureExplodeDialog extends BaseTransformDialog {
     if (result.ok() && result.projection() != null) {
       InterlisSchemaPreview preview =
           controller.createSchemaPreview(
-              result.projection().plan(), input.isKeepChildSourceObject());
+              result.projection().plan(),
+              input.isKeepChildSourceObject(),
+              input.isEmitUpdateReference());
       setStatus(result, preview);
       InterlisDialogUiSupport.populatePreviewTable(wPreview, preview.rows());
       InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, preview);
@@ -388,7 +432,9 @@ public class InterlisStructureExplodeDialog extends BaseTransformDialog {
     if (result.ok() && result.projection() != null) {
       InterlisSchemaPreview preview =
           controller.createSchemaPreview(
-              result.projection().plan(), input.isKeepChildSourceObject());
+              result.projection().plan(),
+              input.isKeepChildSourceObject(),
+              input.isEmitUpdateReference());
       setStatus(result, preview);
       InterlisDialogUiSupport.populatePreviewTable(wPreview, preview.rows());
       InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, preview);
@@ -481,6 +527,13 @@ public class InterlisStructureExplodeDialog extends BaseTransformDialog {
     }
     transformName = wTransformName.getText();
     syncMetaFromWidgets();
+    try {
+      ch.so.agi.hop.interlis.transforms.InterlisDialogMetadata.commit(
+          original, input, metadataProvider);
+    } catch (Exception e) {
+      probeFailed(e);
+      return;
+    }
     dispose();
   }
 

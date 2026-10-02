@@ -296,6 +296,10 @@ class P1PipelineRegressionTest {
     source.rows.add(row);
     var out = new InterlisOutputMeta();
     out.setDefault();
+    out.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
+    out.setValidateBeforePublish(false);
+    out.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
+    out.setValidateBeforePublish(false);
     out.setFileName(temp.resolve("custom-bid.xtf").toString());
     out.setModelNames(MODEL);
     out.setModelDirectories(dirs);
@@ -328,6 +332,10 @@ class P1PipelineRegressionTest {
     source.rows.add(row);
     var out = new InterlisOutputMeta();
     out.setDefault();
+    out.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
+    out.setValidateBeforePublish(false);
+    out.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
+    out.setValidateBeforePublish(false);
     out.setFileName(temp.resolve("out.xtf").toString());
     out.setModelNames(MODEL);
     out.setModelDirectories(dirs);

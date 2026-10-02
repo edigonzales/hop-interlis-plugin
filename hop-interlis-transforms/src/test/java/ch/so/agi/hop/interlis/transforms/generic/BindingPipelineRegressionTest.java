@@ -56,6 +56,7 @@ class BindingPipelineRegressionTest {
       meta.setSourceObjectField("carrier");
       meta.setParentTidField("key");
       meta.setEmitParentBid(false);
+      meta.setEmitUpdateReference(false); // This legacy projection intentionally has no BID.
       meta.setIncludeParentFields(List.of("context"));
       var expected = source.schema.clone();
       meta.getFields(expected, "explode", null, null, new Variables(), null);

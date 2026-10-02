@@ -936,3 +936,58 @@ ItfInterlisTransferReader
 ```
 
 Die Typed Mapping Layer bleibt damit weitgehend identisch. ITF-spezifische Linetable-/AREA-Logik sitzt am IO-Rand.
+
+## 25. Prio 3: getrennte Klasseninputs und selektive Updates
+
+`INTERLIS Output` besitzt zwei persistierte Modi. `MAPPED_INPUTS` ist der Default
+neuer Konfigurationen; fehlendes `mode` lädt `SINGLE_SCHEMA` mit dem bisherigen
+Ausgangsschema und Durchreichen. Im neuen Modus ist Output ein Sink. Jeder
+benannte INFO-Eingang besitzt einen eigenen Klassenplan und eigene Feldbindungen;
+alle physischen RowSets eines vorgelagerten Transforms werden fair gelesen. Es
+entsteht kein gemeinsames, dünn besetztes Zeilenschema.
+
+Explizite Feldzuordnungen ersetzen die Namenskonvention. Berechnungen und
+Typkonvertierungen erfolgen davor. TIDs werden zugeordnet, nie erfunden. Der
+Writer gruppiert erzeugte IOM-Objekte auslagerbar nach BID. Standardmässig erzeugt
+er eine UUID-BID pro Topic, wenn dessen Basket-OID-Domain dies erlaubt; bei
+anderen Domains sind explizite BID-Felder nötig. `FROM_FIELD` übernimmt BIDs aus
+jedem Eingang. Eine BID darf nicht zu zwei Topics gehören. Teilpuffer und
+Hilfsindizes teilen ein Ressourcenbudget. Ein einzelnes Objekt muss in RAM passen.
+
+`INTERLIS Update` ist ein separater Sink für Änderungen am selben Modell. Zuerst
+werden alle Änderungszeilen auslagerbar indiziert, danach wird der vollständige
+Originaltransfer einmal gelesen. Ein Objektpatch ist durch Klasse, BID und TID
+eindeutig. Es gibt keinen TID-only-Fallback. Ein `InterlisPatchPlan` enthält nur
+ausdrücklich ausgewählte Fachattribute, Geometrien oder Blätter einwertiger
+Strukturen. Nicht zugeordnete Werte bleiben erhalten; zugeordnete null-Werte
+werden undefiniert. Referenzen, Rollen, Assoziationsattribute und Identitäten
+sind keine Änderungsziele. Neue/gelöschte/umklassierte Objekte werden nicht erzeugt;
+Patches auf DELETE sind Fehler. Doppelte und nicht zuordenbare Patches sind Fehler.
+
+Geänderte Objekte werden tief kopiert; ausschliesslich die Patchfelder werden mit
+den bestehenden Konvertern geschrieben. Unberührte Geometrien bleiben IOM.
+`InterlisEventWriter` wird von Update und Transfer Output gemeinsam benutzt und
+bewahrt die unterstützten Header-/Basket-Metadaten und Ereignisreihenfolge.
+Unvollständige oder nicht erhaltbare Transfers werden vor Publikation abgelehnt.
+
+Strukturpatches adressieren eine LIST/BAG-Ebene, gegebenenfalls unter einwertigen
+Strukturen. `_ili_update_ref` ist ein versionierter String mit Elternklasse,
+BID/TID, Strukturpfad, ursprünglicher Vorkommensposition und SHA-256 des kanonischen
+IOM-Elterninhalts. Attributnamen werden für die Prüfsumme sortiert, Vorkommensfolgen
+und Referenz-/Objektmetadaten erhalten; XML-Formatierung und Quellpositionen sind
+nicht Teil der Prüfsumme. Explode berechnet sie einmal pro Elternobjekt. Update
+prüft gegen das unveränderte Original, bevor Patches angewendet werden. Der String
+ist ein Herkunfts-/Konsistenznachweis, keine kryptografische Zugriffsberechtigung.
+
+Gefilterte Kinder, Anzahl, LIST-Reihenfolge, BAG-Vorkommen, konkrete Untertypen und
+nicht ausgewählte bzw. tiefer verschachtelte Inhalte bleiben erhalten. Primitive
+Sammlungen verwenden `_ili_value`; null ist kein gültiger Ersatz eines Vorkommens.
+Objekt- und Strukturpatches dürfen gemeinsam auftreten, wenn Zielpfade disjunkt
+sind. Collect behält seine vollständige Ersetzungssemantik.
+
+Original und Ziel müssen auf Pfad-, Symlink- und Hardlink-Ebene verschieden sein.
+Die Originaldatei wird anhand Dateigrösse, Änderungszeit und Dateisystemidentität
+vor/nach der Verarbeitung und nochmals unmittelbar vor Publikation geprüft.
+Alle neuen Sinks schreiben temporär, validieren standardmässig und veröffentlichen
+erst nach erfolgreichem Pipelineabschluss. Überschreiben ist standardmässig aus.
+Modellmigration und ilitransformer-Integration sind nicht Teil dieses Ausbaus.

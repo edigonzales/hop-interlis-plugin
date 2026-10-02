@@ -41,6 +41,25 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
   /** Placeholder used by the GUI for "detect models from the transfer file". */
   public static final String MODELS_FROM_DATA = InterlisModelSourceSupport.MODELS_FROM_DATA;
 
+  @HopMetadataProperty private boolean selectFields;
+  @HopMetadataProperty private java.util.List<String> selectedFields = new java.util.ArrayList<>();
+
+  public boolean isSelectFields() {
+    return selectFields;
+  }
+
+  public void setSelectFields(boolean value) {
+    selectFields = value;
+  }
+
+  public java.util.List<String> getSelectedFields() {
+    return selectedFields;
+  }
+
+  public void setSelectedFields(java.util.List<String> value) {
+    selectedFields = new java.util.ArrayList<>(value);
+  }
+
   @HopMetadataProperty private long bufferMemoryMiB = 64;
   @HopMetadataProperty private String spillDirectory = "";
   @HopMetadataProperty private long maxSpillMiB;
@@ -271,7 +290,10 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
         true,
         "_",
         resolvedDefaultSrid(variables).orElse(null),
-        java.util.Set.of());
+        selectFields ? java.util.Set.copyOf(selectedFields) : java.util.Set.of(),
+        false,
+        true,
+        selectFields);
   }
 
   /** Resolves the configured default SRID; empty or unparsable yields {@code null}. */

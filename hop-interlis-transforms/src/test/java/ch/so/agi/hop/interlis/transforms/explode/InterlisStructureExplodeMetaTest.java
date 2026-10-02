@@ -56,7 +56,8 @@ class InterlisStructureExplodeMetaTest {
             "Location",
             "PostCode_Code",
             "PostCode_Town",
-            "_ili_child_object");
+            "_ili_child_object",
+            "_ili_update_ref");
     assertThat(rowMeta.getValueMeta(2).getType())
         .isEqualTo(org.apache.hop.core.row.value.ValueMetaInteger.TYPE_INTEGER);
     assertThat(rowMeta.getValueMeta(5).getType())
@@ -101,7 +102,8 @@ class InterlisStructureExplodeMetaTest {
             "_ili_index",
             "Kind",
             "Value",
-            "_ili_child_object");
+            "_ili_child_object",
+            "_ili_update_ref");
   }
 
   @Test

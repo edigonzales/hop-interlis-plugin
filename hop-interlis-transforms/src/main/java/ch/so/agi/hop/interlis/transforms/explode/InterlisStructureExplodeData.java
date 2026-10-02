@@ -10,6 +10,9 @@ import org.apache.hop.pipeline.transform.BaseTransformData;
 public class InterlisStructureExplodeData extends BaseTransformData {
   InterlisStructureExplodeBindings bindings;
 
+  String pendingFingerprint;
+  String pendingBid;
+  String pendingTid;
   boolean initialized;
   InterlisStructureProjectionResult projection;
   InterlisStructurePlan plan;

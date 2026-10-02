@@ -54,8 +54,7 @@ The LIST example explicitly uses child carriers, `PRESERVE` and BID plus parent
 key. Collect replaces the whole selected collection: filtering removes children.
 Renumber remaining LIST children from zero per parent when filtering creates gaps.
 The child-preservation example projects only `Name` via the saved
-`selectedChildFields` configuration; Explode currently has no separate field
-selection control. Collect exposes its selection in `Options…`.
+`selectedChildFields` configuration; Explode now exposes this selection through `Fields…`. Collect exposes its selection in `Options…`.
 
 ## Existing regression examples
 
@@ -80,3 +79,27 @@ ZIP is built under `assemblies/assemblies-hop-interlis/target/`.
 `scripts/run-e2e.sh` installs the packaged plugins into the supplied disposable Hop
 installation and runs all regression and handbook pipelines. Set
 `REQUIRE_VECTOR_RASTER_E2E=true` for the complete acceptance suite.
+
+
+## Prio 3: direct writer and selective updates
+
+The pipelines in [prio3](prio3/) are executable examples of the new runtime
+functions. Prepare a common local input directory from the existing small fixtures:
+
+```bash
+mkdir -p /tmp/interlis-prio3-input /tmp/interlis-prio3-output
+cp hop-interlis-core/src/test/resources/fixtures/models/2.4/*.ili /tmp/interlis-prio3-input/
+cp hop-interlis-core/src/test/resources/fixtures/data/2.4/*.xtf /tmp/interlis-prio3-input/
+cp e2e/fixtures/p1-3d.xtf /tmp/interlis-prio3-input/
+"$HOP_HOME/hop-run.sh" -r local -f examples/prio3/multiclass.hpl \
+  -p E2E_INPUT_DIR=/tmp/interlis-prio3-input -p E2E_OUTPUT_DIR=/tmp/interlis-prio3-output
+```
+
+Run `object-update.hpl` and `structure-update.hpl` with the same parameters.
+`multiclass.hpl` writes Target and Item streams (three Target copies) to one XTF.
+`object-update.hpl` changes only Item.Name from Details.Note and preserves XYZ,
+collections and header. `structure-update.hpl` changes Children.Name from Hidden
+while preserving subtype attributes, nested contents and references. Their outputs
+are `example-multiclass.xtf`, `example-update.xtf` and `example-children.xtf`.
+These examples enable overwrite for repeatable demonstrations; newly created
+writers default to overwrite off. All enable full validation before publication.

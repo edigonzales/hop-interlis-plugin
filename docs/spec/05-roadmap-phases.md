@@ -1804,3 +1804,18 @@ und isolierter Hop-2.18.1-Paket-E2E-Abnahme als erledigt markiert.
 
 Implementierung und Abnahme werden in `../progress/p2-corrections.md` geführt.
 P2 gilt erst nach vollständigem Verify, Paket-E2E und UI-Prüfung als abgeschlossen.
+
+
+## Prio 3 nach Prio 1/2
+
+1. Mehrklassenexport direkt im Output, separate typisierte INFO-Eingänge und
+   auslagerbare Basket-Gruppierung; bestehende Einklassenpipelines bleiben kompatibel.
+2. `INTERLIS Update` mit selektiven Fachattribut-Patches und vollständigem
+   Originaltransfer; explizite Input-Feldauswahl.
+3. Struktur- und primitive Sammlungs-Updates im selben Transform mit stabilen
+   Herkunftsschlüsseln aus Explode, ohne Elternzweig, Sortierung oder Collect.
+
+Alle Stufen enthalten SWT-Dialoge, Spezifikation, Beispiele und Paket-E2E.
+Modellmigration (.ilimap vorbereiten und aus Hop ausführen), ilitransformer-Java-
+Integration und der grafische Designer bleiben Folgearbeiten. Abnahme:
+`../progress/prio-3.md`.

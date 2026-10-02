@@ -9,6 +9,19 @@ public final class PreparedXtfOutput implements AutoCloseable {
   private final boolean overwrite;
   private boolean ready, published, aborted;
 
+  @FunctionalInterface
+  public interface PublicationCheck {
+    void verify() throws Exception;
+  }
+
+  private PublicationCheck publicationCheck = () -> {};
+
+  /** Recheck external preconditions immediately before the atomic publication. */
+  public void requireBeforePublication(PublicationCheck check) {
+    if (ready || published || aborted) throw new IllegalStateException("Output already prepared");
+    publicationCheck = java.util.Objects.requireNonNull(check);
+  }
+
   public PreparedXtfOutput(Path target, boolean overwrite) throws java.io.IOException {
     this.target = target.toAbsolutePath().normalize();
     this.overwrite = overwrite;
@@ -47,6 +60,11 @@ public final class PreparedXtfOutput implements AutoCloseable {
   public void publish() throws java.io.IOException {
     if (published) return;
     if (!ready()) throw new IllegalStateException("Output was not prepared: " + target);
+    try {
+      publicationCheck.verify();
+    } catch (Exception e) {
+      throw new java.io.IOException("Publication precondition failed: " + e.getMessage(), e);
+    }
     if (overwrite)
       Files.move(
           temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);

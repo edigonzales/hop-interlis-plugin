@@ -16,13 +16,31 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Resolves models and projects a multi-valued structure attribute of a class into a
- * {@link InterlisStructurePlan}.
+ * Resolves models and projects a multi-valued structure attribute of a class into a {@link
+ * InterlisStructurePlan}.
  *
- * <p>Shared by the transform meta ({@code getFields()}/{@code check()}), the transform runtime
- * and the GUI probe of INTERLIS Structure Explode and INTERLIS Structure Collect.
+ * <p>Shared by the transform meta ({@code getFields()}/{@code check()}), the transform runtime and
+ * the GUI probe of INTERLIS Structure Explode and INTERLIS Structure Collect.
  */
 public final class InterlisStructureProjectionService {
+
+  public InterlisStructureProjectionResult project(
+      ch.so.agi.hop.interlis.core.mapping.InterlisModelContext context,
+      String className,
+      String structurePath,
+      ProjectionOptions options)
+      throws InterlisModelException, InterlisMappingException {
+    var parent =
+        context
+            .schema()
+            .findClass(className)
+            .orElseThrow(() -> new InterlisModelException("Class not found: " + className));
+    return new InterlisStructureProjectionResult(
+        context.model(),
+        context.schema(),
+        structureLocator.locate(context.schema(), parent, structurePath, options),
+        context.modelNames());
+  }
 
   private final InterlisModelService modelService;
   private final InterlisStructureLocator structureLocator;
@@ -75,7 +93,10 @@ public final class InterlisStructureProjectionService {
             .orElseThrow(
                 () ->
                     new InterlisModelException(
-                        "Class " + className + " was not found in models " + modelNames
+                        "Class "
+                            + className
+                            + " was not found in models "
+                            + modelNames
                             + "; available classes: "
                             + schema.classes().stream()
                                 .map(InterlisClassDescriptor::scopedName)

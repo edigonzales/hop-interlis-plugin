@@ -78,6 +78,11 @@ public final class InterlisSchemaPreviewSupport {
 
   public static InterlisSchemaPreview createStructurePreview(
       InterlisStructurePlan plan, boolean carrier) {
+    return createStructurePreview(plan, carrier, false);
+  }
+
+  public static InterlisSchemaPreview createStructurePreview(
+      InterlisStructurePlan plan, boolean carrier, boolean updateReference) {
     List<InterlisPreviewRow> prefixRows =
         List.of(
             new InterlisPreviewRow(plan.parentClass().scopedName(), "", "parent class"),
@@ -90,13 +95,19 @@ public final class InterlisSchemaPreviewSupport {
                 "Integer",
                 plan.ordered() ? "LIST order (semantic)" : "technical index"));
     var preview = createFieldPreview(prefixRows, plan.childFields(), plan.warnings());
-    if (!carrier || plan.primitive()) return preview;
     var rows = new ArrayList<>(preview.rows());
-    rows.add(
-        new InterlisPreviewRow(
-            "_ili_child_object",
-            "InterlisObject",
-            "concrete child, unselected fields and nested collections for PRESERVE"));
+    if (carrier && !plan.primitive())
+      rows.add(
+          new InterlisPreviewRow(
+              "_ili_child_object",
+              "InterlisObject",
+              "concrete child, unselected fields and nested collections for PRESERVE"));
+    if (updateReference)
+      rows.add(
+          new InterlisPreviewRow(
+              ch.so.agi.hop.interlis.core.update.UpdateReference.FIELD,
+              "String",
+              "original occurrence and parent checksum for INTERLIS Update"));
     return new InterlisSchemaPreview(rows, preview.warnings(), preview.errorMessage());
   }
 

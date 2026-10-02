@@ -30,10 +30,7 @@ public final class XtfTransferWriter implements InterlisTransferWriter {
   private boolean transferStarted;
   private boolean basketOpen;
   private boolean closed;
-  private final ch.so.agi.hop.interlis.core.buffer.SpillStore<String> basketIds =
-      new ch.so.agi.hop.interlis.core.buffer.SpillStore<>(
-          new ch.so.agi.hop.interlis.core.buffer.JavaRecordCodec<>(),
-          ch.so.agi.hop.interlis.core.buffer.SpillOptions.defaults());
+  private final ch.so.agi.hop.interlis.core.buffer.SpillStore<String> basketIds;
 
   private void registerBasket(String bid) throws InterlisWriteException {
     if (bid == null || bid.isBlank())
@@ -44,6 +41,17 @@ public final class XtfTransferWriter implements InterlisTransferWriter {
   }
 
   XtfTransferWriter(Path file, ch.interlis.iox.IoxWriter writer, String xtfVersion) {
+    this(file, writer, xtfVersion, ch.so.agi.hop.interlis.core.buffer.SpillOptions.defaults());
+  }
+
+  private XtfTransferWriter(
+      Path file,
+      ch.interlis.iox.IoxWriter writer,
+      String xtfVersion,
+      ch.so.agi.hop.interlis.core.buffer.SpillOptions options) {
+    this.basketIds =
+        new ch.so.agi.hop.interlis.core.buffer.SpillStore<>(
+            new ch.so.agi.hop.interlis.core.buffer.JavaRecordCodec<>(), options);
     this.file = file;
     this.writer = writer;
     this.xtfVersion = xtfVersion;
@@ -52,6 +60,19 @@ public final class XtfTransferWriter implements InterlisTransferWriter {
   public static XtfTransferWriter open(
       Path file, TransferDescription transferDescription, List<String> modelNames)
       throws InterlisWriteException {
+    return open(
+        file,
+        transferDescription,
+        modelNames,
+        ch.so.agi.hop.interlis.core.buffer.SpillOptions.defaults());
+  }
+
+  public static XtfTransferWriter open(
+      Path file,
+      TransferDescription transferDescription,
+      List<String> modelNames,
+      ch.so.agi.hop.interlis.core.buffer.SpillOptions options)
+      throws InterlisWriteException {
     try {
       ch.interlis.iox.IoxWriter writer =
           "2.4".equals(transferDescription.getLastModel().getIliVersion())
@@ -59,7 +80,7 @@ public final class XtfTransferWriter implements InterlisTransferWriter {
               : new XtfWriter(file.toFile(), transferDescription);
       setModels(writer, extractModels(transferDescription, modelNames));
       return new XtfTransferWriter(
-          file, writer, transferDescription.getLastModel().getIliVersion());
+          file, writer, transferDescription.getLastModel().getIliVersion(), options);
     } catch (Exception e) {
       throw new InterlisWriteException(
           "Failed to open XTF writer for " + file + ": " + e.getMessage(), e);

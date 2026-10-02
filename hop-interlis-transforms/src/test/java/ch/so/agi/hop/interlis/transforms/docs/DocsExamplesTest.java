@@ -108,7 +108,8 @@ class DocsExamplesTest {
       assertThat(children).hasSize(example.length - 2);
       var rowMeta = children.get(0).getRowMeta();
       assertThat(rowMeta.getFieldNames())
-          .containsExactly("_ili_parent_tid", "_ili_parent_bid", "_ili_index", "_ili_value");
+          .containsExactly(
+              "_ili_parent_tid", "_ili_parent_bid", "_ili_index", "_ili_value", "_ili_update_ref");
       assertThat(rowMeta.getValueMeta(3).getTypeDesc()).isEqualTo(example[1]);
       for (int i = 0; i < children.size(); i++) {
         assertThat(children.get(i).getData()[0]).isEqualTo("o1");
@@ -127,7 +128,12 @@ class DocsExamplesTest {
     assertThat(children).hasSize(2);
     assertThat(children.get(0).getRowMeta().getFieldNames())
         .containsExactly(
-            "_ili_parent_tid", "_ili_parent_bid", "_ili_index", "Name", "_ili_child_object");
+            "_ili_parent_tid",
+            "_ili_parent_bid",
+            "_ili_index",
+            "Name",
+            "_ili_child_object",
+            "_ili_update_ref");
     var carrier = (ch.interlis.iom.IomObject) children.get(0).getData()[4];
     assertThat(carrier.getobjecttag()).isEqualTo("DemoErhaltung.Daten.SpezialKind");
     assertThat(carrier.getattrvalue("Versteckt")).isEqualTo("erhalten");

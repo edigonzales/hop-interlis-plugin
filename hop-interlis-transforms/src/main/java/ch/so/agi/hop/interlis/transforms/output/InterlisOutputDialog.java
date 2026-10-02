@@ -40,6 +40,7 @@ public class InterlisOutputDialog extends BaseTransformDialog {
 
   private static final String ASSOCIATION_DISPLAY_SUFFIX = " (association)";
 
+  private final InterlisOutputMeta original;
   private final InterlisOutputMeta input;
   private final InterlisOutputDialogController controller = new InterlisOutputDialogController();
 
@@ -70,11 +71,16 @@ public class InterlisOutputDialog extends BaseTransformDialog {
       InterlisOutputMeta transformMeta,
       PipelineMeta pipelineMeta) {
     super(parent, variables, transformMeta, pipelineMeta);
-    this.input = transformMeta;
+    this.original = transformMeta;
+    this.input = (InterlisOutputMeta) transformMeta.clone();
   }
 
   @Override
   public String open() {
+    if (input.getMode() == InterlisOutputMeta.Mode.MAPPED_INPUTS)
+      return new ch.so.agi.hop.interlis.transforms.mapping.ui.MappedSinkDialog(
+              getParent(), variables, original, pipelineMeta)
+          .open();
     shell = new Shell(getParent(), SWT.DIALOG_TRIM | SWT.RESIZE | SWT.MIN | SWT.MAX);
     PropsUi.setLook(shell);
     var display = shell.getDisplay();
@@ -143,6 +149,33 @@ public class InterlisOutputDialog extends BaseTransformDialog {
                       input::setValidationConfigFile)))) {
             input.setChanged();
             refresh();
+          }
+        });
+
+    Button mappedMode = new Button(shell, SWT.PUSH);
+    mappedMode.setText("Class inputs…");
+    var fdMapped = new FormData();
+    fdMapped.top = new FormAttachment(0, margin);
+    fdMapped.right = new FormAttachment(advanced, -margin);
+    mappedMode.setLayoutData(fdMapped);
+    fdTransformName.right = new FormAttachment(mappedMode, -margin);
+    mappedMode.addListener(
+        SWT.Selection,
+        e -> {
+          String name =
+              new ch.so.agi.hop.interlis.transforms.mapping.ui.MappedSinkDialog(
+                      shell, variables, input, pipelineMeta)
+                  .open();
+          if (name != null) {
+            try {
+              ch.so.agi.hop.interlis.transforms.InterlisDialogMetadata.commit(
+                  original, input, metadataProvider);
+            } catch (Exception failure) {
+              probeFailed(failure);
+              return;
+            }
+            transformName = name;
+            shell.dispose();
           }
         });
 
@@ -511,6 +544,13 @@ public class InterlisOutputDialog extends BaseTransformDialog {
     }
     transformName = wTransformName.getText();
     syncMetaFromWidgets();
+    try {
+      ch.so.agi.hop.interlis.transforms.InterlisDialogMetadata.commit(
+          original, input, metadataProvider);
+    } catch (Exception e) {
+      probeFailed(e);
+      return;
+    }
     dispose();
   }
 

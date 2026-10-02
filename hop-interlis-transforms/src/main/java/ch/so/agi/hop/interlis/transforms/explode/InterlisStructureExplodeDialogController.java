@@ -52,6 +52,11 @@ public final class InterlisStructureExplodeDialogController {
   }
 
   /** Builds the structured preview consumed by the SWT table. */
+  public InterlisSchemaPreview createSchemaPreview(
+      InterlisStructurePlan plan, boolean carrier, boolean updateReference) {
+    return InterlisSchemaPreviewSupport.createStructurePreview(plan, carrier, updateReference);
+  }
+
   public InterlisSchemaPreview createSchemaPreview(InterlisStructurePlan plan, boolean carrier) {
     return InterlisSchemaPreviewSupport.createStructurePreview(plan, carrier);
   }

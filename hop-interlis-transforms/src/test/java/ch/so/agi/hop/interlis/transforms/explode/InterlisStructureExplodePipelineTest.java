@@ -88,7 +88,8 @@ class InterlisStructureExplodePipelineTest {
             "Location",
             "PostCode_Code",
             "PostCode_Town",
-            "_ili_child_object");
+            "_ili_child_object",
+            "_ili_update_ref");
 
     RowMetaAndData first = rows.get(0);
     assertThat(first.getData()[0]).isEqualTo("p1");

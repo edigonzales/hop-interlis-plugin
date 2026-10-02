@@ -2,9 +2,8 @@
 
 Diese Spezifikation beschreibt die vorhandenen Dialoge des aktuellen Pluginstands
 (Hop 2.19.0). Das [Benutzerhandbuch](../biblios/user/master.adoc) erklärt dieselben
-Controls mit ausführbaren Beispielen. Ein Mehrklassen-Assistent, editierbares
-Output-Automapping und weitere Modellbrowser-Aktionen gehören nicht zum aktuellen
-Funktionsumfang.
+Controls mit ausführbaren Beispielen. Mehrklassenexport und selektive Updates verwenden normale Dialogtabellen; ein
+grafischer Mappingdesigner und Modellmigration folgen später.
 
 ## 1. Gemeinsame Prinzipien
 
@@ -64,13 +63,14 @@ Die Vorschau zeigt das projizierte Klassenschema. Einwertige Strukturen sind
 abgeflacht; Mehrfachattribute verweisen auf Explode/Collect. Referenzattribute
 zeigen Zielklasse und External-Eigenschaft. Unbekannte angeforderte Mappingtypen
 scheitern mit Kontext. Es gibt keine Inline-Validierung, DELETE-Policy, auswählbare
-Flatten-Policy oder editierbare Klassenfeldselektion.
+Flatten-Policy. `Fields…` bietet nun vollständige oder explizit ausgewählte
+Fachfelder; eine leere explizite Auswahl ist zulässig.
 
 Die Vorschau erklärt die unterschiedlichen Zusagen von Projektion,
 Quellobjekt-Overlay und vollständigem Ereignisstrom. Ein Quellobjekt erhält
 Objektinhalte; ein Klasseninput selektiert genau die konfigurierte Klasse.
 
-## 4. INTERLIS Output
+## 4. INTERLIS Output: bisheriger Einklassenmodus
 
 | Control | Default |
 |---|---|
@@ -181,7 +181,7 @@ Spill directory (empty: system temp) und Maximum spill (MiB, 0: unlimited) (0: k
 Teilpuffer teilen Budget und Disk-Grenze pro Transform. Die Beschreibung muss
 Einzelobjektgrenzen und mögliche Wartezeiten bis Basket-/Lookup-Abschluss erklären.
 
-Beide Writer bieten Validate before publication (aus) und Validation configuration
+Die bisherigen Writer-Modi bieten Validate before publication (aus) und Validation configuration
 (leer). Die vollständige temporäre Datei wird einschliesslich zweitem Durchlauf
 geprüft. Publikation setzt den erfolgreichen Abschluss der gesamten Pipeline voraus.
 
@@ -195,3 +195,30 @@ Handbuchtabellen müssen die vorhandenen Controls und Defaults nennen. Die
 Dokumentationsabnahme rendert den aktuellen Working Tree und prüft Kapitel,
 Tabellen, Listings, Includes und Links bei breitem und schmalem Browserfenster.
 Historische Abnahmeberichte dokumentieren weiterhin ihren damaligen Prüfstand.
+
+
+## 12. Prio-3-Dialoge
+
+Neue Outputs öffnen `INTERLIS Output — class inputs`. Globale Controls sind
+Target XTF, Models, Model directories, Overwrite (aus), Validate before publication
+(an), Validation configuration, Buffer memory (64 MiB), Spill directory (leer),
+Maximum spill (0 = unbegrenzt) und Basket assignment (One basket per topic).
+Die Eingangstabelle zeigt Transform, Klasse und Anzahl Feldzuordnungen. Add/Edit
+öffnet eine Tabelle `INTERLIS target path` / `Hop source field`; Map same-named
+fields ergänzt sichtbare Zuordnungen. TID/BID sowie optionale Operation und
+Quellobjekt sind pro Eingang einstellbar. Legacy single-class mode wechselt
+explizit zum bisherigen Dialog; dessen Class inputs-Schaltfläche führt zurück.
+
+Update verwendet denselben Tabellenaufbau mit zusätzlichem Original XTF (Models
+standardmässig `%DATA`). Ein leerer Structure path bedeutet Objektpatch,
+andernfalls sind Strukturpfad und Update-reference-Feld (`_ili_update_ref`)
+erforderlich. Fachfelder werden relativ zur gewählten Klasse bzw. Struktur
+zugeordnet. Referenzen und Rollen werden für Updates nicht angeboten.
+
+Die Klassen-/Feld- und Eingangsproben laufen asynchron mit dem bestehenden
+Probe-Koordinator. Nicht auflösbare Variablen oder fehlende Modelle erscheinen
+im Status und lassen den Dialog weiterhin bearbeitbar. Dialoge arbeiten auf
+privaten Konfigurationskopien; Cancel verwirft auch bereits bearbeitete Unterdialoge.
+Input und Explode besitzen `Fields…`; Explode bietet unter Options zusätzlich
+Emit structure update reference. Vorhandene Explode-Konfigurationen aktivieren
+dieses zusätzliche Feld nicht automatisch.

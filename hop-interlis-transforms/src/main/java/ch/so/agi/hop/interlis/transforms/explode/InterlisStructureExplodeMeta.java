@@ -49,6 +49,17 @@ public class InterlisStructureExplodeMeta
   public static final String DEFAULT_PARENT_BID_KEY_FIELD = "_ili_parent_bid";
   public static final String DEFAULT_INDEX_FIELD = "_ili_index";
 
+  @HopMetadataProperty(key = "emit_update_reference")
+  private boolean emitUpdateReference;
+
+  public boolean isEmitUpdateReference() {
+    return emitUpdateReference;
+  }
+
+  public void setEmitUpdateReference(boolean value) {
+    emitUpdateReference = value;
+  }
+
   @HopMetadataProperty(key = "keep_child_source_object")
   private boolean keepChildSourceObject;
 
@@ -64,6 +75,8 @@ public class InterlisStructureExplodeMeta
   public void loadXml(org.w3c.dom.Node node, IHopMetadataProvider provider)
       throws org.apache.hop.core.exception.HopXmlException {
     super.loadXml(node, provider);
+    if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "emit_update_reference") == null)
+      emitUpdateReference = false;
     if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "keep_child_source_object") == null)
       keepChildSourceObject = false;
   }
@@ -89,6 +102,7 @@ public class InterlisStructureExplodeMeta
 
   @Override
   public void setDefault() {
+    emitUpdateReference = true;
     keepChildSourceObject = true;
     modelNames = "";
     modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;

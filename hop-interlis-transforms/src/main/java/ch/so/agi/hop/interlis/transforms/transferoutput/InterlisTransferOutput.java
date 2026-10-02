@@ -111,46 +111,11 @@ public class InterlisTransferOutput
   /** Event mode: write the explicit event sequence. */
   private void writeEvent(InterlisObjectEnvelope envelope)
       throws HopException, InterlisWriteException {
-    switch (envelope.eventType()) {
-      case START_TRANSFER -> data.writer.startTransfer(envelope.transferMetadata());
-      case START_BASKET -> {
-        if (envelope.topicName() == null) {
-          throw new HopException("START_BASKET event without a topic");
-        }
-        data.writer.startBasket(envelope.topicName(), envelope.basketId(), envelope.basket());
-        data.currentBid = envelope.basketId();
-        data.currentTopic = envelope.topicName();
-        data.currentBasketMetadata = envelope.basket();
-      }
-      case OBJECT -> {
-        if (envelope.object() == null) {
-          throw new HopException(
-              "Envelope row of class <" + envelope.className() + "> carries no INTERLIS object");
-        }
-        if ((envelope.basketId() != null
-                && !java.util.Objects.equals(data.currentBid, envelope.basketId()))
-            || (envelope.topicName() != null
-                && !java.util.Objects.equals(data.currentTopic, envelope.topicName()))
-            || (envelope.basket() != null
-                && !java.util.Objects.equals(data.currentBasketMetadata, envelope.basket())))
-          throw new HopException(
-              "Object <"
-                  + envelope.objectId()
-                  + "> has conflicting basket context: row basket <"
-                  + envelope.basketId()
-                  + ">, open basket <"
-                  + data.currentBid
-                  + ">");
-        writeObject(envelope);
-      }
-      case END_BASKET -> {
-        data.writer.endBasket();
-        data.currentBid = null;
-        data.currentTopic = null;
-        data.currentBasketMetadata = null;
-      }
-      case END_TRANSFER -> data.writer.endTransfer();
-    }
+    if (data.eventWriter == null)
+      data.eventWriter = new ch.so.agi.hop.interlis.core.io.InterlisEventWriter(data.writer);
+    data.eventWriter.write(envelope);
+    if (envelope.eventType() == ch.so.agi.hop.interlis.core.io.InterlisEventType.OBJECT)
+      data.objectsWritten++;
   }
 
   private void writeObject(InterlisObjectEnvelope envelope)

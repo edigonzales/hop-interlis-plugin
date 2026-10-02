@@ -76,7 +76,9 @@ record InterlisStructureExplodeBindings(
             new ValueMetaString(tidName),
             bindInputs);
     String bidSource =
-        meta.isEmitParentBid() ? InterlisFieldBinding.resolve(vars, meta.getParentBidField()) : "";
+        (meta.isEmitParentBid() || meta.isEmitUpdateReference())
+            ? InterlisFieldBinding.resolve(vars, meta.getParentBidField())
+            : "";
     String bidName = InterlisFieldBinding.resolve(vars, meta.resolvedParentBidKeyFieldName());
     var bid =
         InterlisFieldBinding.bind(
@@ -100,6 +102,11 @@ record InterlisStructureExplodeBindings(
     if (meta.isKeepChildSourceObject() && !plan.primitive())
       InterlisFieldBinding.addUnique(
           output, new ValueMetaInterlisObject("_ili_child_object"), context);
+    if (meta.isEmitUpdateReference())
+      InterlisFieldBinding.addUnique(
+          output,
+          new ValueMetaString(ch.so.agi.hop.interlis.core.update.UpdateReference.FIELD),
+          context);
     var parents = new ArrayList<InterlisFieldBinding>();
     for (String configured :
         meta.getIncludeParentFields() == null ? List.<String>of() : meta.getIncludeParentFields()) {

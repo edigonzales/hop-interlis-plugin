@@ -41,6 +41,7 @@ public class InterlisInputDialog extends BaseTransformDialog {
 
   private static final String ASSOCIATION_DISPLAY_SUFFIX = " (association)";
 
+  private final InterlisInputMeta original;
   private final InterlisInputMeta input;
   private final InterlisInputDialogController controller = new InterlisInputDialogController();
 
@@ -74,7 +75,8 @@ public class InterlisInputDialog extends BaseTransformDialog {
       InterlisInputMeta transformMeta,
       PipelineMeta pipelineMeta) {
     super(parent, variables, transformMeta, pipelineMeta);
-    this.input = transformMeta;
+    this.original = transformMeta;
+    this.input = (InterlisInputMeta) transformMeta.clone();
   }
 
   @Override
@@ -129,6 +131,42 @@ public class InterlisInputDialog extends BaseTransformDialog {
     fdAdvanced.top = new FormAttachment(0, margin);
     advanced.setLayoutData(fdAdvanced);
     fdTransformName.right = new FormAttachment(advanced, -margin);
+    Button fieldSelection = new Button(shell, SWT.PUSH);
+    fieldSelection.setText("Fields…");
+    var fdFields = new FormData();
+    fdFields.right = new FormAttachment(advanced, -margin);
+    fdFields.top = new FormAttachment(0, margin);
+    fieldSelection.setLayoutData(fdFields);
+    fdTransformName.right = new FormAttachment(fieldSelection, -margin);
+    fieldSelection.addListener(
+        SWT.Selection,
+        e -> {
+          syncMetaFromWidgets();
+          var snapshot = (InterlisInputMeta) input.clone();
+          snapshot.setSelectFields(false);
+          snapshot.setSelectedFields(List.of());
+          var vars = ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator.snapshot(variables);
+          var selection =
+              ch.so.agi.hop.interlis.transforms.mapping.ui.FieldSelectionDialog.open(
+                  shell,
+                  input.isSelectFields(),
+                  input.getSelectedFields(),
+                  true,
+                  () ->
+                      snapshot
+                          .tryProject(vars)
+                          .orElseThrow(
+                              () ->
+                                  new IllegalStateException(
+                                      "Select a class and resolve the model first"))
+                          .plan()
+                          .fields());
+          if (selection != null) {
+            input.setSelectFields(selection.selected());
+            input.setSelectedFields(selection.paths());
+            refreshPreview();
+          }
+        });
     advanced.addListener(
         SWT.Selection,
         e -> {
@@ -535,6 +573,13 @@ public class InterlisInputDialog extends BaseTransformDialog {
     }
     transformName = wTransformName.getText();
     syncMetaFromWidgets();
+    try {
+      ch.so.agi.hop.interlis.transforms.InterlisDialogMetadata.commit(
+          original, input, metadataProvider);
+    } catch (Exception e) {
+      probeFailed(e);
+      return;
+    }
     dispose();
   }
 

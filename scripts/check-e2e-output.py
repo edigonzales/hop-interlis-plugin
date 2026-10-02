@@ -375,3 +375,47 @@ for filename in ("primitive-collections.xtf","child-preserve.xtf","reference-eve
 assert not list(output_dir.glob("hop-interlis-spill-*")),"spill directories were not cleaned up"
 assert not list(output_dir.glob("*.pending.xtf")),"prepared outputs were not cleaned up"
 print("Priority 1/2 E2E values OK")
+
+
+# Priority 3: heterogeneous sinks and selective updates use the packaged plugin.
+def semantic(node):
+    # XML namespace prefixes/indentation and attribute order are not INTERLIS contents.
+    children = list(node)
+    if node.tag.split("}")[-1] in {"Item", "Target", "Child", "SpecialChild", "Detail", "Holder", "Strassenachse"}:
+        # Attribute declaration order is not semantic. Stable sorting keeps occurrences
+        # of the same primitive attribute ordered; collection wrappers stay ordered too.
+        children.sort(key=lambda child: child.tag)
+    return (node.tag, tuple(sorted(node.attrib.items())), ((node.text or "") if not children else (node.text or "").strip()),
+            tuple(semantic(child) for child in children))
+
+original_dir = output_dir.parent / "input"
+original = ET.parse(original_dir / "collections-spill.xtf")
+multi = ET.parse(output_dir / "prio3-multi.xtf")
+for cls in ("Item", "Target"):
+    assert sorted(map(semantic, original.findall(".//"+q(cls)))) == sorted(map(semantic, multi.findall(".//"+q(cls)))), cls
+assert len(multi.findall(".//"+q("Data"))) == 2
+children = ET.parse(output_dir / "prio3-children.xtf")
+for child in original.findall(".//"+q("Item")+"/"+q("Children")+"/"+q("SpecialChild")):
+    child.find(q("Name")).text = "keep"
+assert semantic(original.getroot()) == semantic(children.getroot()), "Structure update changed unselected contents"
+# The malformed-reference pipeline tried to overwrite prio3-multi.xtf; comparison above
+# also proves that its existing valid target survived the failure.
+xyz = ET.parse(original_dir / "p1-3d.xtf")
+xyz.find(".//m:Item/m:Name", ns).text = "updated"
+assert semantic(xyz.getroot()) == semantic(ET.parse(output_dir / "prio3-update.xtf").getroot()), "XYZ or untouched structures changed"
+assert semantic(ET.parse(original_dir / "bogen-transfer.xtf").getroot()) == semantic(ET.parse(output_dir / "prio3-arc.xtf").getroot()), "Arc update changed unselected geometry"
+assert semantic(ET.parse(original_dir / "HopIli_Collections_V1_valid.xtf").getroot()) == semantic(ET.parse(output_dir / "prio3-texts.xtf").getroot()), "Primitive update changed transfer contents"
+assert not list(output_dir.glob("hop-interlis-spill-*"))
+assert not list(output_dir.glob("*.pending.xtf"))
+print("Priority 3 E2E: multiple input copies/baskets, disk spooling, selected XYZ/structure/primitive updates, ARC preservation and failed-publication cleanup OK")
+
+# User-facing examples execute against the small fixtures, with the same result checks.
+example_original = ET.parse(original_dir / "HopIli_Collections_V1_valid.xtf")
+example_multi = ET.parse(output_dir / "example-multiclass.xtf")
+for cls in ("Item", "Target"):
+    assert sorted(map(semantic, example_original.findall(".//"+q(cls)))) == sorted(map(semantic, example_multi.findall(".//"+q(cls)))), cls
+for child in example_original.findall(".//"+q("Item")+"/"+q("Children")+"/"+q("SpecialChild")):
+    child.find(q("Name")).text = "keep"
+assert semantic(example_original.getroot()) == semantic(ET.parse(output_dir / "example-children.xtf").getroot())
+assert semantic(xyz.getroot()) == semantic(ET.parse(output_dir / "example-update.xtf").getroot())
+print("Priority 3 runnable examples: outputs verified")

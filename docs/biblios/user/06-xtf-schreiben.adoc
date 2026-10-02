@@ -1,7 +1,40 @@
 [[xtf-schreiben]]
 == XTF schreiben: INTERLIS Output
 
-`INTERLIS Output` schreibt typisierte Zeilen einer konkreten INTERLIS-Klasse. Der Writer bindet Felder über die Namen des zentralen Mappingplans. Für mehrere Klassen und explizite Transferereignisse dient Transfer Output.
+`INTERLIS Output` kann mehrere typisierte Klassenströme direkt in eine gemeinsame
+XTF-Datei schreiben. Neue Konfigurationen öffnen den Mehrklassenmodus. Bestehende
+Pipelines bleiben im bisherigen Einklassenmodus, bis Sie ausdrücklich wechseln.
+
+=== Mehrklassenmodus: Eingänge zuordnen
+
+Verbinden Sie die aufbereiteten Klassenströme direkt mit einem Output. Stellen Sie
+Target XTF, Models und Model directories einmal ein. Mit `Add input…` wählen Sie
+je Eingang den vorgelagerten Transform und die INTERLIS-Zielklasse.
+
+Die Tabelle ordnet `INTERLIS target path` einem `Hop source field` zu.
+`Map same-named fields` ergänzt sichtbare, editierbare Zuordnungen. Einwertige
+Strukturen verwenden Zielpfade wie `Adresse.Strasse`; das Hop-Quellfeld darf anders
+heissen. Berechnungen und Typkonvertierungen gehören vor den Writer. TID-Feld
+(Standard `+_ili_tid+`), optionaler Objektträger und Operationsfeld werden pro
+Eingang eingestellt. Ohne Objektträger müssen die gemappten Werte ein gültiges
+Zielobjekt ergeben; der Writer erfindet keine Objektidentitäten.
+
+`One basket per topic` erzeugt eine UUID-BID pro Topic, sofern dessen Basket-OID-
+Vorgaben dies erlauben. Andernfalls wählen Sie `From input BID fields` und ordnen
+pro Eingang ein BID-Feld zu. Unsortierte Eingänge und vorgelagerte Transform-Kopien
+sind erlaubt. Die gemeinsame Gruppierung lagert bei Bedarf auf Disk aus. Dieselbe
+BID für verschiedene Topics ist ein Fehler. Output selbst hat genau eine Kopie
+und im Mehrklassenmodus keinen nachgelagerten Zeilenstrom.
+
+Neue Outputs haben Validierung vor Publikation eingeschaltet und Überschreiben
+ausgeschaltet. Buffer memory (64 MiB), Spill directory und Maximum spill
+(0 = unbegrenzt) gelten gemeinsam für die Teilpuffer des Writers. Ein einzelnes
+Objekt muss trotzdem in den Arbeitsspeicher passen.
+
+=== Bisheriger Einklassenmodus
+
+`Legacy single-class mode…` öffnet die bisherige Konfiguration. Deren Controls,
+Gruppierungsvoraussetzungen und Durchreichverhalten gelten weiterhin:
 
 === Dialog und Zuordnung
 
@@ -38,7 +71,7 @@ Mehrfachattribute werden vor dem Writer mit Collect in das Eltern-Quellobjekt zu
 
 === Vorbereiten, prüfen und veröffentlichen
 
-Beide Writer schreiben zunächst eine eindeutige temporäre XTF-Datei im Zielverzeichnis. Transferabschluss und Schliessen müssen erfolgreich sein. Die endgültige Datei wird erst am erfolgreichen Pipeline-Ende veröffentlicht, nachdem auch aufgeschobene Validate-Fehler berücksichtigt wurden.
+Alle Writer schreiben zunächst eine eindeutige temporäre XTF-Datei im Zielverzeichnis. Transferabschluss und Schliessen müssen erfolgreich sein. Die endgültige Datei wird erst am erfolgreichen Pipeline-Ende veröffentlicht, nachdem auch aufgeschobene Validate-Fehler berücksichtigt wurden.
 
 Mapping-, Schreib-, Close-, Validierungsfehler, ein späterer Zweigfehler oder Stop verhindern die Veröffentlichung. Eine bestehende Ausgabe bleibt erhalten. Veröffentlichungsfehler zählen als Pipelinefehler.
 
@@ -51,7 +84,8 @@ Eine neue XTF-Datei kann erst nach Pipeline-Ende gelesen werden. Verwenden Sie `
 
 === Validierung vor Veröffentlichung
 
-Im Writer öffnet `Options…` folgende Einstellungen:
+Im bisherigen Einklassenmodus öffnet `Options…` folgende Einstellungen; im neuen
+Mehrklassenmodus stehen sie im Hauptdialog und die Validierung ist dort an:
 
 [cols="2,2,3"]
 |===
@@ -64,6 +98,6 @@ Ein Fehler oder eine unvollständige Validierung verhindert die Veröffentlichun
 
 === Erhaltung nachweisen
 
-Wählen Sie den passenden Weg: einfache Projektion für einzelne Attribute, Overlay für Objektänderungen mit Erhaltung des Rests, `EVENTS` für einen vollständigen unterstützten Transfer. Prüfen Sie das Ergebnis anhand der Inhalte, die der Workflow erhalten soll: IDs, Basket-Zugehörigkeit, Referenzen, Werte, Reihenfolgen, Untertypen, Geometrie und Metadaten.
+Wählen Sie den passenden Weg: einfache Projektion für einzelne Attribute, `INTERLIS Update` für selektive Objektänderungen mit Erhaltung des Transfers, `EVENTS` für einen vollständigen unterstützten Transfer. Prüfen Sie das Ergebnis anhand der Inhalte, die der Workflow erhalten soll: IDs, Basket-Zugehörigkeit, Referenzen, Werte, Reihenfolgen, Untertypen, Geometrie und Metadaten.
 
 Der Ereignisweg kann unterstützte Transfermetadaten erhalten; nicht erhaltbare Headerinformationen führen zu einem Fehler. iox-ili 1.24.4 ersetzt beim Lesen von XTF 2.3 OID-Space-Namen durch künstliche Namen; XTF-2.4-Ausgabe unterstützt keine OID-Spaces. Der Ereignis-Writer lehnt solche nicht erhaltbaren Fälle ab. Ein byteweiser XML-Vergleich eignet sich nicht als fachlicher Nachweis.

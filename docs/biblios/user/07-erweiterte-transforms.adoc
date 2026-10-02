@@ -177,7 +177,8 @@ Der Datei-unabhängige Modellinput benötigt `Models` und `Model dirs`. Er liefe
 [[puffer]]
 === Puffer und grosse Daten
 
-Input, Object to Row, Role Join und Structure Collect haben unter `Options…` dieselben Einstellungen:
+Input, Object to Row, Role Join und Structure Collect haben unter `Options…` dieselben Einstellungen.
+Mehrklassen-Output und Update zeigen sie im Hauptdialog:
 
 [cols="2,2,3"]
 |===
@@ -195,8 +196,76 @@ Das Budget betrifft Puffer. Ein einzelnes IOM-Objekt, seine Geometrien und sein 
 
 === Mehrere Klassen gemeinsam schreiben
 
+Der neue Mehrklassenmodus von INTERLIS Output nimmt die typisierten Klassenströme
+direkt entgegen und übernimmt die Basket-Gruppierung. Für explizite
+Ereignisverarbeitung besteht daneben weiterhin folgender Weg:
+
 Ein typisierter Zweig pro Klasse kann mit Row to Object zurück in dasselbe Envelope-Schema wechseln. Vor einem Transfer Output im Objektmodus müssen zusammengeführte Zeilen nach BID gruppiert werden. Stimmen Identitäten oder Referenzräume nicht überein, müssen sie vorher fachlich abgestimmt werden.
 
 Ein `EVENTS`-Strom benötigt eine gültige Transferfolge. Einfaches Anhängen zweier vollständiger Transfers oder das ungeordnete Zusammenführen ihrer Ereignisse ist dafür ungeeignet. Bewahren Sie Grenzereignisse und Metadaten, oder bauen Sie die gemeinsame Folge ausdrücklich auf.
 
 Die neue Datei wird nach Pipeline-Ende von einer Folgepipeline geprüft. <<beispiel-i,Beispiel I>> zeigt den vollständigen Ereignisweg und einen getrennten Prüflauf.
+
+
+[[interlis-update]]
+=== INTERLIS Update: gezielte Änderungen
+
+Verbinden Sie normale Änderungszeilen mit `INTERLIS Update`. Im Dialog stellen Sie
+Original XTF, Target XTF, Models (Default `%DATA`) und Modellverzeichnisse ein.
+Original und Ziel müssen verschiedene Dateien sein, auch bei Symlinks/Hardlinks.
+Die Zielpublikation erfolgt erst nach erfolgreichem Pipelineabschluss; Validierung
+ist standardmässig an, Überschreiben aus.
+
+Pro Eingang wählen Sie Transform, Elternklasse und Feldzuordnungen. Für
+Objektänderungen bleibt `Structure path` leer. TID und BID werden ausdrücklich
+zugeordnet und müssen zusammen mit der Klasse genau ein Originalobjekt bezeichnen.
+Nur aufgeführte Fachattribute werden ersetzt, einschliesslich Geometrien und
+Blättern einwertiger Strukturen. Ein zugeordneter null-Wert setzt das Attribut
+undefiniert; unzulässige Werte scheitern an Mapping oder Validierung. Fehlende
+Änderungszeilen lassen die betreffenden Originalobjekte unverändert.
+
+Alle anderen Klassen, Referenzen und unterstützten Transfer-/Basketinformationen
+werden aus dem Original übernommen. Unberührte Geometrien bleiben in ihrer
+IOM-Darstellung. Doppelte/unbekannte Schlüssel, DELETE-Objektpatches, unvollständige
+Transfers oder eine während der Verarbeitung veränderte Originaldatei verhindern
+die Veröffentlichung. Referenzen, Rollen, Identitäten und Assoziationen sind keine
+Änderungsziele. Neue Objekte, Löschen, Umklassieren und Modellmigration gehören
+nicht zu diesem Modus. Eine erneut serialisierte XTF ist nicht byteidentisch.
+
+[[struktur-update]]
+=== Struktur-Update ohne Elternzweig
+
+[source,text]
+----
+INTERLIS Input (Quellobjekt mitführen)
+  → Structure Explode (gewählte Sammlung, Herkunftsschlüssel an)
+  → normale Hop-Bearbeitung
+  → INTERLIS Update (Original, Ziel, Strukturpfad, Feldzuordnungen)
+----
+
+Neue Explode-Konfigurationen geben `+_ili_update_ref+` standardmässig aus. Alte
+Konfigurationen müssen `Emit structure update reference` unter `Options…`
+aktivieren; ihr bisheriges Schema bleibt sonst unverändert. Explode benötigt
+TID, BID und das ursprüngliche Elternobjekt. `Fields…` begrenzt die Kindfelder.
+
+Im Update wählen Sie dieselbe Elternklasse, den Sammlungspfad (etwa
+`Kontrollen` oder `Details.Tags`) und das Herkunftsfeld. Zielattribute der
+Feldtabelle sind relativ zum Kind, beispielsweise `Pruefstelle`.
+
+Der Herkunftsschlüssel merkt sich das ursprüngliche Vorkommen und die Prüfsumme
+des Elternobjekts. Sortieren oder Filtern der Änderungszeilen ändert die Zuordnung
+nicht: gefilterte Kinder bleiben erhalten. Anzahl, Reihenfolge, BAG-Duplikate,
+Untertypen und nicht ausgewählte Inhalte bleiben erhalten. Verschachtelte
+Sammlungen werden mitgeführt, aber nicht direkt adressiert. Primitive LIST/BAG
+können über `+_ili_value+` aktualisiert werden; null, Hinzufügen oder Entfernen
+von Vorkommen sind nicht zulässig.
+
+Der Schlüssel muss aus demselben unveränderten Original stammen. Fehlende,
+ungültige, doppelte, veraltete oder zum falschen Pfad gehörende Schlüssel sind
+Fehler. Objekt- und Strukturänderungen dürfen gemeinsam zu Update führen, sofern
+ihre Zielpfade nicht überlappen. Es wird zuerst gegen das Original geprüft.
+
+Für den bewussten Neuaufbau einer ganzen Sammlung verwenden Sie weiterhin
+Collect. Dort ersetzt der Kindstrom die Sammlung vollständig; Filtern kann Kinder
+entfernen. Beim Struktur-Update bedeutet Filtern dagegen: diese Kinder unverändert
+lassen.
