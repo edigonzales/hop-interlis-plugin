@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<workflow>
+  <name>INTERLIS model migration</name>
+  <parameters>
+    <parameter><name>OUTPUT_XTF</name><default_value>${PROJECT_HOME}/migration-output.xtf</default_value><description>Distinct target path; existing targets are not overwritten.</description></parameter>
+  </parameters>
+  <actions>
+    <action><name>Start</name><type>SPECIAL</type><repeat>N</repeat><parallel>N</parallel><xloc>80</xloc><yloc>80</yloc></action>
+    <action>
+      <name>Migrate and validate</name><type>InterlisMigration</type>
+      <mappingFile>${Internal.Workflow.Filename.Folder}/migration.ilimap</mappingFile>
+      <outputFile>${OUTPUT_XTF}</outputFile><validate>Y</validate><overwrite>N</overwrite>
+      <parallel>N</parallel><xloc>310</xloc><yloc>80</yloc>
+    </action>
+  </actions>
+  <hops><hop><from>Start</from><to>Migrate and validate</to><enabled>Y</enabled><evaluation>Y</evaluation><unconditional>Y</unconditional></hop></hops>
+</workflow>

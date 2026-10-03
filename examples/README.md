@@ -103,3 +103,8 @@ while preserving subtype attributes, nested contents and references. Their outpu
 are `example-multiclass.xtf`, `example-update.xtf` and `example-children.xtf`.
 These examples enable overwrite for repeatable demonstrations; newly created
 writers default to overwrite off. All enable full validation before publication.
+# Model migration
+
+[`migration/`](migration/README.md) contains a complete two-class XTF model migration,
+its `.ilimap` mapping and an executable Hop workflow. Open the mapping directly in Hop
+for graphical editing, syntax-highlighted DSL and a complete sample preview.

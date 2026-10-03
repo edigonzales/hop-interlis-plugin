@@ -1835,3 +1835,17 @@ und primitive LIST-Updates. `check-e2e-output.py` vergleicht auch nicht geänder
 Inhalte und bereinigte Temporärdateien. Eine interaktive SWT-Abnahme bleibt
 zusätzlich erforderlich; tatsächlich ausgeführte Prüfungen werden im
 Prio-3-Abnahmeprotokoll erfasst.
+
+## ilimap migration acceptance
+
+The sibling library tests source-preserving edits, partial syntax highlighting,
+embedded source-structure traversal and a real model migration with references,
+ARC/XYZ, LIST ordering and nested BAG occurrences. Run its complete `./gradlew check`.
+The Hop tests cover action metadata XML roundtrips, defaults, unresolved variables,
+file conflicts and installed-plugin execution of `examples/migration/migrate.hwf`.
+The packaged run must validate its output and assert values/references/geometry,
+then reject a second run to the existing target without changing it.
+
+Interactive SWT acceptance covers opening `.ilimap`, loading models, selecting class
+and structure contexts, attribute drag/drop, expression/function and enumeration
+editing, Undo/Redo, invalid DSL recovery, checking, preview and external-edit protection.

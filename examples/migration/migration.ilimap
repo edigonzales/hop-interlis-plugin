@@ -1,0 +1,44 @@
+mapping v2 "Model migration" {
+  job {
+    modeldir ".";
+  }
+  input original { path "source.xtf"; model "MigrationDemo_V1"; option migrationReviewed true; option modelFingerprint "2f17e588a4b192a871411e3cca752bd5f03eab0efc8898e019319810375d25d2"; }
+  output migrated { path "target.xtf"; model "MigrationDemo_V2"; option modelFingerprint "2f17e588a4b192a871411e3cca752bd5f03eab0efc8898e019319810375d25d2"; }
+  oid { strategy preserve; }
+  basket preserve;
+  enum Statuses {
+    "active" => "operational";
+    "retired" => "closed";
+  }
+  rule r_f58981be_5edf_336f_b4f1_e6b1411af9b3 {
+    target migrated class "MigrationDemo_V2.Data.Facility";
+    source s from original class "MigrationDemo_V1.Data.Facility";
+    assign {
+      Name = s.Name;
+    }
+  }
+  rule r_9681ce4b_4832_3bc4_9bb7_9307b80d9563 {
+    target migrated class "MigrationDemo_V2.Data.Line";
+    source s from original class "MigrationDemo_V1.Data.Line";
+    assign {
+      Location = s.Location;
+      Geometry = s.Geometry;
+      Name = trim(s.Label);
+      Origin = "migration";
+      Status = enumMapStrict(s.Status, "Statuses");
+    }
+    bag Controls {
+      from sc in s attribute "Controls";
+      assign {
+        Office = trim(sc.Office);
+      }
+      bag Details {
+        from scc in sc attribute "Details";
+        assign {
+          Note = scc.Note;
+        }
+      }
+    }
+    ref Facility { role "Facility"; target rule r_f58981be_5edf_336f_b4f1_e6b1411af9b3 sourceRef s.Facility; }
+  }
+}

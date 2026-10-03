@@ -3,6 +3,36 @@
 
 Diese Transforms ergänzen die typisierte Klassenverarbeitung. Die generischen Objektfelder sind technische Träger; für fachliche Bearbeitung projizieren Sie gezielt auf typisierte Zeilen.
 
+[[modellmigration]]
+=== Modellmigration mit ilimap
+
+Öffnen Sie eine `.ilimap`-Datei direkt in Hop. Der native Editor zeigt links Regeln und Strukturkontexte, rechts Quell- und Zielschema sowie die Zuordnungen der gewählten Regel. `Load models` lädt die Modelle asynchron. Ziehen Sie eine Quellklasse auf eine Zielklasse oder ein Quellattribut auf ein Zielattribut. Eine bestehende Klassenregel behält beim Ändern ihres Ziels ihre technische ID; kontrollieren Sie anschliessend deren Attributzuordnungen.
+
+`Edit expression` bearbeitet einen Ausdruck. `Insert function` bietet die Funktionen von ilitransformer samt Parametern an. Die Graphansicht zeigt den ausgewählten Ausdruck. `Enumeration table` ordnet jeden Quellwert einem Zielwert zu; nicht zugeordnete Werte führen bei der Ausführung zum Fehler. `Reference` verknüpft eine Quellreferenz mit der Regel, welche das Zielobjekt erzeugt.
+
+Die DSL bleibt massgebend. Änderungen in beiden Ansichten sind mit `Undo` und `Redo` rückgängig zu machen. Syntax-Highlighting, Zeilennummern, Einrückung und Klammermarkierungen unterstützen die Texteingabe. Bei unvollständiger Syntax bleiben Text und Farben sichtbar, während grafische Änderungen pausieren. Kommentare und nicht grafisch unterstützte Definitionen bleiben erhalten. Beim Speichern erkennt der Editor zwischenzeitliche Änderungen durch andere Programme.
+
+`Prepare migration` fragt Quellmodell, Zielmodell, Modellverzeichnisse und Dateipfade ab. Es erzeugt explizite Übernahmevorschläge und weist auf offene Unterschiede hin. Prüfen Sie neue Pflichtattribute, Umbenennungen und nicht zugeordnete Quellinhalte und bestätigen Sie die Entscheidungen mit `Confirm review`. Geänderte Modelldateien werden anhand ihrer Prüfsumme erkannt und verlangen eine erneute Prüfung; die Ausführung ergänzt keine stillen Zuordnungen.
+
+`Check mapping` prüft die Definition ohne Datenausführung. `Preview complete XTF` verarbeitet und validiert eine vollständige kleine Beispieldatei in einem temporären Verzeichnis. Die Anzeige ist auf 100 Objekte begrenzt; die Verarbeitung liest die vollständige Datei einschliesslich der Referenzziele. Die Prüfung eines Beispiels ersetzt die Validierung des produktiven Bestands nicht.
+
+Für den produktiven Lauf verwenden Sie die Workflow-Action `INTERLIS Migration`:
+
+[cols="2,3"]
+|===
+| Einstellung | Bedeutung
+| `Mapping (.ilimap)` | Gespeicherte Mappingdefinition.
+| `Original XTF`, `Target XTF` | Optionale Überschreibungen der Dateipfade aus der Definition.
+| `Additional model directories (;)` | Zusätzliche Modellverzeichnisse.
+| `Report directory` | Optionales Verzeichnis für Berichte und Validierungsdiagnosen.
+| `Validate complete output before publishing` | Standardmässig eingeschaltet.
+| `Overwrite existing target` | Standardmässig ausgeschaltet.
+|===
+
+Hop-Variablen werden in diesen Action-Feldern aufgelöst. Relative Pfade innerhalb der DSL beziehen sich auf deren Datei; die DSL selbst expandiert keine Hop-Variablen. Original und Ziel müssen verschiedene Dateien sein. Die Action führt den gesamten Java-Migrationsjob aus, validiert die temporäre Ausgabe und veröffentlicht sie erst bei Erfolg. Fehler und Abbruch verhindern die Veröffentlichung.
+
+Die erste Version unterstützt eine XTF-Quelle und ein XTF-Ziel. Eine Sammlungsebene lässt sich grafisch bearbeiten; tiefere explizite Strukturregeln bleiben über die DSL zugänglich. Joins, Aufteilungen und Hop-Unterpipelines haben noch keine grafischen Bedienelemente. Die Engine hält ihre Indizes und Zielobjekte im Speicher. Sie verwendet nicht die Spill-Budgets von `INTERLIS Output` und `Update`. Ein lauffähiges Beispiel steht im Repository unter `examples/migration/`.
+
 === INTERLIS Transfer Input
 
 Der Dateiinput hat `Data file`, `Models`, `Model dirs` und `Mode`. Default ist `OBJECTS`. `EVENTS` liefert zusätzlich `+START_TRANSFER+`, `+START_BASKET+`, `+END_BASKET+` und `+END_TRANSFER+`. Objektzeilen verwenden `OBJECT`; Löschoperationen werden über `+_ili_operation=DELETE+` dargestellt.

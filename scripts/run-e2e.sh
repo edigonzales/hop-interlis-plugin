@@ -229,5 +229,6 @@ else
   python3 "$PROJECT_DIR/scripts/check-e2e-output.py" "$WORK_DIR/output"
 fi
 python3 "$PROJECT_DIR/scripts/check-doc-examples-output.py" "$WORK_DIR/output"
+bash "$PROJECT_DIR/scripts/run-migration-e2e.sh" "$HOP_HOME" "$WORK_DIR"
 
 echo "E2E OK"

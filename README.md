@@ -10,6 +10,13 @@ The authoritative architecture and implementation specification lives in [`docs/
 
 ## Status
 
+**Model migration:** a native `.ilimap` editor offers model comparison, class/attribute
+drag-and-drop, expression/function editing, enumeration tables, reference rules and
+structure contexts. The DSL stays editable with syntax highlighting and Undo/Redo.
+The `INTERLIS Migration` workflow action runs ilitransformer as a Java library and
+validates before publishing. See the [migration example and scope](examples/migration/README.md)
+and the [migration acceptance report](docs/progress/prio-3-migration.md).
+
 The [German user handbook](https://edigonzales.github.io/hop-interlis-plugin/)
 tracks the current controls and defaults. [Runnable tutorials](examples/README.md)
 cover primitive collections, child preservation and references with safe output;

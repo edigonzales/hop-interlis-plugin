@@ -41,7 +41,8 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
    * lock (model compilation is a design-time operation). Readers and writers on the other hand are
    * per-instance and never shared between threads, so they do not need this lock.
    */
-  private static final Object MODEL_LOCK = new Object();
+  // Shared with the embedded ilitransformer API in the same plugin classloader.
+  private static final Object MODEL_LOCK = ch.interlis.ili2c.Main.class;
 
   private record CacheEntry(
       CompiledInterlisModel model,

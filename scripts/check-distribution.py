@@ -30,6 +30,8 @@ with ZipFile(zip_path) as archive:
         "ili2c-tool-",
         "ehibasics-",
         "antlr-",
+        "ilitransformer-core-",
+        "ilivalidator-",
     ]
     for fragment in required:
         if not any(fragment in name for name in names):
@@ -47,6 +49,11 @@ with ZipFile(zip_path) as archive:
         "hop-ui-",
         "hop-transform-",
         "hop-action-",
+        "lsp4j",
+        "picocli",
+        "slf4j-simple",
+        "gt-main",
+        "gt-jdbc",
     ]
     for fragment in forbidden:
         matches = [name for name in names if fragment in name]

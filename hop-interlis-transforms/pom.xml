@@ -15,6 +15,11 @@
   <description>Apache Hop transforms for INTERLIS transfer data.</description>
 
   <dependencies>
+    <!-- Thin Java API: execution and editor services share one mapping implementation. -->
+    <dependency>
+      <groupId>guru.interlis</groupId><artifactId>ilitransformer-core</artifactId>
+      <version>${ilitransformer.version}</version>
+    </dependency>
     <!-- Hop 2.19 supplies H2 through lib/jdbc; never bundled into this plugin. -->
     <dependency>
       <groupId>com.h2database</groupId><artifactId>h2</artifactId><scope>provided</scope>

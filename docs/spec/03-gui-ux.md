@@ -222,3 +222,27 @@ privaten Konfigurationskopien; Cancel verwirft auch bereits bearbeitete Unterdia
 Input und Explode besitzen `Fields…`; Explode bietet unter Options zusätzlich
 Emit structure update reference. Vorhandene Explode-Konfigurationen aktivieren
 dieses zusätzliche Feld nicht automatisch.
+
+## ilimap mapping editor
+
+`.ilimap` opens in a native Explorer editor tab. Rules and embedded structure contexts
+form the navigation tree; source and target schema trees support class/attribute
+Drag-and-drop. The selected rule exposes target assignments and an expression AST
+view. Expressions, function parameters, complete enumeration tables and referenced
+target rules are edited through focused controls. Existing advanced syntax is retained
+and remains editable in the DSL.
+
+The UTF-8 DSL is authoritative. Source edits replace ranges in the parsed document;
+graphical commands are atomic undo steps. Technical rule IDs stay stable when attribute
+mappings change. The lexical highlighter remains active during incomplete edits and
+provides keyword/function/string/enum/number/comment styles, line numbers, indentation
+and syntax error underlines. No browser editor or Eclipse workbench dependency is added.
+Model probing, checking and previews run off the SWT thread; stale results and results
+after disposal are discarded. Cancelled action dialogs do not mutate their metadata.
+
+Prepared drafts contain explicit mappings, review comments, source-model fingerprints
+and a pending review flag. A user confirms the draft after resolving changes/losses;
+execution does not update mappings or fingerprints. Static mapping checks, complete
+sample previews and full production validation have separate states. Preview executes
+a chosen complete small file; its display limit does not truncate migration input.
+Saving detects external edits and uses an atomic replacement of the mapping file.

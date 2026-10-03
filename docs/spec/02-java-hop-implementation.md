@@ -1833,3 +1833,26 @@ Elternfeldern angefügt. Die neue Plugin-ID lautet `INTERLIS_UPDATE`.
 Neue Dateisinks bleiben Single-copy. Beliebig viele vorgelagerte Kopien sind
 zulässig. Keine neue Bibliothek, kein geänderter INTERLIS-/Hop-/CI-Pin und keine
 ilitransformer-Abhängigkeit sind dafür erforderlich.
+
+## Prio 3: ilimap migration integration
+
+`InterlisMigration` is a workflow action executing a complete XTF-to-XTF job through
+`guru.interlis:ilitransformer-core`. The thin library is published by the existing
+ilitransformer Gradle `publish` lifecycle, separately from the CLI distribution. No
+CLI subprocess, shaded CLI jar, LSP server or second mapping evaluator is embedded.
+For local development publish that library to Maven local before building this plugin.
+CI consumes the normal Maven artifact; publish the sibling change before the dependent
+plugin revision. All existing INTERLIS, geometry, Hop and CI pins remain unchanged.
+
+Mapping preparation, model comparison, tokenization, source edits, compilation and
+execution belong to ilitransformer. The action resolves Hop variables and passes path
+overrides, validation/overwrite settings and progress logging to its Java API. Cancellation
+interrupts the worker; publication is guarded after execution/validation. Original/output
+path aliases and input modification are rejected. The migration currently uses the
+engine's memory-backed indexes and is not a streaming Hop row transform.
+
+The existing `MODEL_LOCK` and the embedded compiler use `ch.interlis.ili2c.Main.class`
+as the shared monitor. The action belongs to `sogeo-geometry`. Hop 2.19 file-type plugins
+cannot declare this group, so the small `.ilimap` file-type entry point constructs the
+editor using the registered action's classloader. It must not create another compiler
+runtime in the file-type plugin loader.

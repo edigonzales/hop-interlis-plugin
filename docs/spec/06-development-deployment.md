@@ -246,3 +246,20 @@ Vor Abschluss: Diff und Git-Status prüfen, fokussierte Tests, vollständiges
 Generierte Artefakte, lokale Config und Zugangsdaten werden nicht eingecheckt.
 Abnahmeberichte nennen tatsächlich ausgeführte Prüfungen, Artefaktstände und
 verbleibende Grenzen; historische Berichte behalten ihre damaligen Ergebnisse.
+
+For changes involving migration, build the sibling ilitransformer with Java 21:
+
+```bash
+(cd ../ilitransformer && ./gradlew check publishCorePublicationToMavenLocal)
+./mvnw -B -ntp clean verify
+python3 scripts/check-distribution.py
+```
+
+The published `ilitransformer-core` artifact is a thin Java library, not the CLI ZIP.
+Its existing CI `publish` task publishes both artifacts. Publish the library change
+before pushing the dependent Hop revision to CI. No sibling source checkout is needed
+for normal consumers once the matching snapshot has been published.
+
+For a single local development loop, set `ILITRANSFORMER_REPO` to the sibling checkout
+before running `scripts/dev-sync-hop-plugin.sh "$HOP_HOME"`. This explicitly enables
+Gradle `check publishCorePublicationToMavenLocal` before the usual plugin build.

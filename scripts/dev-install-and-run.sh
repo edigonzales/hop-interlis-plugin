@@ -37,6 +37,16 @@ export PATH="$JAVA_HOME/bin:$PATH"
 export HOP_JAVA_HOME="$JAVA_HOME"
 echo "==> Using JDK $JAVA_HOME"
 
+# Optional local library development. Normal installations resolve the published Maven artifact.
+if [[ -n "${ILITRANSFORMER_REPO:-}" ]]; then
+  if [[ ! -x "$ILITRANSFORMER_REPO/gradlew" ]]; then
+    echo "ilitransformer Gradle Wrapper not found in ILITRANSFORMER_REPO" >&2
+    exit 1
+  fi
+  echo "==> Checking and installing the local ilitransformer Java library"
+  (cd "$ILITRANSFORMER_REPO" && ./gradlew check publishCorePublicationToMavenLocal)
+fi
+
 GEOMETRY_REPO="$(cd "$GEOMETRY_REPO" && pwd)"
 GEOMETRY_PLUGIN_DIR="$HOP_HOME/plugins/misc/hop-geometry-type"
 INTERLIS_PLUGIN_DIR="$HOP_HOME/plugins/transforms/interlis"

@@ -1819,3 +1819,9 @@ Alle Stufen enthalten SWT-Dialoge, Spezifikation, Beispiele und Paket-E2E.
 Modellmigration (.ilimap vorbereiten und aus Hop ausführen), ilitransformer-Java-
 Integration und der grafische Designer bleiben Folgearbeiten. Abnahme:
 `../progress/prio-3.md`.
+
+The migration editor adds the next Prio-3 capability after Output/Update. Its first
+scope is XTF model migrations, graphical class/attribute mappings, embedded structures,
+DSL highlighting and complete-file previews. Later expansion can add richer structure
+contexts, complex class operations and controlled Hop subpipelines without introducing
+another mapping language or evaluator.
