@@ -173,8 +173,7 @@ Assembly-Target geprüft. Der Kandidat wird im E2E-Job nicht neu gebaut.
 Vor Änderungen an Tests oder Workflows gilt der
 [gemeinsame CI-Vertrag](https://github.com/edigonzales/hop-plugin-ci/blob/main/docs/ci-contract.md).
 Die tatsächlich verwendeten Schnittstellen stehen in `.github/workflows/verify.yml`.
-Workflow-Revision und Helper-`ci-ref` bleiben gemeinsam auf
-`990af4813013fa8d21f6447e7545ed5499f2f202`.
+Der gemeinsame Workflow lädt seine Helfer vom gepinnten Commit.
 
 Die Verify-Matrix prüft Java 21/25 auf Ubuntu, macOS und Windows. Ubuntu/JDK 21
 führt `clean verify` und Distributionsprüfung aus und liefert das kanonische

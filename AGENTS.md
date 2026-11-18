@@ -385,8 +385,7 @@ Never claim that tests passed unless they were actually executed.
 
 Before changing pipelines or test setup, read the
 [shared CI contract](https://github.com/edigonzales/hop-plugin-ci/blob/main/docs/ci-contract.md).
-The documentation follows `main`; use the interfaces at this repo's actual
-workflow/helper revisions and preserve existing pins and `ci-ref` values.
+Use the CI interfaces at the shared workflow pin.
 
 Run the commands below from this repository root in Bash, using Python 3, Maven
 and JDK 21 (`JAVA_HOME` and `PATH` pointing to that JDK). Compatibility jobs also
