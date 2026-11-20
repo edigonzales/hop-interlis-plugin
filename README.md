@@ -152,7 +152,7 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
   make the dialog unusable;
 - central mapping plan shared by `getFields()`, runtime and GUI (no schema drift).
 
-Phase 0 (project foundation) is implemented as well:
+The implementation includes:
 
 - multi-module Maven build (Java 21, Apache Hop 2.19.0, iox-ili 1.24.4, ili2c 5.6.8);
 - INTERLIS model compilation and schema extraction (`TransferDescription` → descriptors);

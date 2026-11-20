@@ -895,7 +895,7 @@ Einige Mappings können lenient sein, aber Defaults bleiben sicher:
 
 ## 22. Performance-Grundsätze
 
-- Modelle werden pro Konfiguration kompiliert und gecacht.
+- Modelle werden bei der Schemaanalyse oder Initialisierung kompiliert.
 - `InterlisRowMappingPlan` wird einmal pro Transform initialisiert.
 - Feldpositionen werden einmal bestimmt, nicht pro Row über Namen gesucht.
 - Converter werden im Plan vorkompiliert.

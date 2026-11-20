@@ -1705,10 +1705,9 @@ Die konfigurierte Kopienzahl wird vor der Ausgabe geprüft, auch in Kopie 0.
 Die betroffenen Transforms lehnen auch Partitionierung ab. Die Meldung nennt
 den konkreten Grund und verlangt eine Kopie. Zentrale Hilfsklasse: `InterlisParallelCopies`.
 
-Geteilte Dienste: `InterlisModelService` ist thread-sicher (statischer
-Cache, serialisierte Compiles); Mapper und Pläne sind nach der
-Initialisierung unveränderlich; Reader/Writer werden nie zwischen
-Transform-Kopien geteilt.
+`InterlisModelService` serialisiert Compileraufrufe unter `MODEL_LOCK`.
+Mapper und Pläne sind nach der Initialisierung unveränderlich. Reader und
+Writer bleiben bei ihrer jeweiligen Transform-Kopie.
 
 ### Thread-Safety der INTERLIS-Bibliotheken
 
