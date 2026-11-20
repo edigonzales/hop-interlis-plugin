@@ -9,14 +9,12 @@ import ch.interlis.ili2c.config.FileEntryKind;
 import ch.interlis.ili2c.metamodel.Ili2cMetaAttrs;
 import ch.interlis.ili2c.metamodel.TransferDescription;
 import ch.interlis.ilirepository.IliManager;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Compiles INTERLIS models through the ili2c compiler entry points.
@@ -44,94 +42,17 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
   // Shared with the embedded ilitransformer API in the same plugin classloader.
   private static final Object MODEL_LOCK = ch.interlis.ili2c.Main.class;
 
-  private record CacheEntry(
-      CompiledInterlisModel model,
-      java.util.Map<Path, String> files,
-      List<String> directoryFiles) {}
-
-  private static final ConcurrentHashMap<String, CacheEntry> cache = new ConcurrentHashMap<>();
   private final InterlisSchemaExtractor schemaExtractor = new InterlisSchemaExtractor();
 
   @Override
   public CompiledInterlisModel compile(ModelSource source, ModelCompileOptions options)
       throws InterlisModelException {
     synchronized (MODEL_LOCK) {
-      String key = cacheKey(source, options);
-      List<String> listing = directoryFiles(source);
-      CacheEntry entry = cache.get(key);
-      if (entry != null
-          && entry.directoryFiles().equals(listing)
-          && entry.files().entrySet().stream()
-              .allMatch(f -> f.getValue().equals(fingerprint(f.getKey())))) {
-        return entry.model();
-      }
-      cache.remove(key);
-      CompiledInterlisModel model = doCompile(source, options);
-      java.util.Map<Path, String> files = new java.util.LinkedHashMap<>();
-      for (var it = model.transferDescription().iterator(); it.hasNext(); ) {
-        var declared = it.next();
-        if (!(declared instanceof ch.interlis.ili2c.metamodel.PredefinedModel)
-            && declared.getFileName() != null) {
-          Path file = Path.of(declared.getFileName()).toAbsolutePath().normalize();
-          files.put(file, fingerprint(file));
-        }
-      }
-      for (Path file : source.iliFiles())
-        files.put(file.toAbsolutePath().normalize(), fingerprint(file));
-      cache.put(key, new CacheEntry(model, java.util.Map.copyOf(files), listing));
-      return model;
+      return compileModels(source, options);
     }
   }
 
-  /** Explicit reload; callers with an existing model keep their immutable instance. */
-  public CompiledInterlisModel reload(ModelSource source, ModelCompileOptions options)
-      throws InterlisModelException {
-    synchronized (MODEL_LOCK) {
-      cache.remove(cacheKey(source, options));
-      return compile(source, options);
-    }
-  }
-
-  private static String fingerprint(Path file) {
-    try {
-      var digest = java.security.MessageDigest.getInstance("SHA-256");
-      try (var input = Files.newInputStream(file)) {
-        byte[] buffer = new byte[8192];
-        for (int count; (count = input.read(buffer)) != -1; ) digest.update(buffer, 0, count);
-      }
-      return java.util.HexFormat.of().formatHex(digest.digest());
-    } catch (IOException e) {
-      return "unavailable";
-    } catch (java.security.NoSuchAlgorithmException e) {
-      throw new IllegalStateException("SHA-256 unavailable", e);
-    }
-  }
-
-  /** Detect added/removed local candidates that can change repository override resolution. */
-  private static List<String> directoryFiles(ModelSource source) throws InterlisModelException {
-    List<String> files = new ArrayList<>();
-    for (String directory : source.modelDirectories()) {
-      if (directory.contains("://")) continue;
-      Path path = Path.of(directory).toAbsolutePath().normalize();
-      if (!Files.isDirectory(path)) continue;
-      try (var paths = Files.walk(path)) {
-        files.addAll(
-            paths
-                .filter(
-                    p ->
-                        p.toString().endsWith(".ili")
-                            || p.getFileName().toString().equals("ilimodels.xml"))
-                .map(p -> p.toString().endsWith(".xml") ? p + "@" + fingerprint(p) : p.toString())
-                .sorted()
-                .toList());
-      } catch (IOException e) {
-        throw new InterlisModelException("Cannot inspect model directory " + path, e);
-      }
-    }
-    return List.copyOf(files);
-  }
-
-  private CompiledInterlisModel doCompile(ModelSource source, ModelCompileOptions options)
+  private CompiledInterlisModel compileModels(ModelSource source, ModelCompileOptions options)
       throws InterlisModelException {
     List<Path> resolvedFiles = resolveModelFiles(source, options);
     if (resolvedFiles.isEmpty()) {
@@ -365,22 +286,6 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
     }
   }
 
-  private String cacheKey(ModelSource source, ModelCompileOptions options) {
-    StringBuilder key = new StringBuilder();
-    key.append("ili:").append(options.iliLanguageVersion()).append(';');
-    for (Path file : source.iliFiles()) {
-      key.append(file.toAbsolutePath().normalize());
-      key.append(';');
-    }
-    for (String modelName : source.modelNames()) {
-      key.append("name:").append(modelName).append(';');
-    }
-    for (String directory : source.modelDirectories()) {
-      key.append("dir:").append(directory).append(';');
-    }
-    return key.toString();
-  }
-
   @Override
   public List<InterlisClassDescriptor> listTransferableClasses(CompiledInterlisModel model) {
     return schemaExtractor.extract(model.transferDescription()).selectableClasses();
@@ -406,13 +311,6 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
       throw new InterlisModelException(
           "Failed to detect model names from transfer file " + transferFile + ": " + e.getMessage(),
           e);
-    }
-  }
-
-  @Override
-  public void clearCache() {
-    synchronized (MODEL_LOCK) {
-      cache.clear();
     }
   }
 }

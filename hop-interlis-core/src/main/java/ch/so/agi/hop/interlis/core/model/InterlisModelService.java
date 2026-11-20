@@ -14,9 +14,6 @@ public interface InterlisModelService {
   /**
    * Compiles the requested models into a {@link CompiledInterlisModel}.
    *
-   * <p>Equal requests return the cached compilation result; the cache key covers files, model
-   * names and directories (including file timestamps for local files).
-   *
    * @throws InterlisModelException if the models cannot be resolved or do not compile
    */
   CompiledInterlisModel compile(ModelSource source, ModelCompileOptions options)
@@ -39,7 +36,4 @@ public interface InterlisModelService {
    */
   java.util.List<String> detectModelNames(java.nio.file.Path transferFile)
       throws InterlisModelException;
-
-  /** Drops all cached compilation results. */
-  void clearCache();
 }

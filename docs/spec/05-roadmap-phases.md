@@ -173,8 +173,7 @@ Phase-0-Funktionalität:
 - lokale `.ili`-Dateien,
 - Model directories,
 - Modellname,
-- TransferDescription,
-- Cache.
+- TransferDescription.
 
 Repository-Auflösung kann zunächst auf die von ili2c/ilirepository bereitgestellten Mechanismen gestützt werden.
 
@@ -1447,7 +1446,6 @@ Produktionsreife erhöhen, ohne die API unnötig aufzublähen.
 
 - Streaming prüfen.
 - MappingPlan caching.
-- Model cache.
 - weniger Allocation pro Row.
 - Geometry conversion profiling.
 - grosse XTF-Testdateien.

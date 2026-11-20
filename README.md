@@ -40,9 +40,7 @@ compatibility, metrics and executed checks.
 **Phase 8** (hardening, performance, compatibility) is implemented – the roadmap
 is complete except for Phase 7, which was deliberately skipped (see below):
 
-- the compiled-model cache is JVM-wide (one compile per model set and Hop
-  session); a 50k-object streaming baseline test documents the
-  performance characteristics;
+- model compilation runs during schema inspection or initialization, under the shared ili2c lock;
 - an explicit threading policy: file-based transforms reject parallel
   copies with an actionable error, per-row transforms support them;
 - `http(s)://` INTERLIS model repositories work as model directories

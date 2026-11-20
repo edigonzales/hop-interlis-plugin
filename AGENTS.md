@@ -225,6 +225,8 @@ Rules:
 
 - compile models only under the global `MODEL_LOCK` in `InterlisModelServiceImpl`
   (ili2c keeps static compiler state);
+- compile during initialization or a schema probe and reuse the resulting model and
+  mapping plan for the lifetime of that operation;
 - treat a compiled `TransferDescription` as immutable: only read it, never
   mutate it; it may be shared across threads (verified: model getters return
   fresh copies or are pure reads);

@@ -20,7 +20,7 @@ Die Standardmodellquelle besteht aus `+%XTF_DIR+`, https://models.interlis.ch un
 
 `+%XTF_DIR+` bezeichnet das Verzeichnis der Transferdatei. `%DATA` ermittelt Modellnamen, nicht die Modelltexte: `.ili`-Dateien und ihre Imports müssen über die Modellverzeichnisse verfügbar sein. Für Offline-Läufe setzen Sie `Model dirs` auf lokale Verzeichnisse, wie in den Tutorials.
 
-Eine noch nicht aufgelöste Variable oder fehlende Datei kann die Vorschau verhindern. Der Dialog bleibt geöffnet und zeigt eine Diagnose. Setzen Sie die benötigten Variablen und verwenden Sie `Reload model` zum erneuten Laden; damit wird auch der kompilierte Modellcache invalidiert.
+Eine noch nicht aufgelöste Variable oder fehlende Datei kann die Vorschau verhindern. Der Dialog bleibt geöffnet und zeigt eine Diagnose. Setzen Sie die benötigten Variablen und verwenden Sie `Reload model` für eine erneute Modellprobe.
 
 === Technische Felder und Vorschau
 

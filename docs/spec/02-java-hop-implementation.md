@@ -111,8 +111,6 @@ public interface InterlisModelService {
 
   List<String> detectModelNames(Path transferFile)
       throws InterlisModelException;
-
-  void clearCache();
 }
 ```
 
@@ -124,7 +122,6 @@ public interface InterlisModelService {
 4. ili2c über `IliManager`/geeignete aktuelle API kompilieren.
 5. `TransferDescription` erzeugen.
 6. `InterlisSchemaDescriptor` erzeugen.
-7. Resultat cachen.
 
 Für alle Transform-Metadaten mit einem `modelDirectories`-Feld gilt als
 Default die semikolongetrennte Liste
@@ -230,26 +227,12 @@ Plugin die dort implementierte Repository-Suche (`RepositoryVisitor` und
   löst der ili2c `IliManager` auf;
 - Fehlerfälle (unreachable, unbekanntes Modell) ergeben actionable
   Diagnostik mit Repository-Liste und Offline-/Override-Hinweisen;
-- der kompilierte Model-Cache ist JVM-weit statisch (Wiederverwendung unveränderter Modellquellen und Imports).
 
-### Cache-Key
-
-Mindestens:
-
-```text
-sorted model names
-resolved model repositories/directories
-meta config
-relevante ili2c settings
-```
-
-Cache-Einträge enthalten SHA-256-Fingerprints der tatsächlich kompilierten Dateien
-inklusive Imports. Lokale Verzeichnislisten erkennen hinzugekommene oder entfernte
-Kandidaten. Die Prüfung geschieht bei Modellzugriff, niemals pro Zeile. Reload
-invalidiert den kompilierten Cache und kompiliert unter MODEL_LOCK erneut; die
-separate Downloadcache-/TTL-Politik von ili2c bleibt erhalten. Reload garantiert
-keinen erneuten Download unveränderter Remotequellen. Explizite Dateien werden
-anhand deklarierter Modellnamen ausgewertet, nicht anhand ihres Dateinamens.
+Die Modellprobe und der Start eines Transforms kompilieren die benötigten Modelle
+unter `MODEL_LOCK`. Die Runtime verwendet danach ihren Mappingplan pro Zeile.
+Die Downloadcache-/TTL-Politik von ili2c gilt sowohl beim Start als auch bei einer
+erneuten Modellprobe. Explizite Dateien werden anhand deklarierter Modellnamen
+ausgewertet.
 
 # 4. Schema Extraction
 

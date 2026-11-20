@@ -1504,7 +1504,6 @@ Messgrössen:
 - Peak Heap,
 - GC-Verhalten,
 - Startzeit Modellkompilierung,
-- Effekt Model Cache,
 - Writer Buffering.
 
 Wichtigster funktionaler Performance-Grundsatz:
@@ -1540,7 +1539,7 @@ Für Transforms, bei denen Parallelität gefährlich wäre, muss dies dokumentie
 Zu testen:
 
 - Reader-Ressourcen werden nicht zwischen Copies geteilt.
-- Model Cache ist threadsicher.
+- Modellkompilierung läuft unter dem gemeinsamen ili2c-Lock.
 - Geometry Mapper besitzt keinen veränderlichen globalen Zustand.
 - Writer verhindert unkontrolliertes paralleles Schreiben in dieselbe XTF-Datei.
 
