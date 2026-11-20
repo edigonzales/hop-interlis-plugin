@@ -23,7 +23,7 @@ import org.apache.hop.pipeline.transform.TransformMeta;
     id = "INTERLIS_TEST_LOOKUP_ROWS",
     name = "INTERLIS Test Lookup Rows",
     description = "Emits synthetic lookup rows (test support)",
-    image = "ch/so/agi/hop/interlis/transforms/test/icons/interlis-test.svg",
+    image = "ch/so/agi/hop/interlis/transforms/input/icons/interlis-input.svg",
     categoryDescription = "Geospatial",
     classLoaderGroup = "sogeo-geometry",
     keywords = {"interlis", "test"})
