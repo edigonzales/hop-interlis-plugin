@@ -5,8 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
 import ch.so.agi.hop.interlis.transforms.testutil.SyntheticLookupRowsMeta;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
 import org.apache.hop.core.HopEnvironment;
 import org.apache.hop.core.RowMetaAndData;
@@ -21,7 +19,6 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 import org.apache.hop.pipeline.transforms.rowstoresult.RowsToResultMeta;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.io.TempDir;
 
 class InterlisRoleJoinPipelineTest {
 
@@ -171,46 +168,17 @@ class InterlisRoleJoinPipelineTest {
   }
 
   @Test
-  void projects_external_role_bids_from_xtf_and_joins_across_baskets(@TempDir Path directory)
-      throws Exception {
-    String model =
-        Files.readString(TestData.path("/models/HopIli_Associations_V1.ili"))
-            .replace("Address -- {1} Address;", "Address (EXTERNAL) -- {1} Address;");
-    Files.writeString(directory.resolve("HopIli_Associations_V1.ili"), model);
-    Path transfer = directory.resolve("two-baskets.xtf");
-    Files.writeString(
-        transfer,
-        """
-        <?xml version="1.0"?>
-        <ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS"
-                      xmlns:m="http://www.interlis.ch/xtf/2.4/HopIli_Associations_V1">
-          <ili:headersection><ili:models><ili:model>HopIli_Associations_V1</ili:model></ili:models></ili:headersection>
-          <ili:datasection>
-            <m:Data ili:bid="b1">
-              <m:Person ili:tid="p1"><m:Name>Local</m:Name></m:Person>
-              <m:Person ili:tid="p2"><m:Name>External</m:Name></m:Person>
-              <m:Address ili:tid="a1"><m:Street>Local street</m:Street></m:Address>
-              <m:AddressOwnership>
-                <m:Person ili:ref="p1"/><m:Address ili:ref="a1"/><m:Share>0.5</m:Share>
-              </m:AddressOwnership>
-              <m:AddressOwnership>
-                <m:Person ili:ref="p2"/><m:Address ili:ref="a2" ili:bid="b2"/><m:Share>0.5</m:Share>
-              </m:AddressOwnership>
-            </m:Data>
-            <m:Data ili:bid="b2">
-              <m:Address ili:tid="a2"><m:Street>External street</m:Street></m:Address>
-            </m:Data>
-          </ili:datasection>
-        </ili:transfer>
-        """);
+  void projects_external_role_bids_from_xtf_and_joins_across_baskets() throws Exception {
     var main = personInput();
     var lookup = addressInput();
-    for (var input : List.of(main, lookup)) {
-      input.setFileName(transfer.toString());
-      input.setModelDirectories(directory.toString());
-    }
+    main.setClassName("HopIli_ExternalRole_V1.Data.Person");
+    lookup.setClassName("HopIli_ExternalRole_V1.Data.Address");
+    String transfer = TestData.path("/data/HopIli_ExternalRole_V1.xtf").toString();
+    main.setFileName(transfer);
+    lookup.setFileName(transfer);
     var join = roleJoin("lookup");
-    join.setModelDirectories(directory.toString());
+    join.setModelNames("HopIli_ExternalRole_V1");
+    join.setMainClassName("HopIli_ExternalRole_V1.Data.Person");
 
     Pipeline engine =
         run(join, new TransformMeta("INTERLIS Input", main), new TransformMeta("lookup", lookup));
