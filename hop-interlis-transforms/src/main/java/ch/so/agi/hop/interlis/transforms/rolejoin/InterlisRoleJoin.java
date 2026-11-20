@@ -170,7 +170,7 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
               this, data.storageOptions.divided(2), data.mainRowSet, data.lookupRowSet);
       // Bind the effective main schema before indexing the lookup. The fair reader
       // buffers rows from either input while waiting for the first main row.
-      Object[] mainRow = readMainRow();
+      Object[] mainRow = data.inputs.next(0, meta.getMaxLookupRows());
       if (mainRow != null) {
         bindMainRowMeta();
       }

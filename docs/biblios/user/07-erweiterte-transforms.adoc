@@ -167,7 +167,7 @@ Der Join liest beide Eingänge abwechselnd. Noch nicht verarbeitbare Hauptzeilen
 
 `Max lookup rows` begrenzt die Zahl gelesener Lookup-Zeilen auf standardmässig 500'000. `0` erlaubt unbegrenzt viele. Dieser Grenzwert gilt unabhängig vom Speicherbudget.
 
-Der Hauptstrom liefert die Ziel-TID im konfigurierten Referenzfeld. Der optionale String `+<Rolle>_ref_bid+` legt den Zielbasket ausdrücklich fest. Bei einem umbenannten Referenzfeld findet Role Join auch dessen Begleitfeld mit Suffix `+_bid+`, falls das rollenbasierte Feld fehlt. Führen Sie die Rollen-BID im Hauptstrom mit, wenn die Eingangsprojektion sie für den Join bereitstellen soll.
+Der Hauptstrom liefert die Ziel-TID im konfigurierten Referenzfeld. Der optionale String `+<Rolle>_ref_bid+` legt den Zielbasket ausdrücklich fest. Role Join verwendet das Begleitfeld des konfigurierten Referenzfeldes mit Suffix `+_bid+`, sofern es vorhanden ist. Bei einem umbenannten Referenzfeld bleibt das rollenbasierte Feld als Alternative verfügbar. Die Modellprojektion liefert das Feld für als `EXTERNAL` deklarierte Rollen. Führen Sie es bis zum Join mit.
 
 Ohne explizite Ziel-BID gilt bei vorhandenem Basketkontext die `+_ili_bid+` der Hauptzeile. Für eine explizite Ziel-BID muss der Lookup eine passende `+_ili_bid+` als String liefern. Fehlt das Feld oder hat ein Objekt mit der Ziel-TID keine BID und fehlt der Treffer im verlangten Basket, meldet Role Join den fehlenden Basketkontext. Fehlt der Zielschlüssel, gelten die Einstellungen für fehlende Pflichtreferenzen.
 

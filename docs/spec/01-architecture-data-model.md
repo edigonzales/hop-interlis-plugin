@@ -554,7 +554,7 @@ municipality_ref : String
 
 Der Wert ist die referenzierte Objekt-TID.
 
-Optional können bei externen Referenzen zusätzliche Felder erscheinen:
+Bei einer im Modell als `EXTERNAL` deklarierten Rolle liefert die Projektion zusätzlich die nullable Ziel-BID:
 
 ```text
 municipality_ref

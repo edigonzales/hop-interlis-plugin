@@ -72,9 +72,9 @@ final class InterlisRoleJoinBindings {
     var reference =
         InterlisFieldBinding.bind(
             input, context, name, "reference", 0, new ValueMetaString(name), true);
-    var referenceBid = optionalString(input, context, probe.role().name() + "_ref_bid");
+    var referenceBid = optionalString(input, context, name + "_bid");
     if (!referenceBid.present()) {
-      referenceBid = optionalString(input, context, name + "_bid");
+      referenceBid = optionalString(input, context, probe.role().name() + "_ref_bid");
     }
     return new Main(
         reference,

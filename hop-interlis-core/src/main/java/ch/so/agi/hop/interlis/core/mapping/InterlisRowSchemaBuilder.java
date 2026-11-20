@@ -99,6 +99,28 @@ public final class InterlisRowSchemaBuilder {
       }
     }
 
+    if (!options.includeRoleRefBid()) {
+      // Append companions for model-declared external roles after the existing fields.
+      var externalRoles =
+          fields.stream()
+              .filter(field -> field.source() == InterlisFieldSource.ROLE_REFERENCE)
+              .map(InterlisFieldPlan::roleDescriptor)
+              .filter(InterlisRoleDescriptor::external)
+              .toList();
+      for (var role : externalRoles) {
+        index =
+            addRoleField(
+                fields,
+                usedNames,
+                index,
+                role.name() + "_ref_bid",
+                InterlisFieldSource.ROLE_REFERENCE_BID,
+                role,
+                root.scopedName(),
+                warnings);
+      }
+    }
+
     return new InterlisRowMappingPlan(
         root, fields, warnings, options.defaultSrid(), linkResolvedRoles);
   }

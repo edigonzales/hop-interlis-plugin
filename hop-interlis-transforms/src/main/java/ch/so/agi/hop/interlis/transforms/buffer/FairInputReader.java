@@ -24,6 +24,11 @@ public final class FairInputReader implements AutoCloseable {
   }
 
   public Object[] next(int wanted) throws HopException {
+    return next(wanted, 0);
+  }
+
+  /** Bounds rows held from other inputs while waiting for the requested input. */
+  public Object[] next(int wanted, long otherInputLimit) throws HopException {
     while (!owner.isStopped()) {
       while (owner.isPaused() && !owner.isStopped()) pause();
       if (pending[wanted] != null && pending[wanted].size() > 0) return pending[wanted].poll();
@@ -44,6 +49,17 @@ public final class FairInputReader implements AutoCloseable {
           if (owner.getFirstRowReadDate() == null) owner.setFirstRowReadDate(new java.util.Date());
           for (var listener : owner.getRowListeners())
             listener.rowReadEvent(input.getRowMeta(), row);
+          if (i != wanted
+              && otherInputLimit > 0
+              && pending[i] != null
+              && pending[i].size() >= otherInputLimit) {
+            throw new HopException(
+                "Input <"
+                    + input.getOriginTransformName()
+                    + "> exceeds the configured maximum of "
+                    + otherInputLimit
+                    + " rows");
+          }
           if (pending[i] == null)
             pending[i] =
                 new SpillStore<>(
