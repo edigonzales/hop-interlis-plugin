@@ -9,11 +9,6 @@ siehe `phase-07.md`).
 
 ### Arbeitspaket 8.1 – Performance
 
-- **Statischer Model-Cache:** `InterlisModelServiceImpl` cached kompilierte
-  Modelle jetzt JVM-weit (statisch) statt pro Service-Instanz – in Pipelines
-  mit mehreren Transforms wird ein Modell nur noch einmal kompiliert
-  (Compile ist durch den bestehenden Lock serialisiert; das kompilierte
-  `CompiledInterlisModel` ist unveränderlich und damit gefahrlos teilbar).
 - **Large-Transfer-Baseline:** `LargeTransferStreamingTest` generiert
   50'000 Objekte (~4 MB XTF) on-the-fly, mappt und schreibt sie
   streaming (Input → Output) und liest das Ergebnis zurück
@@ -40,7 +35,7 @@ siehe `phase-07.md`).
     `Structure Collect` und `Role Join` benötigen wegen ihrer getrennten
     Eingangsströme eine Kopie (siehe `p1-corrections.md`).
 - Thread-sichere geteilte Dienste: `InterlisModelServiceImpl`
-  (statischer Cache + Compile-Lock), Mapper/Pläne sind pro Transform
+  (Compile-Lock), Mapper/Pläne sind pro Transform
   unveränderlich nach Init; Reader/Writer sind pro Instanz und werden nie
   zwischen Kopien geteilt (Invariante aus 01-Arch §21).
 
@@ -93,8 +88,6 @@ siehe `phase-07.md`).
 `./mvnw -B -ntp clean verify` grün (292 Tests: Core 146 + Transforms 146).
 Neu u. a.:
 
-- `InterlisModelServiceTest.model_cache_is_shared_across_service_instances`
-  (statischer Cache);
 - `InterlisModelRepositoryTest` (4 Fälle, eingebetteter HTTP-Server);
 - `XtfTransferReaderTest.rejects_interlis_1_itf_transfers_...` (ITF-Fail-fast);
 - `ParallelCopiesPolicyTest` (4 Fälle: Guard-Unit, Pipeline-Copies-Reject,
@@ -108,8 +101,7 @@ Neu u. a.:
 - ITF-Fail-fast statt stiller Halb-Interpretation.
 - Der Repository-Lookup ist Version-agnostisch (Modellname pinnt die
   Version; die Sprachversion des Index-Eintrags wird nicht erzwungen).
-- Der statische Model-Cache gilt pro JVM-Lauf (Hop-Sitzung); der
-  Repositorium-Download-Cache persistiert in `~/.ilicache`.
+- Der Downloadcache für Modellrepositorys persistiert in `~/.ilicache`.
 
 ## Known limitations
 

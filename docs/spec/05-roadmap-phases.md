@@ -1740,7 +1740,6 @@ docs/adr/
 ├── 0003-curves-via-sqlmm-wkb.md
 ├── 0004-structure-mapping.md
 ├── 0005-association-mapping.md
-├── 0006-model-cache.md
 └── 0007-itf-after-xtf.md
 ```
 

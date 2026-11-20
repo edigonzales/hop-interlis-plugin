@@ -6,15 +6,14 @@ noch offen. P2 ist deshalb noch nicht vollständig abgeschlossen.
 Ausgangspunkt: P1-Commit 315ab2e. Umfang: Review-Befunde 8–15 und die Zusatzbefunde
 zu Enumerationen, expliziten Modelldateien und Release-Absicherung.
 
-Umgesetzt: tiefe Projektion; Inhaltsprüfung des Modellcaches und Reload;
+Umgesetzt: tiefe Projektion; aktuelle Modellkompilierung bei Reload;
 namensbasierte Envelope-Bindung; Header-/Basket-/Carrier-/Operationssemantik;
 Writer-Abschluss und Restkinder; asynchrone Modellproben mit typisiertem Status;
 strikte Datumswerte und DST; vollständige Enumeration-Suche; gemeinsamer
 Basket-Puffer; wiederverwendbare CI und Release-Abhängigkeit von Matrix und E2E.
 
 Bewusste Einschränkungen: OID-Space-Namen können mit dem gepinnten XTF-2.3-Reader
-nicht rekonstruiert werden; dieser Fall wird bei Event-Ausgabe abgelehnt. Reload
-umgeht den kompilierten Cache, nicht die Downloadcache-TTL der INTERLIS-Bibliothek.
+nicht rekonstruiert werden; dieser Fall wird bei Event-Ausgabe abgelehnt. Für Reload gilt die Downloadcache-TTL der INTERLIS-Bibliothek.
 Die P1-Einschränkung für echte 3D-Kurven bleibt bestehen.
 
 Verifikation am 9. September 2026 unter macOS mit Temurin 21.0.7:
@@ -35,7 +34,7 @@ Verifikation am 9. September 2026 unter macOS mit Temurin 21.0.7:
   Build-Artefakte, lokalen Konfigurationen oder Entwicklerpfade im Änderungssatz.
 
 Regressionen wurden zunächst reproduziert, darunter tiefe Feldauswahl,
-Datums-/DST-Werte, explizite Modelldateien und Cache-Invalidierung. Bei der letzten
+Datums-/DST-Werte, explizite Modelldateien und Änderungen an Modellimporten. Bei der letzten
 Kontrolle wurde zusätzlich eine unerkannte widersprüchliche Basket-ID im Eventmodus
 reproduziert und behoben; passende Eventströme bleiben erfolgreich.
 

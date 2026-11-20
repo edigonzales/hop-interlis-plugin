@@ -325,8 +325,7 @@ compile_local_model_returns_transfer_description()
 compile_model_with_import_resolves_dependencies()
 unknown_model_fails_with_diagnostic()
 syntax_error_is_reported_with_model_and_line()
-model_cache_reuses_same_compilation_result()
-model_cache_key_changes_when_model_configuration_changes()
+detects_changed_import_even_with_same_timestamp()
 ```
 
 ## 7.2 `InterlisClassDescriptorExtractorTest`

@@ -19,11 +19,8 @@ import java.util.Optional;
 /**
  * Compiles INTERLIS models through the ili2c compiler entry points.
  *
- * <p>Compilation results are cached per resolved request. Local model files contribute their
- * content fingerprints to dependency validation so that model edits during development are picked
- * up. The cache is static: compiled models are shared by all service instances (and therefore all
- * transforms) in the JVM. A {@link CompiledInterlisModel} is immutable after construction, so
- * sharing it is safe; model compilation is a design-time operation.
+ * <p>Each compilation resolves current model sources. The caller reuses the resulting model
+ * during schema analysis or execution.
  *
  * <p><b>Thread-safety rule:</b> the INTERLIS libraries (ili2c, iox-ili, ehibasics) are
  * single-threaded by design and not thread-safe. ili2c keeps static compiler state, therefore every
@@ -36,7 +33,7 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
   /**
    * Central serialization point for every ili2c use in the plugin. ili2c uses shared static state
    * internally and is not safe for concurrent compilation; all compiles are serialized through this
-   * lock (model compilation is a design-time operation). Readers and writers on the other hand are
+   * lock. Readers and writers on the other hand are
    * per-instance and never shared between threads, so they do not need this lock.
    */
   // Shared with the embedded ilitransformer API in the same plugin classloader.
