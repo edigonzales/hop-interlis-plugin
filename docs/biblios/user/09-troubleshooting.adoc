@@ -39,7 +39,7 @@ Prüfen Sie ferner das Zielverzeichnis, Schreibrechte, freien Diskplatz, `Overwr
 
 Der Writer erzeugt keine TIDs automatisch. Stellen Sie ein String-Feld mit einer zum Modell passenden Identität bereit. Numerische IDs können führende Nullen verlieren und sollten als Strings gelesen werden.
 
-Eine Referenz-BID ohne Ziel-TID ist ein Fehler. Null in einem projizierten Referenzfeld entfernt die Referenz. Kontrollieren Sie TID/BID des Zielobjekts und die External-Eigenschaft im Modell. Role Join verlangt eindeutige Lookup-TIDs; er ersetzt keine allgemeine Abstimmung mehrerer Identitätsräume.
+Eine Referenz-BID ohne Ziel-TID ist ein Fehler. Null in einem projizierten Referenzfeld entfernt die Referenz. Kontrollieren Sie TID/BID des Zielobjekts und die External-Eigenschaft im Modell. Bei Role Join benötigt eine explizite Ziel-BID das String-Feld `+_ili_bid+` im Lookup. Prüfen Sie dort die erwartete BID zur Ziel-TID.
 
 === Geometrie verändert oder abgelehnt
 

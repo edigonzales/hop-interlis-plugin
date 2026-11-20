@@ -1,6 +1,7 @@
 package ch.so.agi.hop.interlis.transforms.testutil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.apache.hop.core.CheckResult;
 import org.apache.hop.core.ICheckResult;
@@ -11,14 +12,10 @@ import org.apache.hop.core.row.value.ValueMetaString;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.metadata.api.IHopMetadataProvider;
 import org.apache.hop.pipeline.PipelineMeta;
-import org.apache.hop.pipeline.transform.BaseTransformData;
 import org.apache.hop.pipeline.transform.BaseTransformMeta;
 import org.apache.hop.pipeline.transform.TransformMeta;
 
-/**
- * Test-only inputless transform emitting configurable synthetic lookup rows with the schema
- * {@code _ili_tid, Name}. Used by INTERLIS Role Join pipeline tests.
- */
+/** Test-only inputless transform emitting String rows for Role Join pipeline tests. */
 @Transform(
     id = "INTERLIS_TEST_LOOKUP_ROWS",
     name = "INTERLIS Test Lookup Rows",
@@ -30,7 +27,7 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 public class SyntheticLookupRowsMeta
     extends BaseTransformMeta<SyntheticLookupRows, SyntheticLookupRowsData> {
 
-  /** [tid, name] pairs. */
+  private List<String> fields = List.of("_ili_tid", "Street");
   private final List<Object[]> rows = new ArrayList<>();
 
   public SyntheticLookupRowsMeta() {
@@ -42,8 +39,12 @@ public class SyntheticLookupRowsMeta
     rows.clear();
   }
 
-  public void addRow(String tid, String name) {
-    rows.add(new Object[] {tid, name});
+  public void setFields(String... names) {
+    fields = List.of(names);
+  }
+
+  public void addRow(String... values) {
+    rows.add(Arrays.copyOf(values, values.length, Object[].class));
   }
 
   public List<Object[]> getRows() {
@@ -59,8 +60,9 @@ public class SyntheticLookupRowsMeta
       IVariables variables,
       IHopMetadataProvider metadataProvider)
       throws HopTransformException {
-    rowMeta.addValueMeta(new ValueMetaString("_ili_tid"));
-    rowMeta.addValueMeta(new ValueMetaString("Street"));
+    for (String field : fields) {
+      rowMeta.addValueMeta(new ValueMetaString(field));
+    }
   }
 
   @Override
@@ -75,6 +77,7 @@ public class SyntheticLookupRowsMeta
       IVariables variables,
       IHopMetadataProvider metadataProvider) {
     remarks.add(
-        new CheckResult(ICheckResult.TYPE_RESULT_OK, "Synthetic lookup rows transform", transformMeta));
+        new CheckResult(
+            ICheckResult.TYPE_RESULT_OK, "Synthetic lookup rows transform", transformMeta));
   }
 }

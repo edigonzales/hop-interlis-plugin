@@ -30,7 +30,7 @@ public class SyntheticLookupRows
       RowMeta outputRowMeta = new RowMeta();
       meta.getFields(outputRowMeta, getTransformName(), null, null, this, metadataProvider);
       for (Object[] row : meta.getRows()) {
-        putRow(outputRowMeta, new Object[] {row[0], row[1]});
+        putRow(outputRowMeta, row.clone());
       }
     }
     setOutputDone();

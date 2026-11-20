@@ -105,8 +105,9 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
   class rows (`<role>_ref`, `<role>_<attribute>`), resolved from the association
   link objects per basket, and written back as regenerated link objects;
 - `INTERLIS Role Join` joins a role's target class fields onto the main stream
-  (model-driven key/field selection, spill-backed lookup with configurable limit, hard errors for
-  missing mandatory references and duplicate lookup TIDs, model-aware dialog);
+  (model-driven field selection and a spill-backed lookup with a configurable limit).
+  It uses the target basket when the streams provide basket information. See the
+  [Role Join field contract](docs/biblios/user/07-erweiterte-transforms.adoc#role-join).
 - reference roles support external basket references (`<role>_ref_bid`) on read.
 
 **Phase 3** (structures end to end) is implemented:
