@@ -25,8 +25,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # All branches so that biblios can check out the configured
-          # 'main' branch from the workspace clone (exact-commit build).
+          # Biblios clones the checked-out history from the workspace.
           fetch-depth: 0
 
       - name: Set up Java
@@ -62,6 +61,8 @@ jobs:
 
       - name: Prepare biblios config (render exact checkout)
         run: |
+          # JGit clones the configured main branch, including for a detached PR checkout.
+          git switch -C main
           sed "s|url: https://github.com/edigonzales/hop-interlis-plugin.git|url: file://${GITHUB_WORKSPACE}|" \
             docs/biblios/biblios.yml > docs/biblios/biblios.ci.yml
 

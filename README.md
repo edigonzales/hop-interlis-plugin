@@ -40,9 +40,7 @@ compatibility, metrics and executed checks.
 **Phase 8** (hardening, performance, compatibility) is implemented – the roadmap
 is complete except for Phase 7, which was deliberately skipped (see below):
 
-- the compiled-model cache is JVM-wide (one compile per model set and Hop
-  session); a 50k-object streaming baseline test documents the
-  performance characteristics;
+- model compilation runs during schema inspection or initialization, under the shared ili2c lock;
 - an explicit threading policy: file-based transforms reject parallel
   copies with an actionable error, per-row transforms support them;
 - `http(s)://` INTERLIS model repositories work as model directories
@@ -154,7 +152,7 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
   make the dialog unusable;
 - central mapping plan shared by `getFields()`, runtime and GUI (no schema drift).
 
-Phase 0 (project foundation) is implemented as well:
+The implementation includes:
 
 - multi-module Maven build (Java 21, Apache Hop 2.19.0, iox-ili 1.24.4, ili2c 5.6.8);
 - INTERLIS model compilation and schema extraction (`TransferDescription` → descriptors);
@@ -170,8 +168,7 @@ See [`docs/progress/phase-08.md`](docs/progress/phase-08.md),
 [`docs/progress/phase-04.md`](docs/progress/phase-04.md),
 [`docs/progress/phase-03.md`](docs/progress/phase-03.md),
 [`docs/progress/phase-02.md`](docs/progress/phase-02.md),
-[`docs/progress/phase-01.md`](docs/progress/phase-01.md) and
-[`docs/progress/phase-00.md`](docs/progress/phase-00.md) for details and known limitations.
+and [`docs/progress/phase-01.md`](docs/progress/phase-01.md) for details and known limitations.
 
 ## Quick start for developers
 

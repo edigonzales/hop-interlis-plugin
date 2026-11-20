@@ -325,8 +325,7 @@ compile_local_model_returns_transfer_description()
 compile_model_with_import_resolves_dependencies()
 unknown_model_fails_with_diagnostic()
 syntax_error_is_reported_with_model_and_line()
-model_cache_reuses_same_compilation_result()
-model_cache_key_changes_when_model_configuration_changes()
+detects_changed_import_even_with_same_timestamp()
 ```
 
 ## 7.2 `InterlisClassDescriptorExtractorTest`
@@ -1504,7 +1503,6 @@ Messgrössen:
 - Peak Heap,
 - GC-Verhalten,
 - Startzeit Modellkompilierung,
-- Effekt Model Cache,
 - Writer Buffering.
 
 Wichtigster funktionaler Performance-Grundsatz:
@@ -1540,7 +1538,7 @@ Für Transforms, bei denen Parallelität gefährlich wäre, muss dies dokumentie
 Zu testen:
 
 - Reader-Ressourcen werden nicht zwischen Copies geteilt.
-- Model Cache ist threadsicher.
+- Modellkompilierung läuft unter dem gemeinsamen ili2c-Lock.
 - Geometry Mapper besitzt keinen veränderlichen globalen Zustand.
 - Writer verhindert unkontrolliertes paralleles Schreiben in dieselbe XTF-Datei.
 

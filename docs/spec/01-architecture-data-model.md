@@ -895,7 +895,7 @@ Einige Mappings können lenient sein, aber Defaults bleiben sicher:
 
 ## 22. Performance-Grundsätze
 
-- Modelle werden pro Konfiguration kompiliert und gecacht.
+- Modelle werden bei der Schemaanalyse oder Initialisierung kompiliert.
 - `InterlisRowMappingPlan` wird einmal pro Transform initialisiert.
 - Feldpositionen werden einmal bestimmt, nicht pro Row über Namen gesucht.
 - Converter werden im Plan vorkompiliert.
@@ -911,7 +911,7 @@ Hop kann Transform-Kopien parallel ausführen. Daher:
 
 - `*Meta` enthält nur Konfiguration.
 - `*Data` enthält Runtime-Zustand pro Transform-Kopie.
-- `InterlisModelCache` darf global/shared sein, aber gecachte Deskriptoren und `TransferDescription` werden nach Erstellung als read-only behandelt.
+- Deskriptoren und `TransferDescription` werden nach der Erstellung nur gelesen.
 - IOX Reader/Writer/Validator werden nie zwischen Transform-Kopien geteilt.
 - Mutable Geometry-Converter werden pro Transform oder per ThreadLocal verwendet.
 

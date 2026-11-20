@@ -33,7 +33,7 @@ class P2ModelRegressionTest {
   }
 
   @Test
-  void detects_changed_import_even_with_same_timestamp_and_reuses_unchanged_model()
+  void detects_changed_import_even_with_same_timestamp()
       throws Exception {
     Path imported = dir.resolve("Base.ili");
     Files.writeString(imported, model("Base", "DOMAIN Label = TEXT*20;"));
@@ -42,18 +42,19 @@ class P2ModelRegressionTest {
         model("Main", "IMPORTS Base; TOPIC T = CLASS C = Name : Base.Label; END C; END T;"));
     var request = new ModelSource(List.of(), List.of("Main"), List.of(dir.toString()));
     var first = service.compile(request, ModelCompileOptions.defaults());
-    assertThat(service.compile(request, ModelCompileOptions.defaults())).isSameAs(first);
     var timestamp = Files.getLastModifiedTime(imported);
     Files.writeString(imported, model("Base", "DOMAIN Label = TEXT*40;"));
     Files.setLastModifiedTime(imported, timestamp);
-    assertThat(service.compile(request, ModelCompileOptions.defaults())).isNotSameAs(first);
+    var updated = service.compile(request, ModelCompileOptions.defaults());
+    assertThat(maxLabelLength(first)).isEqualTo(20);
+    assertThat(maxLabelLength(updated)).isEqualTo(40);
     Files.delete(imported);
     assertThatThrownBy(() -> service.compile(request, ModelCompileOptions.defaults()))
         .isInstanceOf(InterlisModelException.class);
   }
 
   @Test
-  void reload_recompiles_and_enumerations_include_unused_model_domains_and_association_attributes()
+  void enumerations_include_unused_model_domains_and_association_attributes()
       throws Exception {
     Path file = dir.resolve("Enums.ili");
     Files.writeString(
@@ -70,11 +71,15 @@ class P2ModelRegressionTest {
         """));
     var request = new ModelSource(List.of(file), List.of(), List.of(dir.toString()));
     var compiled = service.compile(request, ModelCompileOptions.defaults());
-    assertThat(service.reload(request, ModelCompileOptions.defaults())).isNotSameAs(compiled);
     var rows = new InterlisEnumerationExtractor().extract(compiled);
     assertThat(rows)
         .extracting(InterlisEnumerationRow::definition)
         .contains("Enums.Unused", "Enums.ColorType", "Enums.T.AB.Kind")
         .doesNotContain("Enums.T.A.Kind", "Enums.ColorAlias");
+  }
+  private static int maxLabelLength(CompiledInterlisModel model) {
+    var label =
+        (ch.interlis.ili2c.metamodel.Domain) model.transferDescription().getElement("Base.Label");
+    return ((ch.interlis.ili2c.metamodel.TextType) label.getType()).getMaxLength();
   }
 }

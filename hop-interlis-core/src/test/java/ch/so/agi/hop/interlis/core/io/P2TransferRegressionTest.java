@@ -9,6 +9,8 @@ import ch.so.agi.hop.interlis.core.model.*;
 import java.nio.file.*;
 import java.util.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.io.TempDir;
 
 class P2TransferRegressionTest {
@@ -81,8 +83,10 @@ class P2TransferRegressionTest {
     }
   }
 
-  @Test
-  void external_standalone_role_can_be_read_and_written_without_duplicate_ref_members()
+  @ParameterizedTest
+  @ValueSource(booleans = {false, true})
+  void external_standalone_role_can_be_read_and_written_without_duplicate_ref_members(
+      boolean modelAfterHeader)
       throws Exception {
     var model =
         new InterlisModelServiceImpl()
@@ -96,10 +100,14 @@ class P2TransferRegressionTest {
     try (var reader =
             XtfTransferReader.open(
                 TestResources.path("/data/HopIli_Associations_V1_extref.xtf"),
-                model.transferDescription());
+                modelAfterHeader ? null : model.transferDescription());
         var writer =
             XtfTransferWriter.open(
                 output, model.transferDescription(), List.of("HopIli_Associations_V1"))) {
+      if (modelAfterHeader) {
+        assertThat(reader.next().eventType()).isEqualTo(InterlisEventType.START_TRANSFER);
+        reader.setModel(model.transferDescription());
+      }
       writer.startTransfer("test");
       writer.startBasket("HopIli_Associations_V1.Data", "b1");
       InterlisObjectEnvelope event;

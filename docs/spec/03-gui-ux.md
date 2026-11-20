@@ -33,8 +33,8 @@ Modellprobe darf die Klasse leer bleiben; erst die Auswahl liefert die Vorschau.
 
 Input, Output, Object to Row, Row to Object, Explode/Collect und Role Join verwenden
 `InterlisProbeCoordinator`: 300 ms Debounce, eine laufende und eine ersetzbare
-Anfrage pro Dialog. Explizites `Reload` startet ohne Debounce und invalidiert den
-kompilierten Modellcache. Konfiguration und Variablen werden vor dem Hintergrundlauf
+Anfrage pro Dialog. Explizites `Reload` startet die Modellprobe ohne Debounce.
+Konfiguration und Variablen werden vor dem Hintergrundlauf
 kopiert. Nur die aktuelle Anfrage darf Ergebnisse im SWT-Thread anzeigen;
 Schliessen verwirft ausstehende Ergebnisse.
 

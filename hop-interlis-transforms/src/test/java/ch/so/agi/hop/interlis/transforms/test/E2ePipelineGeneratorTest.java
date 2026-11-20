@@ -13,7 +13,6 @@ import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.pipeline.transform.ITransformMeta;
 import org.apache.hop.pipeline.transform.TransformMeta;
 import org.apache.hop.pipeline.transforms.textfileoutput.TextFileOutputMeta;
-import org.apache.hop.pipeline.transforms.writetolog.WriteToLogMeta;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -586,25 +585,6 @@ class E2ePipelineGeneratorTest {
       previous = transform;
     }
     return pipeline;
-  }
-
-  @Test
-  void generatePhase0DemoPipeline() throws Exception {
-    Path outputDir = outputDirectory();
-    Files.createDirectories(outputDir);
-
-    PipelineMeta pipelineMeta = new PipelineMeta();
-    pipelineMeta.setName("01-interlis-test");
-    TransformMeta source =
-        new TransformMeta("INTERLIS_TEST", "INTERLIS Test", new InterlisTestMeta());
-    source.setLocation(100, 100);
-    TransformMeta sink = new TransformMeta("Write to log", new WriteToLogMeta());
-    sink.setLocation(300, 100);
-    pipelineMeta.addTransform(source);
-    pipelineMeta.addTransform(sink);
-    pipelineMeta.addPipelineHop(new PipelineHopMeta(source, sink));
-
-    write(outputDir.resolve("01-interlis-test.hpl"), pipelineMeta);
   }
 
   private static String inputFile(Path inputDir, String name) {

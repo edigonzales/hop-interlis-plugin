@@ -103,56 +103,6 @@ class InterlisModelServiceTest {
         .hasMessageContaining("does not exist");
   }
 
-  @Test
-  void model_cache_reuses_same_compilation_result() throws Exception {
-    ModelSource source =
-        new ModelSource(
-            List.of(TestResources.path("/models/HopIli_Primitives_V1.ili")),
-            List.of(),
-            List.of());
-    CompiledInterlisModel first = service.compile(source, primitivesOptions());
-    CompiledInterlisModel second = service.compile(source, primitivesOptions());
-
-    assertThat(second.transferDescription()).isSameAs(first.transferDescription());
-  }
-
-  @Test
-  void model_cache_is_shared_across_service_instances() throws Exception {
-    // The cache is static: every transform creates its own service instance, but the compiled
-    // model is shared JVM-wide (design-time, immutable result).
-    ModelSource source =
-        new ModelSource(
-            List.of(TestResources.path("/models/HopIli_Primitives_V1.ili")),
-            List.of(),
-            List.of());
-    CompiledInterlisModel first =
-        new InterlisModelServiceImpl().compile(source, primitivesOptions());
-    CompiledInterlisModel second =
-        new InterlisModelServiceImpl().compile(source, primitivesOptions());
-
-    assertThat(second.transferDescription()).isSameAs(first.transferDescription());
-  }
-
-  @Test
-  void model_cache_key_changes_when_model_configuration_changes() throws Exception {
-    CompiledInterlisModel first =
-        service.compile(
-            new ModelSource(
-                List.of(TestResources.path("/models/HopIli_Primitives_V1.ili")),
-                List.of(),
-                List.of()),
-            primitivesOptions());
-    CompiledInterlisModel second =
-        service.compile(
-            new ModelSource(
-                List.of(TestResources.path("/models/HopIli_Geometry_V1.ili")),
-                List.of(),
-                List.of()),
-            ModelCompileOptions.defaults());
-
-    assertThat(second.transferDescription()).isNotSameAs(first.transferDescription());
-  }
-
   private static boolean modelName(TransferDescription td, String expectedName) {
     java.util.Iterator<ch.interlis.ili2c.metamodel.Model> models = td.iterator();
     while (models.hasNext()) {

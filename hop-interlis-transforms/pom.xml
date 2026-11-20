@@ -122,6 +122,12 @@
       </plugin>
       <plugin>
         <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- Hop 2.19 supplies H2 2.4.240. Its MVStore close assertion can fail after a
+               version has already been released under the store lock. H2 removed that
+               assertion in issue #3764. Remove this flag when Hop supplies the fix. -->
+          <argLine>-da:org.h2.mvstore.MVStore</argLine>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>io.smallrye</groupId>

@@ -33,8 +33,6 @@ public final class InterlisProbeCoordinator implements AutoCloseable {
         worker.schedule(
             () -> {
               try {
-                if (immediate)
-                  new ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl().clearCache();
                 T result = probe.call();
                 deliver(request, () -> success.accept(result));
               } catch (Exception e) {
