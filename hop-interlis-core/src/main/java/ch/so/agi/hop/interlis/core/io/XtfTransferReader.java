@@ -31,19 +31,17 @@ public final class XtfTransferReader implements InterlisTransferReader {
   private static final String MODEL_HEADER_NAME_ATTR = "model";
 
   private final Path file;
-  private final TransferDescription transferDescription;
+  private TransferDescription transferDescription;
   private IoxReader reader;
-  private final IoxReferenceCanonicalizer references;
+  private IoxReferenceCanonicalizer references;
   private String currentTopic;
   private String currentBasketId;
   private InterlisBasketMetadata currentBasketMetadata;
   private List<String> detectedModelNames;
   private boolean transferEnded;
 
-  private XtfTransferReader(Path file, TransferDescription transferDescription) {
+  private XtfTransferReader(Path file) {
     this.file = file;
-    this.transferDescription = transferDescription;
-    references = new IoxReferenceCanonicalizer(transferDescription);
   }
 
   public static XtfTransferReader open(Path file) throws InterlisReadException {
@@ -52,14 +50,11 @@ public final class XtfTransferReader implements InterlisTransferReader {
 
   public static XtfTransferReader open(Path file, TransferDescription transferDescription)
       throws InterlisReadException {
-    XtfTransferReader transferReader = new XtfTransferReader(file, transferDescription);
+    XtfTransferReader transferReader = new XtfTransferReader(file);
     try {
       rejectUnsupportedFormat(file);
       transferReader.reader = new ReaderFactory().createReader(file.toFile(), null);
-      if (transferReader.reader instanceof IoxIliReader ioxIliReader
-          && transferDescription != null) {
-        ioxIliReader.setModel(transferDescription);
-      }
+      transferReader.setModel(transferDescription);
       return transferReader;
     } catch (InterlisReadException e) {
       throw e;
@@ -202,9 +197,12 @@ public final class XtfTransferReader implements InterlisTransferReader {
    * resolve topics; safe to call after the transfer header was read.
    */
   public void setModel(TransferDescription transferDescription) {
+    if (transferDescription == null && references != null) return;
     if (reader instanceof IoxIliReader ioxIliReader && transferDescription != null) {
       ioxIliReader.setModel(transferDescription);
     }
+    this.transferDescription = transferDescription;
+    references = new IoxReferenceCanonicalizer(transferDescription);
   }
 
   private static List<String> detectModelNames(XtfStartTransferEvent event) {
