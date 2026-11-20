@@ -170,8 +170,7 @@ See [`docs/progress/phase-08.md`](docs/progress/phase-08.md),
 [`docs/progress/phase-04.md`](docs/progress/phase-04.md),
 [`docs/progress/phase-03.md`](docs/progress/phase-03.md),
 [`docs/progress/phase-02.md`](docs/progress/phase-02.md),
-[`docs/progress/phase-01.md`](docs/progress/phase-01.md) and
-[`docs/progress/phase-00.md`](docs/progress/phase-00.md) for details and known limitations.
+and [`docs/progress/phase-01.md`](docs/progress/phase-01.md) for details and known limitations.
 
 ## Quick start for developers
 

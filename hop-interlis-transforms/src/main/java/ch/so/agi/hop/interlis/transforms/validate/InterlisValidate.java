@@ -4,12 +4,11 @@ import ch.interlis.ili2c.metamodel.TransferDescription;
 import ch.interlis.iom_j.xtf.XtfStartTransferEvent;
 import ch.interlis.iox.IoxEvent;
 import ch.interlis.iox.IoxLogEvent;
-import ch.interlis.iox.IoxLogging;
 import ch.interlis.iox.IoxReader;
 import ch.interlis.iox_j.IoxIliReader;
-import ch.interlis.iox_j.logging.LogEventFactory;
 import ch.interlis.iox_j.utility.ReaderFactory;
 import ch.interlis.iox_j.validator.ValidationConfig;
+import ch.so.agi.hop.interlis.core.io.InterlisValidationService;
 import ch.so.agi.hop.interlis.core.io.XtfTransferReader;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisModelService;
@@ -33,10 +32,8 @@ import org.apache.hop.pipeline.transform.TransformMeta;
  * INTERLIS Validate: validates an XTF transfer file with the iox-ili streaming validator and emits
  * one error row per finding.
  *
- * <p>The validation findings are collected through a custom {@link LogEventFactory}; the transfer
- * objects themselves are not emitted (use INTERLIS Transfer Input for that). Optional: {@code
- * stopOnFirstError}, {@code maxErrors}, severity filters and {@code failOnErrors} (fail the
- * pipeline after emitting the rows).
+ * <p>Severity filters select the emitted diagnostics. Error limits apply during validation;
+ * failOnErrors fails the pipeline after emitting the rows.
  */
 public class InterlisValidate extends BaseTransform<InterlisValidateMeta, InterlisValidateData> {
 
@@ -140,15 +137,20 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
         }
 
         long limit = meta.isStopOnFirstError() ? 1 : meta.getMaxErrors();
-        CollectingLogFactory logFactory = new CollectingLogFactory(0, this::isStopped);
-        var result =
-            new ch.so.agi.hop.interlis.core.io.InterlisValidationService()
-                .validate(reader, first, td, config, limit, this::isStopped, logFactory::addEvent);
-        String incomplete = result.incomplete();
         List<Object[]> rows = new ArrayList<>();
-        for (IoxLogEvent finding : logFactory.findings) {
-          if (accepted(finding)) rows.add(toRow(finding, file));
-        }
+        var result =
+            new InterlisValidationService()
+                .validate(
+                    reader,
+                    first,
+                    td,
+                    config,
+                    limit,
+                    this::isStopped,
+                    finding -> {
+                      if (accepted(finding)) rows.add(toRow(finding, file));
+                    });
+        String incomplete = result.incomplete();
         if (incomplete != null) {
           rows.add(
               new Object[] {
@@ -156,7 +158,7 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
                 "Validation incomplete: "
                     + incomplete
                     + "; "
-                    + logFactory.errorCount
+                    + result.errors()
                     + " error(s) reached",
                 file.toString(),
                 null,
@@ -171,7 +173,7 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
                 null
               });
         }
-        data.errorCount = logFactory.errorCount;
+        data.errorCount = result.errors();
         data.pendingRows = rows.iterator();
         data.phase = InterlisValidateData.Phase.EMIT;
         if (isBasic()) logBasic("Validation of " + file + " produced " + rows.size() + " row(s)");
@@ -252,59 +254,5 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
       return List.of();
     }
     return InterlisModelSourceSupport.parseModelDirectories(resolved);
-  }
-
-  /** A private control signal, caught only at the validation boundary (also in the second pass). */
-  private static final class ValidationAborted extends RuntimeException {
-    ValidationAborted(String reason) {
-      super(reason, null, false, false);
-    }
-  }
-
-  static final class CollectingLogFactory extends LogEventFactory implements IoxLogging {
-    private final List<IoxLogEvent> findings = new ArrayList<>();
-    private final long limit;
-    private final java.util.function.BooleanSupplier cancelled;
-    private long errorCount;
-    private ValidationAborted aborted;
-    private boolean active;
-
-    CollectingLogFactory(long limit, java.util.function.BooleanSupplier cancelled) {
-      this.limit = limit;
-      this.cancelled = cancelled;
-      setLogger(this);
-    }
-
-    void begin() {
-      active = true;
-      checkCancelled();
-      checkLimit();
-    }
-
-    private void checkLimit() {
-      if (limit > 0 && errorCount >= limit) {
-        aborted = new ValidationAborted("error limit " + limit + " reached");
-        if (active) throw aborted;
-      }
-    }
-
-    void checkCancelled() {
-      if (aborted != null) throw aborted;
-      if (cancelled.getAsBoolean()) {
-        aborted = new ValidationAborted("user cancellation");
-        throw aborted;
-      }
-    }
-
-    @Override
-    public void addEvent(IoxLogEvent event) {
-      if (active) checkCancelled();
-      if (aborted != null) return; // Constructor diagnostics stop at the same limit.
-      findings.add(event);
-      if (event.getEventKind() == IoxLogEvent.ERROR) {
-        errorCount++;
-        checkLimit();
-      }
-    }
   }
 }
