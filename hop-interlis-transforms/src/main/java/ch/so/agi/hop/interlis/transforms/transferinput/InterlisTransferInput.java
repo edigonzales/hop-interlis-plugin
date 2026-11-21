@@ -42,36 +42,39 @@ public class InterlisTransferInput
       doInitialize();
     }
 
-    InterlisObjectEnvelope envelope;
-    try {
-      envelope = data.reader.next();
-    } catch (Exception e) {
-      throw new HopException("Failed to read INTERLIS transfer: " + e.getMessage(), e);
-    }
-    if (envelope == null) {
-      closeReader();
-      setOutputDone();
-      if (isBasic()) {
-        logBasic(
-            "Finished reading INTERLIS transfer: events read "
-                + data.eventsRead
-                + ", rows emitted "
-                + data.rowsEmitted);
+    boolean objectsOnly = meta.resolvedMode() == TransferInputMode.OBJECTS;
+    while (!isStopped()) {
+      InterlisObjectEnvelope envelope;
+      try {
+        envelope = data.reader.next();
+      } catch (Exception e) {
+        throw new HopException("Failed to read INTERLIS transfer: " + e.getMessage(), e);
       }
-      return false;
+      if (envelope == null) {
+        break;
+      }
+      data.eventsRead++;
+      if (isStopped()) {
+        break;
+      }
+      if (!objectsOnly || envelope.eventType() == InterlisEventType.OBJECT) {
+        putRow(data.outputRowMeta, InterlisEnvelopeRowLayout.toRow(envelope));
+        data.rowsEmitted++;
+        return true;
+      }
     }
 
-    data.eventsRead++;
-    if (meta.resolvedMode() == TransferInputMode.OBJECTS
-        && envelope.eventType() != InterlisEventType.OBJECT) {
-      // Skip transfer/basket events; their context is carried in the object rows' fields.
-      return processRow();
+    closeReader();
+    setOutputDone();
+    if (isBasic()) {
+      logBasic(
+          (isStopped() ? "Stopped reading" : "Finished reading")
+              + " INTERLIS transfer: events read "
+              + data.eventsRead
+              + ", rows emitted "
+              + data.rowsEmitted);
     }
-
-    Object[] row = InterlisEnvelopeRowLayout.toRow(envelope);
-    data.rowsEmitted++;
-    putRow(data.outputRowMeta, row);
-    return true;
+    return false;
   }
 
   private void doInitialize() throws HopException {

@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<ili:transfer xmlns:ili="http://www.interlis.ch/xtf/2.4/INTERLIS"
+              xmlns:m="http://www.interlis.ch/xtf/2.4/HopIli_ExternalRole_V1">
+  <ili:headersection><ili:models><ili:model>HopIli_ExternalRole_V1</ili:model></ili:models></ili:headersection>
+  <ili:datasection>
+    <m:Data ili:bid="b1">
+      <m:Person ili:tid="p1"><m:Name>Local</m:Name><m:Address ili:ref="a1"/></m:Person>
+      <m:Person ili:tid="p2"><m:Name>External</m:Name><m:Address ili:ref="a2" ili:bid="b2"/></m:Person>
+      <m:Address ili:tid="a1"><m:Street>Local street</m:Street></m:Address>
+    </m:Data>
+    <m:Data ili:bid="b2">
+      <m:Address ili:tid="a2"><m:Street>External street</m:Street></m:Address>
+    </m:Data>
+  </ili:datasection>
+</ili:transfer>

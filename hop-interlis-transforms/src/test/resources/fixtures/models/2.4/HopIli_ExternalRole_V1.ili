@@ -1,0 +1,16 @@
+INTERLIS 2.4;
+MODEL HopIli_ExternalRole_V1 (en)
+AT "https://hop.interlis.example/models" VERSION "2026-11-20" =
+  TOPIC Data =
+    CLASS Person =
+      Name : MANDATORY TEXT*60;
+    END Person;
+    CLASS Address =
+      Street : MANDATORY TEXT*80;
+    END Address;
+    ASSOCIATION AddressOwnership =
+      Person -- {0..*} Person;
+      Address (EXTERNAL) -- {1} Address;
+    END AddressOwnership;
+  END Data;
+END HopIli_ExternalRole_V1.

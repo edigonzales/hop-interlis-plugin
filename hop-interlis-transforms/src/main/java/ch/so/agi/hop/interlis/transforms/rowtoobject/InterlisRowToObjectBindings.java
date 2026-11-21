@@ -48,7 +48,8 @@ record InterlisRowToObjectBindings(
               field.hopFieldName(),
               field.outputIndex(),
               factory.createValueMeta(field),
-              !bid || !name.isBlank()));
+              field.source() != InterlisFieldSource.ROLE_REFERENCE_BID
+                  && (!bid || !name.isBlank())));
     }
     String sourceName = InterlisFieldBinding.resolve(vars, meta.getSourceObjectField());
     String selected = sourceName;

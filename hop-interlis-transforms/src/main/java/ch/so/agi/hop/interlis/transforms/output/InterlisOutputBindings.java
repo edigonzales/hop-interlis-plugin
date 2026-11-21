@@ -49,7 +49,7 @@ public record InterlisOutputBindings(
                   field.hopFieldName(),
                   field.outputIndex(),
                   factory.createValueMeta(field),
-                  true));
+                  field.source() != InterlisFieldSource.ROLE_REFERENCE_BID));
       if (field.source() == InterlisFieldSource.BASKET_ID) basketIndex = field.outputIndex();
     }
     String basket = meta.getBasketId() == null ? "" : vars.resolve(meta.getBasketId());

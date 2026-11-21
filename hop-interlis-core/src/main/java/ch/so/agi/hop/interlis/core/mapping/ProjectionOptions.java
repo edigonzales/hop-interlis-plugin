@@ -15,7 +15,8 @@ import java.util.Set;
  * @param defaultSrid SRID assigned to mapped geometries; {@code null} keeps SRID 0
  * @param selectedPropertyPaths dotted paths of the properties to project; empty means all supported
  *     properties
- * @param includeRoleRefBid emit {@code <role>_ref_bid} fields for reference roles
+ * @param includeRoleRefBid emit {@code <role>_ref_bid} for all projected roles. External roles
+ *     always have that field.
  * @param flattenAssociationAttributes flatten attributes of uniquely embeddable attributed
  *     associations onto the class rows ({@code <role>_<attribute>})
  */

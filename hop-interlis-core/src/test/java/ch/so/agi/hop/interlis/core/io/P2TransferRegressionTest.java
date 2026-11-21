@@ -129,7 +129,9 @@ class P2TransferRegressionTest {
             && event.object().getattrobj("Task", 0) != null
             && event.object().getattrobj("Task", 0).getobjectrefbid() != null) {
           found = true;
+          assertThat(event.basketId()).isEqualTo("b1");
           assertThat(event.object().getattrvaluecount("Task")).isEqualTo(1);
+          assertThat(event.object().getattrobj("Task", 0).getobjectrefoid()).isEqualTo("t2");
           assertThat(event.object().getattrobj("Task", 0).getobjectrefbid()).isEqualTo("b2");
           assertThat(event.object().getattrobj("Task", 0).getobjectreforderpos()).isEqualTo(1);
         }

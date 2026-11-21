@@ -554,7 +554,7 @@ municipality_ref : String
 
 Der Wert ist die referenzierte Objekt-TID.
 
-Optional können bei externen Referenzen zusätzliche Felder erscheinen:
+Bei einer im Modell als `EXTERNAL` deklarierten Rolle liefert die Projektion zusätzlich die nullable Ziel-BID:
 
 ```text
 municipality_ref
@@ -671,8 +671,10 @@ municipality_Name
 municipality_BfsNo
 ```
 
-Der Join schlägt Schlüssel und Felder modellgetrieben vor. Der Lookup wird vor
-der ersten Join-Ausgabe vollständig eingelesen; der aktuelle Speicher lagert Nutzdaten und
+Der Join schlägt Schlüssel und Felder modellgetrieben vor. Der
+[Feldvertrag für den Zielbasket](../biblios/user/07-erweiterte-transforms.adoc#role-join)
+bestimmt den Lookup-Schlüssel und damit die Duplikatprüfung. Der Lookup wird vor
+der ersten Join-Ausgabe vollständig eingelesen. Der Speicher lagert Nutzdaten und
 Index oberhalb des Pufferbudgets auf Disk aus. Beide Eingänge werden abwechselnd
 gelesen, damit ein gemeinsamer Produzent auch bei kleinen Hop-Queues weiterläuft.
 `maxLookupRows` bleibt eine zusätzliche Schutzgrenze (Default 500'000; 0 ohne

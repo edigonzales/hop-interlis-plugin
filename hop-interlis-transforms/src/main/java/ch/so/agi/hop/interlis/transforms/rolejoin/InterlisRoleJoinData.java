@@ -11,12 +11,10 @@ public class InterlisRoleJoinData extends BaseTransformData {
   InterlisRoleJoinBindings.Lookup lookupBindings;
 
   boolean initialized;
-  boolean mainBound;
-  boolean lookupBound;
   InterlisRoleJoinProbeResult probe;
   IRowSet mainRowSet;
   IRowSet lookupRowSet;
-  ch.so.agi.hop.interlis.core.buffer.SpillStore<Object[]> lookupByTid;
+  ch.so.agi.hop.interlis.core.buffer.SpillStore<Object[]> lookupIndex;
   ch.so.agi.hop.interlis.transforms.buffer.FairInputReader inputs;
   IRowMeta outputRowMeta;
 }

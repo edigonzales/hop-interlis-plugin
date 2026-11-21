@@ -371,7 +371,15 @@ for filename in ("primitive-collections.xtf","child-preserve.xtf","reference-eve
         assert child.find(q("Details")+"/"+q("Detail")+"/"+q("Text")).text=="nested",filename
         assert child.find(q("TargetRef")).get("{"+ili_ns+"}bid")=="b2",filename
         if filename=="child-spill.xtf": assert child.find(q("Payload")).text=="payload"*600,filename
-    if filename=="reference-event-roundtrip.xtf": assert len(tree.findall(".//"+q("Target")))==2,filename
+    if filename == "reference-event-roundtrip.xtf":
+        ili = "{" + ili_ns + "}"
+        baskets = {
+            basket.get(ili + "bid"): [obj.get(ili + "tid") for obj in basket]
+            for basket in tree.findall(".//" + q("Data"))
+        }
+        assert baskets == {"b1": ["t1", "i1"], "b2": ["t2"]}, baskets
+        assert item.find(q("InternalRef")).attrib == {ili + "ref": "t1"}, filename
+        assert item.find(q("ExternalRef")).attrib == {ili + "ref": "t2", ili + "bid": "b2"}, filename
 assert not list(output_dir.glob("hop-interlis-spill-*")),"spill directories were not cleaned up"
 assert not list(output_dir.glob("*.pending.xtf")),"prepared outputs were not cleaned up"
 print("Priority 1/2 E2E values OK")

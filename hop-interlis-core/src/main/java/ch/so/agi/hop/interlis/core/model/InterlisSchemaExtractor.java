@@ -746,6 +746,7 @@ public final class InterlisSchemaExtractor {
         inherited,
         destination == null ? null : destination.getScopedName(null),
         role.isOrdered(),
+        role.isExternal(),
         associationOf(role));
   }
 

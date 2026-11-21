@@ -156,6 +156,7 @@ Ungültige Indizes, Kardinalitätsverletzungen und mehrdeutige Zuordnungen werde
 
 Neue Explode-Konfigurationen führen den Kind-Carrier mit; neue Collect-Konfigurationen verwenden `PRESERVE` sowie BID plus Elternschlüssel. Beim Laden alter `.hpl`-Dateien ohne die neuen Optionen gilt das bisherige Verhalten: Explode ohne Kind-Carrier, Collect mit `REBUILD` und bisheriger Schlüsselwahl ohne BID. Das Laden migriert diese Semantik nicht automatisch. Wählen Sie für eine Umstellung die Optionen ausdrücklich und kontrollieren Sie beide Eingangsschemas.
 
+[[role-join]]
 === INTERLIS Role Join
 
 Role Join ergänzt Zielattribute einer einfachen Assoziationsrolle. Der Dialog enthält `Main input`, `Lookup input`, `Models`, `Model dirs`, `Class`, `Role`, `Main ref field`, `Lookup TID field`, `Output prefix`, `Fields to add` und `Max lookup rows`.
@@ -164,7 +165,13 @@ Die Lookup-TID ist standardmässig `+_ili_tid+`. Ein leeres Präfix wird aus dem
 
 Der Join liest beide Eingänge abwechselnd. Noch nicht verarbeitbare Hauptzeilen werden gepuffert; die erste Ergebniszeile folgt erst nach vollständigem Lookup. Dadurch kann ein gemeinsamer Produzent beide Zweige versorgen. Nutzdaten und Index werden bei Bedarf auf Disk ausgelagert.
 
-`Max lookup rows` begrenzt die Zahl gelesener Lookup-Zeilen auf standardmässig 500'000. Überschreiten ist ein Fehler; `0` erlaubt unbegrenzt viele. Dieser Grenzwert gilt unabhängig vom Speicherbudget. Der Lookup verwendet TIDs: in zusammengeführten Identitätsräumen müssen diese eindeutig sein. Für allgemeine skalare Referenzattribute mit TID/BID prüfen Sie eine entsprechend zusammengesetzte Join-Zuordnung in Ihrer Pipeline.
+`Max lookup rows` begrenzt die Zahl gelesener Lookup-Zeilen auf standardmässig 500'000. `0` erlaubt unbegrenzt viele. Dieser Grenzwert gilt unabhängig vom Speicherbudget.
+
+Der Hauptstrom liefert die Ziel-TID im konfigurierten Referenzfeld. Der optionale String `+<Rolle>_ref_bid+` legt den Zielbasket ausdrücklich fest. Role Join verwendet das Begleitfeld des konfigurierten Referenzfeldes mit Suffix `+_bid+`, sofern es vorhanden ist. Bei einem umbenannten Referenzfeld bleibt das rollenbasierte Feld als Alternative verfügbar. Die Modellprojektion liefert das Feld für als `EXTERNAL` deklarierte Rollen. Führen Sie es bis zum Join mit.
+
+Ohne explizite Ziel-BID gilt bei vorhandenem Basketkontext die `+_ili_bid+` der Hauptzeile. Für eine explizite Ziel-BID muss der Lookup eine passende `+_ili_bid+` als String liefern. Fehlt das Feld oder hat ein Objekt mit der Ziel-TID keine BID und fehlt der Treffer im verlangten Basket, meldet Role Join den fehlenden Basketkontext. Fehlt der Zielschlüssel, gelten die Einstellungen für fehlende Pflichtreferenzen.
+
+Bei Streams ohne Basketfelder im Hauptstrom oder ohne `+_ili_bid+` im Lookup bleibt der TID-Lookup für Referenzen ohne explizite BID verfügbar. Andernfalls prüft `Fail on duplicate lookup TID` das Paar aus BID und TID. Ist die Prüfung deaktiviert, bleibt die erste Zeile mit demselben Lookup-Schlüssel massgeblich.
 
 [[validierung]]
 === INTERLIS Validate
