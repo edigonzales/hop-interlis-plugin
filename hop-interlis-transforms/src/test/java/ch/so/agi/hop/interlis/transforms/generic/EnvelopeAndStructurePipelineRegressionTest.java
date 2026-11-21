@@ -1,6 +1,6 @@
 package ch.so.agi.hop.interlis.transforms.generic;
 
-import static ch.so.agi.hop.interlis.transforms.generic.P1PipelineRegressionTest.run;
+import static ch.so.agi.hop.interlis.transforms.generic.ValidationMappingAndOutputPipelineTest.run;
 import static org.assertj.core.api.Assertions.*;
 
 import ch.interlis.iom_j.Iom_jObject;
@@ -22,7 +22,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 
 @Timeout(30)
-class P2PipelineRegressionTest {
+class EnvelopeAndStructurePipelineRegressionTest {
   @TempDir Path dir;
   static final String MODEL = "HopIli_P1_V1", ITEM = MODEL + ".Data.Item";
   static String models;

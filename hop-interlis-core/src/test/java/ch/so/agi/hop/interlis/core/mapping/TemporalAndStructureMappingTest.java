@@ -10,7 +10,7 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class P2MappingRegressionTest {
+class TemporalAndStructureMappingTest {
   @TempDir Path dir;
 
   private InterlisAttributeDescriptor attribute(InterlisValueKind kind) {

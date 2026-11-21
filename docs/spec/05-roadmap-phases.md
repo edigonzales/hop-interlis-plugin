@@ -1453,7 +1453,9 @@ Testen gegen:
 - minimale unterstützte Hop-Version,
 - aktuelle freigegebene Version.
 
-Bei API-Änderungen Compatibility Layer statt Copy/Paste-Divergenz.
+Die Kompatibilität mit unterstützten Hop-Versionen und gültigen
+INTERLIS-Standards bleibt erforderlich. Während der Vorproduktion gilt für
+die eigene Plugin-API nur der aktuelle [Plugin-Vertrag](02-java-hop-implementation.md#32-pre-production-plugin-contracts).
 
 ---
 

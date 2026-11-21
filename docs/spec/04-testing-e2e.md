@@ -1818,11 +1818,11 @@ und eine konkrete Bindungsdiagnose. Alle bisherigen Paket-Pipelines bleiben akti
 
 ## Prio 3: zusätzliche Abnahme
 
-`Prio3PipelineTest` prüft heterogene INFO-Eingänge, Safe Mode mit RowSet-Grösse 1,
+`MappedOutputAndUpdatePipelineTest` prüft heterogene INFO-Eingänge, Safe Mode mit RowSet-Grösse 1,
 mehrere physische Transform-Kopien, Objekt-/Struktur-/primitive Patches,
 unbekannte/doppelte/veraltete Schlüssel, mandatory/null, Herkunftspositionen,
 Symlink-/Hardlink-Gleichheit und Publikation nach späten Fehlern/Stop bzw.
-Originaländerungen. `Prio3MetadataTest` prüft echte Hop-XML-Serialisierung,
+Originaländerungen. `MappedTransformMetadataTest` prüft echte Hop-XML-Serialisierung,
 Metadaten-Defaults, technische Leerprojektion, Umbenennung/Entfernung und tiefe
 Dialogkopien. Core-Tests prüfen kanonische Schlüssel und erzwungenes Grouping-Spill.
 

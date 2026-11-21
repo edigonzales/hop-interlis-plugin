@@ -61,7 +61,7 @@ class BindingPipelineRegressionTest {
       meta.setIncludeParentFields(List.of("context"));
       var expected = source.schema.clone();
       meta.getFields(expected, "explode", null, null, new Variables(), null);
-      var result = P1PipelineRegressionTest.run(1, false, source, meta);
+      var result = ValidationMappingAndOutputPipelineTest.run(1, false, source, meta);
       if (invalid) assertThat(result.getErrors()).isPositive();
       else {
         assertThat(result.getErrors()).isZero();

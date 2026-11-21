@@ -28,7 +28,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 
 @Timeout(30)
-class P1PipelineRegressionTest {
+class ValidationMappingAndOutputPipelineTest {
   @TempDir Path temp;
   static final String MODEL = "HopIli_P1_V1", ITEM = MODEL + ".Data.Item";
   static String dirs;
@@ -297,10 +297,6 @@ class P1PipelineRegressionTest {
     source.rows.add(row);
     var out = new InterlisOutputMeta();
     out.setDefault();
-
-    out.setValidateBeforePublish(false);
-
-    out.setValidateBeforePublish(false);
     out.setFileName(temp.resolve("custom-bid.xtf").toString());
     out.setModelNames(MODEL);
     out.setModelDirectories(dirs);
@@ -336,10 +332,6 @@ class P1PipelineRegressionTest {
     source.rows.add(row);
     var out = new InterlisOutputMeta();
     out.setDefault();
-
-    out.setValidateBeforePublish(false);
-
-    out.setValidateBeforePublish(false);
     out.setFileName(temp.resolve("out.xtf").toString());
     out.setModelNames(MODEL);
     out.setModelDirectories(dirs);

@@ -14,7 +14,7 @@ import org.apache.hop.core.row.value.*;
 import org.apache.hop.core.variables.Variables;
 import org.junit.jupiter.api.*;
 
-class P1BindingAndLayoutTest {
+class EnvelopeBindingAndLayoutTest {
   static InterlisRowMappingPlan plan;
   static final Variables VARS = new Variables();
 

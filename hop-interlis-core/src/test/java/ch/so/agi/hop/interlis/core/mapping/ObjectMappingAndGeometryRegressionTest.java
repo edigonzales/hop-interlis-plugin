@@ -13,7 +13,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 import org.locationtech.jts.geom.*;
 
-class P1MappingRegressionTest {
+class ObjectMappingAndGeometryRegressionTest {
   static InterlisProjectionResult projection;
   static InterlisRowMappingPlan plan;
   final RowToIomMapper writer = new RowToIomMapper();

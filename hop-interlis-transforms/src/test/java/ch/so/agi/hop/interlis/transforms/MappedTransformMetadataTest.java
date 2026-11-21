@@ -17,7 +17,7 @@ import org.apache.hop.metadata.serializer.xml.XmlMetadataUtil;
 import org.apache.hop.pipeline.transform.*;
 import org.junit.jupiter.api.*;
 
-class Prio3MetadataTest {
+class MappedTransformMetadataTest {
   @BeforeAll
   static void init() throws Exception {
     HopEnvironment.init();
