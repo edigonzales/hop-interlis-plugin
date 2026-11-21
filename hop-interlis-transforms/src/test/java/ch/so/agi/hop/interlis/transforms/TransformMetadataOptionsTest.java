@@ -56,6 +56,33 @@ class TransformMetadataOptionsTest {
   }
 
   @Test
+  void omitted_options_use_current_structure_and_writer_defaults() throws Exception {
+    var node = XmlHandler.loadXmlString("<transform/>").getDocumentElement();
+    var provider = new MemoryMetadataProvider();
+    var collect =
+        XmlMetadataUtil.deSerializeFromXml(node, InterlisStructureCollectMeta.class, provider);
+    assertThat(collect.getCollectMode())
+        .isEqualTo(InterlisStructureCollectMeta.CollectMode.PRESERVE);
+    assertThat(collect.getParentBidField()).isEqualTo("_ili_bid");
+    assertThat(collect.getChildParentBidField()).isEqualTo("_ili_parent_bid");
+    assertThat(collect.isStrictOrdering()).isTrue();
+    assertThat(collect.isFailOnDuplicateIndex()).isTrue();
+    assertThat(collect.isFailOnChildWithoutParent()).isTrue();
+
+    var explode =
+        XmlMetadataUtil.deSerializeFromXml(node, InterlisStructureExplodeMeta.class, provider);
+    assertThat(explode.isEmitParentBid()).isTrue();
+    assertThat(explode.isKeepChildSourceObject()).isTrue();
+    assertThat(explode.isEmitUpdateReference()).isTrue();
+    var output = XmlMetadataUtil.deSerializeFromXml(node, InterlisOutputMeta.class, provider);
+    assertThat(output.isValidateBeforePublish()).isTrue();
+    var update =
+        XmlMetadataUtil.deSerializeFromXml(
+            node, ch.so.agi.hop.interlis.transforms.update.InterlisUpdateMeta.class, provider);
+    assertThat(update.isValidateBeforePublish()).isTrue();
+  }
+
+  @Test
   void buffer_and_output_options_survive_serialization() throws Exception {
     var input = new InterlisInputMeta();
     input.setDefault();

@@ -1609,7 +1609,7 @@ Eingangsströme bleiben nach Elternidentität zu sortieren. Explode liefert Kind
 über einen Cursor einzeln. Das bestehende Role-Join-Limit bleibt 500'000
 Eingangszeilen; 0 bedeutet unbegrenzt, negative Werte sind Fehler.
 
-Beide Hop-Writer verwenden `PreparedXtfOutput`: eindeutige temporäre Datei im
+Die XTF-Dateisinks verwenden `PreparedXtfOutput`: eindeutige temporäre Datei im
 Zielverzeichnis, vollständiges Transferende, erfolgreiches Schliessen und optional
 Vollvalidierung, dann Vorbereitung. `InterlisPipelineCompletion` veröffentlicht
 am Pipeline-Ende erst nach allen aufgeschobenen Validate-Fehlern und nur ohne
@@ -1620,7 +1620,7 @@ nicht ersetzt. Eine nicht unterstützte Operation scheitert ohne unsicheren
 Fallback. Die Garantie gilt pro Datei; mehrere Ziele sind keine gemeinsame
 Dateisystemtransaktion.
 
-`validateBeforePublish=false` bleibt Default. Eine optionale Konfigurationsdatei
+Output und Update validieren standardmässig vor Veröffentlichung. Bei Transfer Output ist die Option standardmässig aus. Eine optionale Konfigurationsdatei
 und `InterlisValidationService` ermöglichen Vollvalidierung einschliesslich zweitem
 Durchlauf. Fehler oder unvollständige Validierung verhindern die Veröffentlichung.
 Der Validate-Transform verwendet denselben Dienst und liefert vor dem Pipelinefehler

@@ -122,7 +122,9 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
     maxSpillMiB = value;
   }
 
-  @HopMetadataProperty private boolean validateBeforePublish = true;
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean validateBeforePublish = true;
+
   @HopMetadataProperty private String validationConfigFile = "";
 
   public boolean isValidateBeforePublish() {
@@ -143,7 +145,10 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
 
   @HopMetadataProperty private String fileName;
   @HopMetadataProperty private String modelNames;
-  @HopMetadataProperty private String modelDirectories;
+
+  @HopMetadataProperty
+  private String modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
+
   @HopMetadataProperty private boolean overwrite;
 
   public InterlisOutputMeta() {

@@ -157,6 +157,19 @@ class InterlisRoleJoinMetaTest {
   }
 
   @Test
+  void omitted_xml_options_use_current_lookup_defaults() throws Exception {
+    var node =
+        org.apache.hop.core.xml.XmlHandler.loadXmlString("<transform/>").getDocumentElement();
+    var restored = new InterlisRoleJoinMeta();
+    restored.loadXml(node, new MemoryMetadataProvider());
+
+    assertThat(restored.getLookupTidField()).isEqualTo("_ili_tid");
+    assertThat(restored.isFailOnDuplicateKey()).isTrue();
+    assertThat(restored.isFailOnMissingMandatoryReference()).isTrue();
+    assertThat(restored.getMaxLookupRows()).isEqualTo(500_000L);
+  }
+
+  @Test
   void plugin_contract() {
     org.apache.hop.core.annotations.Transform annotation =
         InterlisRoleJoinMeta.class.getAnnotation(org.apache.hop.core.annotations.Transform.class);

@@ -131,17 +131,26 @@ public class InterlisStructureCollectMeta
 
   @HopMetadataProperty private String parentInputTransform;
   @HopMetadataProperty private String childInputTransform;
-  @HopMetadataProperty private String parentKeyField;
-  @HopMetadataProperty private String childParentKeyField;
-  @HopMetadataProperty private String childIndexField;
+  @HopMetadataProperty private String parentKeyField = DEFAULT_PARENT_KEY_FIELD;
+  @HopMetadataProperty private String childParentKeyField = DEFAULT_CHILD_PARENT_KEY_FIELD;
+  @HopMetadataProperty private String childIndexField = DEFAULT_CHILD_INDEX_FIELD;
   @HopMetadataProperty private String modelNames;
-  @HopMetadataProperty private String modelDirectories;
+
+  @HopMetadataProperty
+  private String modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
+
   @HopMetadataProperty private String className;
   @HopMetadataProperty private String structureAttributePath;
-  @HopMetadataProperty private String sourceObjectField;
-  @HopMetadataProperty private boolean strictOrdering;
-  @HopMetadataProperty private boolean failOnDuplicateIndex;
-  @HopMetadataProperty private boolean failOnChildWithoutParent;
+  @HopMetadataProperty private String sourceObjectField = DEFAULT_SOURCE_OBJECT_FIELD;
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean strictOrdering = true;
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean failOnDuplicateIndex = true;
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean failOnChildWithoutParent = true;
 
   public InterlisStructureCollectMeta() {
     super();
