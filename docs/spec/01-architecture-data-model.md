@@ -732,7 +732,7 @@ Dies ist für Mapping- und GUI-Pipelines nützlich.
 
 ## 16. OID/TID
 
-TIDs werden als String transportiert und müssen vor dem Writer bereitstehen. Klassenobjekte und identifizierbare Assoziationen benötigen eine TID; bei nicht identifizierbaren Assoziationen ist sie optional. Der aktuelle Writer hat keine UUID-Erzeugung oder Missing-TID-Policy. Identifikatoren müssen zum modellierten OID-/Identitätsraum passen. Eindeutigkeit und Referenzgültigkeit werden mit vollständiger Dateivalidierung geprüft; technische Schlüsselprüfungen ersetzen diese nicht.
+TIDs werden als String transportiert und müssen vor dem Writer bereitstehen. Klassenobjekte und identifizierbare Assoziationen benötigen eine TID; bei nicht identifizierbaren Assoziationen ist sie optional. Identifizierbare Objekte benötigen eine gemappte TID, die zur OID-Domain ihres Typs passt. Eindeutigkeit und Referenzgültigkeit werden mit vollständiger Dateivalidierung geprüft; technische Schlüsselprüfungen ersetzen diese nicht.
 
 ## 17. Baskets
 
@@ -754,7 +754,17 @@ Damit kann ein Transfer mit mehreren Baskets gelesen und gruppiert verarbeitet w
 
 ### 17.2 Writer-Basket-Zuordnung
 
-Der typisierte Writer verwendet `basketIdField` (Default `_ili_bid`) und `basketId` (Default `b1`). Eine leere beziehungsweise nicht nutzbare Feld-BID verwendet den Default. Es gibt keine separate Basket-Policy-Auswahl. BID-Wechsel schliessen den aktiven Basket. Wiederholte abgeschlossene BIDs werden in typisiertem, generischem Objekt- und Ereignismodus zentral abgelehnt. Alle Zeilen derselben BID müssen zusammenhängend vorliegen; eine lexikografische BID-Reihenfolge ist keine Voraussetzung.
+INTERLIS Output gruppiert die Objekte aller gemappten Eingänge nach BID und lagert
+die Gruppierung bei Bedarf auf Disk aus. Die Eingänge dürfen unsortiert sein.
+Mit `PER_TOPIC` erzeugt der Writer pro Topic eine UUID-BID, sofern dessen
+Basket-OID-Domain dies erlaubt. Mit `FROM_FIELD` benötigt jeder Eingang ein
+gemapptes String-Feld mit einer gültigen BID pro Zeile. Eine BID darf nur einem
+Topic zugeordnet werden.
+
+INTERLIS Transfer Output verlangt im Objektmodus zusammenhängende BID-Gruppen.
+Im Ereignismodus geben Start- und End-Ereignisse die Grenzen vor. Ein bereits
+abgeschlossener Basket darf in beiden Modi von Transfer Output nicht erneut
+geöffnet werden.
 
 ### 17.3 Basket-Metadaten
 

@@ -33,13 +33,13 @@ Prüfen Sie ferner das Zielverzeichnis, Schreibrechte, freien Diskplatz, `Overwr
 
 === BID taucht erneut auf
 
-`B1 → B2 → B1` verletzt die zusammenhängende Basket-Gruppierung. Ordnen Sie den Objektstrom vor dem Writer nach BID-Gruppen. Bei `EVENTS` müssen Start-/End-Ereignisse und Objekt-BIDs zueinander passen; abgeschlossene BIDs dürfen auch dort nicht erneut beginnen.
+Bei `INTERLIS Transfer Output` im Objektmodus verletzt `B1 → B2 → B1` die zusammenhängende Basket-Gruppierung. Gruppieren Sie den Objektstrom nach BID. Im Ereignismodus müssen Start- und End-Ereignisse und Objekt-BIDs zusammenpassen. Bei `INTERLIS Output` werden die Objekte automatisch nach BID gruppiert. Stellen Sie dort sicher, dass jede BID nur einem Topic zugeordnet ist.
 
 === TID oder Referenz ungültig
 
 Der Writer erzeugt keine TIDs automatisch. Stellen Sie ein String-Feld mit einer zum Modell passenden Identität bereit. Numerische IDs können führende Nullen verlieren und sollten als Strings gelesen werden.
 
-Eine Referenz-BID ohne Ziel-TID ist ein Fehler. Null in einem projizierten Referenzfeld entfernt die Referenz. Kontrollieren Sie TID/BID des Zielobjekts und die External-Eigenschaft im Modell. Bei Role Join benötigt eine explizite Ziel-BID das String-Feld `+_ili_bid+` im Lookup. Prüfen Sie dort die erwartete BID zur Ziel-TID.
+Eine Referenz-BID ohne Ziel-TID ist ein Fehler. Null in einem projizierten Referenzfeld entfernt die Referenz. Kontrollieren Sie TID/BID des Zielobjekts und die External-Eigenschaft im Modell. Bei Role Join benötigen beide Eingänge das String-Feld `+_ili_bid+`. Prüfen Sie im Lookup die erwartete BID zur Ziel-TID.
 
 === Geometrie verändert oder abgelehnt
 
