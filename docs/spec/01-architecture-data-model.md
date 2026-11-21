@@ -129,10 +129,9 @@ _ili_transfer_metadata String
 
 Die kanonische **Ausgabe** wird in `InterlisEnvelopeRowLayout` zentral definiert.
 Eingänge werden einmalig anhand ihrer Feldnamen und Typen gebunden; die Reihenfolge
-im eingehenden Hop-Stream ist frei. Nach den vier Basket-Metadatenfeldern folgt
-optional `_ili_transfer_metadata` (String, JSON-Schema-Version 1). Die bisherigen
-14 Felder behalten ihre Positionen und Typen; alte Streams ohne Headerfeld bleiben
-lesbar.
+im eingehenden Hop-Stream ist frei. Im Ereignismodus muss die
+Spalte `_ili_transfer_metadata` (String, JSON-Schema-Version 1) mitgeführt werden.
+Der Wert kann bei Ereignissen ohne Transfer-Header leer bleiben.
 
 ## 4. Typed row projection
 
@@ -499,7 +498,7 @@ Mehrfachattribute werden im Klassenplan ausgelassen und mit einer Diagnose auf E
 
 Kindzeilen tragen `_ili_parent_tid`, standardmässig `_ili_parent_bid` und `_ili_index`. Primitive Sammlungen verwenden `_ili_value` mit dem Elementtyp; Strukturkinder projizierte Strukturfelder sowie optional `_ili_child_object`. BAG-Duplikate bleiben erhalten, BAG-Indizes sind technisch; LIST-Indizes bestimmen die Reihenfolge.
 
-Neue Collect-Konfigurationen verwenden `(BID, Elternschlüssel)` und `PRESERVE`; Eltern- und Kindstrom müssen nach dieser Identität aufsteigend sortiert sein. Alte Dateien behalten die bisherige Schlüsselwahl und REBUILD. Schlüssel werden aus den konfigurierten Feldern gelesen; es gibt keine automatische Erzeugung eines `_ili_parent_key`.
+Collect verwendet `(BID, Elternschlüssel)` und standardmässig `PRESERVE`. Eltern- und Kindstrom müssen nach dieser Identität aufsteigend sortiert sein. Die konfigurierten Felder liefern die Schlüsselwerte.
 
 Collect ersetzt die gesamte ausgewählte Sammlung. Keine Kindzeilen ergeben eine leere Sammlung, sofern die Modellkardinalität dies erlaubt. Strikte LIST-Indizes sind eindeutig, aufsteigend und lückenlos ab 0. Nicht-strikter Modus sortiert innerhalb der aktuellen Gruppe; er sortiert nicht den gesamten Eingang nach Elternidentität. Optionen für doppelte Indizes und verwaiste Kinder bleiben wirksam.
 
@@ -533,9 +532,8 @@ Teil dieses Ausbaus.
 
 Collect ersetzt die gesamte ausgewählte Sammlung. Gefilterte Kinder verschwinden;
 bei strikten LIST-Indizes müssen verbleibende Kinder gegebenenfalls neu nummeriert
-werden. Neue Konfigurationen ordnen Eltern über `(BID, Elternschlüssel)` zu und
-prüfen leere Schlüssel, doppelte Eltern, Sortierung und verwaiste Kinder. Alte
-Dateien behalten ihre bisherige Schlüsselwahl und den Neuaufbau ohne Kind-Carrier.
+werden. Collect prüft leere Schlüssel, doppelte Eltern, Sortierung und verwaiste
+Kinder anhand von `(BID, Elternschlüssel)`.
 
 Die drei Erhaltungszusagen sind verschieden: Projektion bearbeitet ausgewählte
 Felder; Overlay erhält zusätzlich unprojizierte Objektinhalte; der vollständige

@@ -1457,17 +1457,9 @@ public final class InterlisUiModelService {
 
 ## 25.2 `InterlisSchemaPreviewFormatter`
 
-```java
-public String formatClass(InterlisClassDescriptor descriptor, ProjectionOptions options);
-public String formatStructure(...);
-public String formatAssociation(...);
-```
+Die UI-neutrale Vorschau verwendet `InterlisSchemaPreview` mit typisierten
+Tabellenzeilen und einem separaten Diagnosebereich.
 
-In der SWT-Implementierung liefert die Preview-Erzeugung zusätzlich das
-strukturierte `InterlisSchemaPreview` aus Abschnitt „Strukturierte
-Schema-Preview“. Die bisherigen Textformatierer bleiben nur für
-Abwärtskompatibilität und Tests verfügbar; Dialoge verwenden für die Anzeige
-die Tabelle und einen separaten Diagnosebereich.
 
 ## 25.3 `InterlisModelTreeBuilder`
 

@@ -60,7 +60,7 @@ Die Reihenfolge ist genau die Tabellenreihenfolge, innerhalb zusammengefasster Z
 
 Konfigurieren Sie `Data file`, `Models`, `Model dirs`, `Overwrite existing file` und `Event mode`. Default ist Objektmodus (`Event mode` aus). `Options…` enthält dieselbe Validierung vor Veröffentlichung wie der typisierte Writer.
 
-Im Objektmodus müssen die BIDs zusammenhängend gruppiert sein. Im Ereignismodus muss die Reihenfolge vollständig und gültig sein:
+Im Objektmodus müssen die BIDs zusammenhängend gruppiert sein. Im Ereignismodus führen Sie `+_ili_transfer_metadata+` bis zum Writer mit. Die Ereignisfolge muss vollständig und gültig sein.
 
 [source,text]
 ----
@@ -283,10 +283,9 @@ INTERLIS Input (Quellobjekt mitführen)
   → INTERLIS Update (Original, Ziel, Strukturpfad, Feldzuordnungen)
 ----
 
-Neue Explode-Konfigurationen geben `+_ili_update_ref+` standardmässig aus. Alte
-Konfigurationen müssen `Emit structure update reference` unter `Options…`
-aktivieren; ihr bisheriges Schema bleibt sonst unverändert. Explode benötigt
-TID, BID und das ursprüngliche Elternobjekt. `Fields…` begrenzt die Kindfelder.
+Explode gibt `+_ili_update_ref+` standardmässig aus und benötigt dafür TID,
+BID und das ursprüngliche Elternobjekt. Die Option heisst
+`Emit structure update reference`. `Fields…` begrenzt die Kindfelder.
 
 Im Update wählen Sie dieselbe Elternklasse, den Sammlungspfad (etwa
 `Kontrollen` oder `Details.Tags`) und das Herkunftsfeld. Zielattribute der

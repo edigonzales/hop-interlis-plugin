@@ -1138,7 +1138,7 @@ Text-/Zahl-/Boolean-/Enum-Sammlungen, Aliase, echte Referenzattribute, Struktur-
 Untertypen, Composition-Restrictions und verschachtelte Listen. Regressionen
 prüfen leere Sammlungen, Duplikate, Reihenfolge, Kardinalität, null, Carrier-Fehler,
 Overlay und das Entfernen von Kindern. XML-Tests verwenden auch den tatsächlichen
-Hop-Metadatenserializer und unterscheiden alte und neue Konfigurationen.
+Hop-Metadatenserializer und prüfen aktuelle Optionen und Defaults.
 
 Zwei separate JVM-Läufe unter `-Xmx128m` puffern jeweils einen Basket und einen
 Lookup mit mehr als 256 MiB serialisierten Daten. Der Consumer akkumuliert keine

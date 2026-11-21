@@ -9,12 +9,10 @@ import org.apache.hop.core.row.IRowMeta;
 /** Resolves an incoming envelope schema once, preserving the original row for append output. */
 public final class InterlisEnvelopeBindings {
   private final InterlisRowBindings fields;
-  private final int size;
   private final boolean eventMode;
 
-  private InterlisEnvelopeBindings(InterlisRowBindings fields, int size, boolean eventMode) {
+  private InterlisEnvelopeBindings(InterlisRowBindings fields, boolean eventMode) {
     this.fields = fields;
-    this.size = size;
     this.eventMode = eventMode;
   }
 
@@ -36,16 +34,16 @@ public final class InterlisEnvelopeBindings {
               i,
               canonical.getValueMeta(i),
               i == InterlisEnvelopeRowLayout.OBJECT_INDEX
-                  || (eventMode && i == InterlisEnvelopeRowLayout.EVENT_TYPE_INDEX)));
+                  || (eventMode
+                      && (i == InterlisEnvelopeRowLayout.EVENT_TYPE_INDEX
+                          || i == InterlisEnvelopeRowLayout.TRANSFER_METADATA_INDEX))));
     }
-    return new InterlisEnvelopeBindings(
-        new InterlisRowBindings(fields), canonical.size(), eventMode);
+    return new InterlisEnvelopeBindings(new InterlisRowBindings(fields), eventMode);
   }
 
   public InterlisObjectEnvelope fromRow(Object[] row) throws HopException {
-    Object[] values = new Object[size];
+    Object[] values = fields.values(row);
     try {
-      values = fields.values(row);
       if (eventMode && (values[0] == null || values[0].toString().isBlank()))
         throw new IllegalArgumentException("Event mode requires _ili_event_type on every row");
       if (values[InterlisEnvelopeRowLayout.OBJECT_INDEX] instanceof IomObject object) {

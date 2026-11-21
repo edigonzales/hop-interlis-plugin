@@ -79,6 +79,15 @@ class P2PipelineRegressionTest {
   }
 
   @Test
+  void event_mode_requires_the_transfer_metadata_field_in_the_input_schema() throws Exception {
+    var schema = InterlisEnvelopeSchemaFactory.createRowMeta();
+    schema.removeValueMeta(InterlisEnvelopeRowLayout.TRANSFER_METADATA_INDEX);
+    assertThatThrownBy(() -> InterlisEnvelopeBindings.bind(schema, "_ili_object", true))
+        .hasMessageContaining("_ili_transfer_metadata");
+    assertThat(InterlisEnvelopeBindings.bind(schema, "_ili_object", false)).isNotNull();
+  }
+
+  @Test
   void row_to_object_preserves_carrier_operation_and_unprojected_payload_and_delete_is_empty()
       throws Exception {
     var p =

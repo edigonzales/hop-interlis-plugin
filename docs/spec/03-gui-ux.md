@@ -166,8 +166,9 @@ Spill directory (empty: system temp) und Maximum spill (MiB, 0: unlimited) (0: k
 Teilpuffer teilen Budget und Disk-Grenze pro Transform. Die Beschreibung muss
 Einzelobjektgrenzen und mögliche Wartezeiten bis Basket-/Lookup-Abschluss erklären.
 
-Die bisherigen Writer-Modi bieten Validate before publication (aus) und Validation configuration
-(leer). Die vollständige temporäre Datei wird einschliesslich zweitem Durchlauf
+Output und Update aktivieren Validate before publication standardmässig.
+Transfer Output bietet dieselbe Option mit Default aus. Validation configuration
+ist zunächst leer. Die vollständige temporäre Datei wird einschliesslich zweitem Durchlauf
 geprüft. Publikation setzt den erfolgreichen Abschluss der gesamten Pipeline voraus.
 
 ## 11. GUI-Abnahme
