@@ -298,7 +298,7 @@ xml = ET.parse(output_dir / "p1-roundtrip.xtf")
 item = xml.find(".//m:Item", ns)
 assert item is not None
 assert item.attrib[f"{{{ns['ili']}}}tid"] == "new-id", "configured TID did not override _ili_tid"
-assert xml.find(".//m:Data", ns).attrib[f"{{{ns['ili']}}}bid"] == "constant"
+assert xml.find(".//m:Data", ns).attrib[f"{{{ns['ili']}}}bid"] == "b1"
 assert item.findtext("m:Name", namespaces=ns) == "updated", "source carrier overrode the edited row"
 assert item.findtext("m:Children/m:Detail/m:Code", namespaces=ns) == "keep-child"
 line = [(1., 2., 3.), (4., 5., 6.)]
@@ -346,9 +346,9 @@ with (output_dir / "binding-structures.csv").open(newline="", encoding="utf-8") 
 assert rows == [["_ili_parent_tid", "Code", "Name"], ["i0", "keep-child", "before0"]], rows
 with (output_dir / "binding-join.csv").open(newline="", encoding="utf-8") as f:
     rows = [[value.strip() for value in row] for row in csv.reader(f, delimiter=";")]
-assert rows == [["Name", "reference", "_ili_tid", "Address_Street"],
-                ["Meier", "a1", "p1", "Main Street"],
-                ["Mueller", "", "p2", ""], ["Keller", "", "p3", ""]], rows
+assert rows == [["Name", "reference", "_ili_tid", "_ili_bid", "Address_Street"],
+                ["Meier", "a1", "p1", "b1", "Main Street"],
+                ["Mueller", "", "p2", "b1", ""], ["Keller", "", "p3", "b1", ""]], rows
 print("  Bindings: reordered Explode/Collect and Role Join values plus expected binding failures verified")
 
 # Priority 1/2 packaged regressions: values, subtype/carrier contents and external BIDs.

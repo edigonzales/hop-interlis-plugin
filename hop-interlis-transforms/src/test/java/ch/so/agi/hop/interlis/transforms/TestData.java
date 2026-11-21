@@ -1,5 +1,12 @@
 package ch.so.agi.hop.interlis.transforms;
 
+import ch.so.agi.hop.interlis.core.mapping.InterlisFieldSource;
+import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
+import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
+import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
+import ch.so.agi.hop.interlis.transforms.mapping.InterlisFieldAssignment;
+import ch.so.agi.hop.interlis.transforms.mapping.InterlisMappedInput;
+import ch.so.agi.hop.interlis.transforms.mapping.MappedClassPlan;
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
@@ -52,7 +59,37 @@ public final class TestData {
   }
 
   public static String modelDirectoriesValue() {
-    return modelDirectories().stream().map(Path::toString).collect(Collectors.joining(File.pathSeparator));
+    return modelDirectories().stream()
+        .map(Path::toString)
+        .collect(Collectors.joining(File.pathSeparator));
+  }
+
+  public static InterlisMappedInput mappedInput(String source, String className) {
+    var mapping = new InterlisMappedInput();
+    mapping.setTransformName(source);
+    mapping.setClassName(className);
+    try {
+      var model = className.substring(0, className.indexOf('.'));
+      var plan =
+          new InterlisProjectionService()
+              .project(
+                  new InterlisModelRequest(
+                      null, List.of(model), List.of(path("/models").toString())),
+                  className,
+                  ProjectionOptions.defaults())
+              .plan();
+      mapping.setFields(
+          plan.fields().stream()
+              .filter(
+                  f ->
+                      f.source() != InterlisFieldSource.OBJECT_ID
+                          && f.source() != InterlisFieldSource.BASKET_ID)
+              .map(f -> new InterlisFieldAssignment(f.hopFieldName(), MappedClassPlan.target(f)))
+              .toList());
+    } catch (Exception e) {
+      throw new IllegalArgumentException("Could not prepare mapping for " + className, e);
+    }
+    return mapping;
   }
 
   private static Path modelPath(String fileName) {

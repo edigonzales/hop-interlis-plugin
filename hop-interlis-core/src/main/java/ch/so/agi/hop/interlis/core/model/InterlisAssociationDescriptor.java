@@ -13,8 +13,8 @@ import java.util.List;
  * @param name association name
  * @param scopedName qualified name, e.g. {@code Model.Topic.Association}
  * @param topicScopedName qualified topic name
- * @param identifiable whether the association declares its own OID (rare; XTF link objects of
- *     plain associations carry no TID)
+ * @param identifiable whether the association declares its own OID (rare; XTF link objects of plain
+ *     associations carry no TID)
  * @param roles roles in model order
  * @param attributes association attributes in model order
  * @param modelKind kind of the owning INTERLIS model
@@ -28,24 +28,6 @@ public record InterlisAssociationDescriptor(
     List<InterlisAttributeDescriptor> attributes,
     InterlisModelKind modelKind)
     implements InterlisPlanRoot {
-
-  /** Backwards-compatible constructor for descriptors created outside the extractor. */
-  public InterlisAssociationDescriptor(
-      String name,
-      String scopedName,
-      String topicScopedName,
-      boolean identifiable,
-      List<InterlisRoleDescriptor> roles,
-      List<InterlisAttributeDescriptor> attributes) {
-    this(
-        name,
-        scopedName,
-        topicScopedName,
-        identifiable,
-        roles,
-        attributes,
-        InterlisModelKind.DATA);
-  }
 
   public InterlisAssociationDescriptor {
     roles = roles == null ? List.of() : List.copyOf(roles);

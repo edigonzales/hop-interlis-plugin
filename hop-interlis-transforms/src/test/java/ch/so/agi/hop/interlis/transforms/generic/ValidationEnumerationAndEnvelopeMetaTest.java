@@ -22,7 +22,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.w3c.dom.Node;
 
-class Phase6MetaTest {
+class ValidationEnumerationAndEnvelopeMetaTest {
 
   @BeforeAll
   static void initHop() throws Exception {

@@ -36,7 +36,7 @@ class InterlisStructureCollectorTest {
   }
 
   private static InterlisStructureCollector.StructureChild child(int index, Object... values) {
-    return new InterlisStructureCollector.StructureChild(index, values);
+    return new InterlisStructureCollector.StructureChild(index, values, null);
   }
 
   @Test
@@ -129,7 +129,7 @@ class InterlisStructureCollectorTest {
   @Test
   void rejects_missing_list_index_when_strict() throws Exception {
     StructureCollectOptions lenientOnDuplicates =
-        new StructureCollectOptions(true, false, RowWriteOptions.defaults());
+        new StructureCollectOptions(true, false, RowWriteOptions.defaults(), false);
     assertThatThrownBy(
             () ->
                 collector.collect(
@@ -145,7 +145,7 @@ class InterlisStructureCollectorTest {
   @Test
   void tolerates_gaps_when_not_strict() throws Exception {
     StructureCollectOptions lenient =
-        new StructureCollectOptions(false, true, RowWriteOptions.defaults());
+        new StructureCollectOptions(false, true, RowWriteOptions.defaults(), false);
     IomObject result =
         collector.collect(
             persons.get("p3"),

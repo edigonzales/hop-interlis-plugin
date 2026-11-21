@@ -17,39 +17,32 @@ import org.apache.hop.metadata.serializer.xml.XmlMetadataUtil;
 import org.apache.hop.pipeline.transform.*;
 import org.junit.jupiter.api.*;
 
-class NewOptionsCompatibilityTest {
+class TransformMetadataOptionsTest {
   @BeforeAll
   static void init() throws Exception {
     HopEnvironment.init();
   }
 
-  <T> T reload(T original, boolean legacy) throws Exception {
+  <T> T reload(T original) throws Exception {
     var meta = (ITransformMeta) original;
     String xml = new TransformMeta("test", meta).getXml();
-    if (legacy)
-      xml =
-          xml.replaceAll(
-              "(?s)<(collect_mode|parent_bid_field|child_parent_bid_field|keep_child_source_object|bufferMemoryMiB|spillDirectory|maxSpillMiB|validateBeforePublish|validationConfigFile)>.*?</\\1>",
-              "");
-    var restored = original.getClass().getConstructor().newInstance();
     // The same annotation serializer used by Hop's .hpl loader, not only custom loadXml.
-    restored =
+    return (T)
         XmlMetadataUtil.deSerializeFromXml(
             XmlHandler.loadXmlString(xml).getDocumentElement(),
             original.getClass(),
             new MemoryMetadataProvider());
-    return (T) restored;
   }
 
   @Test
-  void new_collect_defaults_and_old_hpl_rebuild_are_distinct() throws Exception {
+  void collect_and_explode_options_survive_serialization() throws Exception {
     var meta = new InterlisStructureCollectMeta();
     meta.setDefault();
     meta.setSelectedChildFields(java.util.List.of("Name"));
     meta.setBufferMemoryMiB(3);
     meta.setMaxSpillMiB(40);
     meta.setSpillDirectory("${TEMP_DIR}");
-    var modern = reload(meta, false);
+    var modern = reload(meta);
     assertThat(modern.getSelectedChildFields()).containsExactly("Name");
     assertThat(modern.getCollectMode())
         .isEqualTo(InterlisStructureCollectMeta.CollectMode.PRESERVE);
@@ -57,47 +50,62 @@ class NewOptionsCompatibilityTest {
     assertThat(modern.getChildParentBidField()).isEqualTo("_ili_parent_bid");
     assertThat(modern.getBufferMemoryMiB()).isEqualTo(3);
     assertThat(modern.getMaxSpillMiB()).isEqualTo(40);
-    var old = reload(meta, true);
-    assertThat(old.getCollectMode()).isEqualTo(InterlisStructureCollectMeta.CollectMode.REBUILD);
-    assertThat(old.getParentBidField()).isNullOrEmpty();
-    assertThat(old.getChildParentBidField()).isNullOrEmpty();
-    assertThat(old.getBufferMemoryMiB()).isEqualTo(64);
     var explode = new InterlisStructureExplodeMeta();
     explode.setDefault();
-    assertThat(reload(explode, false).isKeepChildSourceObject()).isTrue();
-    assertThat(reload(explode, true).isKeepChildSourceObject()).isFalse();
+    assertThat(reload(explode).isKeepChildSourceObject()).isTrue();
   }
 
   @Test
-  void buffer_and_output_options_roundtrip_and_missing_options_keep_compatible_defaults()
-      throws Exception {
+  void omitted_options_use_current_structure_and_writer_defaults() throws Exception {
+    var node = XmlHandler.loadXmlString("<transform/>").getDocumentElement();
+    var provider = new MemoryMetadataProvider();
+    var collect =
+        XmlMetadataUtil.deSerializeFromXml(node, InterlisStructureCollectMeta.class, provider);
+    assertThat(collect.getCollectMode())
+        .isEqualTo(InterlisStructureCollectMeta.CollectMode.PRESERVE);
+    assertThat(collect.getParentBidField()).isEqualTo("_ili_bid");
+    assertThat(collect.getChildParentBidField()).isEqualTo("_ili_parent_bid");
+    assertThat(collect.isStrictOrdering()).isTrue();
+    assertThat(collect.isFailOnDuplicateIndex()).isTrue();
+    assertThat(collect.isFailOnChildWithoutParent()).isTrue();
+
+    var explode =
+        XmlMetadataUtil.deSerializeFromXml(node, InterlisStructureExplodeMeta.class, provider);
+    assertThat(explode.isEmitParentBid()).isTrue();
+    assertThat(explode.isKeepChildSourceObject()).isTrue();
+    assertThat(explode.isEmitUpdateReference()).isTrue();
+    var output = XmlMetadataUtil.deSerializeFromXml(node, InterlisOutputMeta.class, provider);
+    assertThat(output.isValidateBeforePublish()).isTrue();
+    var update =
+        XmlMetadataUtil.deSerializeFromXml(
+            node, ch.so.agi.hop.interlis.transforms.update.InterlisUpdateMeta.class, provider);
+    assertThat(update.isValidateBeforePublish()).isTrue();
+  }
+
+  @Test
+  void buffer_and_output_options_survive_serialization() throws Exception {
     var input = new InterlisInputMeta();
     input.setDefault();
     input.setBufferMemoryMiB(2);
     input.setMaxSpillMiB(50);
-    assertThat(reload(input, false).getBufferMemoryMiB()).isEqualTo(2);
-    assertThat(reload(input, true).getBufferMemoryMiB()).isEqualTo(64);
+    assertThat(reload(input).getBufferMemoryMiB()).isEqualTo(2);
     var project = new InterlisObjectToRowMeta();
     project.setDefault();
     project.setBufferMemoryMiB(4);
-    assertThat(reload(project, false).getBufferMemoryMiB()).isEqualTo(4);
-    assertThat(reload(project, true).getBufferMemoryMiB()).isEqualTo(64);
+    assertThat(reload(project).getBufferMemoryMiB()).isEqualTo(4);
     var join = new InterlisRoleJoinMeta();
     join.setDefault();
     join.setMaxLookupRows(0);
     join.setBufferMemoryMiB(5);
-    assertThat(reload(join, false).getMaxLookupRows()).isZero();
-    assertThat(reload(join, true).getBufferMemoryMiB()).isEqualTo(64);
+    assertThat(reload(join).getMaxLookupRows()).isZero();
     var output = new InterlisOutputMeta();
     output.setDefault();
     output.setValidateBeforePublish(true);
     output.setValidationConfigFile("config.ini");
-    assertThat(reload(output, false).isValidateBeforePublish()).isTrue();
-    assertThat(reload(output, true).isValidateBeforePublish()).isFalse();
+    assertThat(reload(output).isValidateBeforePublish()).isTrue();
     var transfer = new InterlisTransferOutputMeta();
     transfer.setDefault();
     transfer.setValidateBeforePublish(true);
-    assertThat(reload(transfer, false).isValidateBeforePublish()).isTrue();
-    assertThat(reload(transfer, true).isValidateBeforePublish()).isFalse();
+    assertThat(reload(transfer).isValidateBeforePublish()).isTrue();
   }
 }

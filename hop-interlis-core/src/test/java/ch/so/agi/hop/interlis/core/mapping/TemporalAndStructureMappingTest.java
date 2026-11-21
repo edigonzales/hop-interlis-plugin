@@ -10,7 +10,7 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class P2MappingRegressionTest {
+class TemporalAndStructureMappingTest {
   @TempDir Path dir;
 
   private InterlisAttributeDescriptor attribute(InterlisValueKind kind) {
@@ -28,7 +28,11 @@ class P2MappingRegressionTest {
         null,
         false,
         -1,
-        -1);
+        -1,
+        InterlisGeometryEncoding.NATIVE,
+        null,
+        false,
+        java.util.Set.of());
   }
 
   @Test
@@ -84,7 +88,17 @@ class P2MappingRegressionTest {
     var request = new InterlisModelRequest(null, List.of("Deep"), List.of(dir.toString()));
     var options =
         new ProjectionOptions(
-            true, true, false, false, false, true, "_", null, Set.of("Address.Home.Place.Name"));
+            true,
+            true,
+            false,
+            false,
+            false,
+            true,
+            "_",
+            null,
+            Set.of("Address.Home.Place.Name"),
+            false,
+            true);
     var result = service.project(request, "Deep.T.Item", options);
     assertThat(result.plan().fields())
         .extracting(InterlisFieldPlan::hopFieldName)

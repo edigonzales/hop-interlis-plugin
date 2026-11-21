@@ -7,7 +7,7 @@ import java.util.*;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-class P2ModelRegressionTest {
+class ModelRepositoryAndEnumerationTest {
   @TempDir Path dir;
   final InterlisModelServiceImpl service = new InterlisModelServiceImpl();
 

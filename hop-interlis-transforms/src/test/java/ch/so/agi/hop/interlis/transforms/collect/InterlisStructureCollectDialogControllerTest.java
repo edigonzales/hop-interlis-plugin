@@ -62,22 +62,14 @@ class InterlisStructureCollectDialogControllerTest {
             "INTERLIS Input",
             "INTERLIS Structure Explode",
             "_ili_tid",
-            "_ili_parent_tid");
+            "_ili_parent_tid",
+            meta);
 
     assertThat(structured.rows())
         .extracting(row -> row.fieldName())
         .contains("Parent input", "Child input", "Structure", "Street");
     assertThat(structured.errorMessage()).isNull();
 
-    String preview =
-        controller.formatCollectPreview(
-            result.projection().plan(), "INTERLIS Input", "INTERLIS Structure Explode",
-            "_ili_tid", "_ili_parent_tid");
-
-    assertThat(preview)
-        .contains("Parent stream  INTERLIS Input")
-        .contains("Child stream   INTERLIS Structure Explode")
-        .contains("LIST OF HopIli_Structures_V1.Data.Address")
-        .contains("sorted");
+    assertThat(structured.warnings()).anyMatch(warning -> warning.contains("_ili_parent_bid"));
   }
 }

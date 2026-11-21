@@ -43,10 +43,6 @@
     <fileName>${E2E_OUTPUT_DIR}/association-rows-roundtrip.xtf</fileName>
     <modelNames>HopIli_Associations_V1</modelNames>
     <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
-    <className>HopIli_Associations_V1.Data.PersonTask</className>
-    <objectIdField>_ili_tid</objectIdField>
-    <basketIdField>_ili_bid</basketIdField>
-    <basketId>b1</basketId>
     <overwrite>Y</overwrite>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -59,6 +55,30 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <basketMode>FROM_FIELD</basketMode>
+    <validateBeforePublish>N</validateBeforePublish>
+    <inputs>
+      <input>
+        <transformName>INTERLIS Input</transformName>
+        <className>HopIli_Associations_V1.Data.PersonTask</className>
+        <objectIdField>_ili_tid</objectIdField>
+        <basketIdField>_ili_bid</basketIdField>
+        <fields>
+          <field>
+            <sourceField>Person_ref</sourceField>
+            <targetPath>Person_ref</targetPath>
+          </field>
+          <field>
+            <sourceField>Task_ref</sourceField>
+            <targetPath>Task_ref</targetPath>
+          </field>
+          <field>
+            <sourceField>Task_order_pos</sourceField>
+            <targetPath>Task_order_pos</targetPath>
+          </field>
+        </fields>
+      </input>
+    </inputs>
   </transform>
   <order>
     <hop>

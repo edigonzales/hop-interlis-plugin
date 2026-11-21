@@ -5,7 +5,6 @@ import org.apache.hop.core.row.RowMeta;
 import org.apache.hop.pipeline.Pipeline;
 import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.pipeline.transform.BaseTransform;
-import org.apache.hop.pipeline.transform.BaseTransformData;
 import org.apache.hop.pipeline.transform.TransformMeta;
 
 /** Runtime of the {@link SyntheticChildRowsMeta} test transform. */
@@ -32,8 +31,7 @@ public class SyntheticChildRows
       meta.getFields(outputRowMeta, getTransformName(), null, null, this, metadataProvider);
       for (Object[] row : meta.getRows()) {
         putRow(
-            outputRowMeta,
-            new Object[] {row[0], row[1], row[2], row[3], null, null, null});
+            outputRowMeta, new Object[] {row[0], row[1], row[2], row[3], null, null, null, "b1"});
       }
     }
     setOutputDone();

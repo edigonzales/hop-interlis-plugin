@@ -11,6 +11,7 @@ import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.objecttorow.InterlisObjectToRowMeta;
 import ch.so.agi.hop.interlis.transforms.rowtoobject.InterlisRowToObjectMeta;
@@ -35,7 +36,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-/** Vertical tests of the generic envelope path: Transfer Input, Object to Row, Row to Object, Transfer Output. */
+/**
+ * Vertical tests of the generic envelope path: Transfer Input, Object to Row, Row to Object,
+ * Transfer Output.
+ */
 class GenericEnvelopePipelineTest {
 
   @TempDir Path tempDir;
@@ -48,7 +52,7 @@ class GenericEnvelopePipelineTest {
   private InterlisTransferInputMeta transferInput(TransferInputMode mode) {
     InterlisTransferInputMeta meta = new InterlisTransferInputMeta();
     meta.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
-    meta.setModelNames(ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA);
+    meta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setMode(mode.name());
     return meta;
@@ -215,7 +219,7 @@ class GenericEnvelopePipelineTest {
 
     InterlisTransferInputMeta input = new InterlisTransferInputMeta();
     input.setFileName(TestData.path("/data/HopIli_Associations_V1_delete.xtf").toString());
-    input.setModelNames(ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(TestData.path("/models").toString());
     input.setMode(TransferInputMode.EVENTS.name());
 

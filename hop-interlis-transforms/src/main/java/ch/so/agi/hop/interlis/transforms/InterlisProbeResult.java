@@ -24,39 +24,9 @@ public record InterlisProbeResult(
     List<InterlisAssociationDescriptor> associations,
     InterlisProbeStatus status) {
 
-  public InterlisProbeResult(
-      boolean configured,
-      String message,
-      InterlisProjectionResult projection,
-      List<InterlisClassDescriptor> classes,
-      List<InterlisAssociationDescriptor> associations) {
-    this(
-        configured,
-        message,
-        projection,
-        classes,
-        associations,
-        projection != null
-            ? InterlisProbeStatus.SUCCESS
-            : configured ? InterlisProbeStatus.INFO : InterlisProbeStatus.ERROR);
-  }
-
-  public InterlisProbeResult withStatus(InterlisProbeStatus value) {
-    return new InterlisProbeResult(configured, message, projection, classes, associations, value);
-  }
-
   public InterlisProbeResult {
     classes = classes == null ? List.of() : List.copyOf(classes);
     associations = associations == null ? List.of() : List.copyOf(associations);
-  }
-
-  /** Backwards-compatible constructor without associations. */
-  public InterlisProbeResult(
-      boolean configured,
-      String message,
-      InterlisProjectionResult projection,
-      List<InterlisClassDescriptor> classes) {
-    this(configured, message, projection, classes, List.of());
   }
 
   public boolean successful() {

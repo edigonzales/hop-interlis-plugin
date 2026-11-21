@@ -40,12 +40,12 @@ public final class InterlisStructureDialogSupport {
       ProjectionOptions options) {
     if (modelNames == null || modelNames.isEmpty()) {
       return new InterlisStructureProbeResult(
-              false,
-              "Model probe unavailable: no INTERLIS models configured.",
-              null,
-              List.of(),
-              List.of())
-          .withStatus(ch.so.agi.hop.interlis.transforms.InterlisProbeStatus.INFO);
+          false,
+          "Model probe unavailable: no INTERLIS models configured.",
+          null,
+          List.of(),
+          List.of(),
+          InterlisProbeStatus.INFO);
     }
     try {
       InterlisModelService modelService = new InterlisModelServiceImpl();
@@ -63,17 +63,18 @@ public final class InterlisStructureDialogSupport {
             "Model loaded: " + modelNames + "; " + classes.size() + " classes",
             null,
             classes,
-            List.of());
+            List.of(),
+            InterlisProbeStatus.INFO);
       }
       InterlisClassDescriptor classDescriptor = schema.findClass(className).orElse(null);
       if (classDescriptor == null) {
         return new InterlisStructureProbeResult(
-                true,
-                "Class " + className + " not found in models " + modelNames,
-                null,
-                classes,
-                List.of())
-            .withStatus(ch.so.agi.hop.interlis.transforms.InterlisProbeStatus.ERROR);
+            true,
+            "Class " + className + " not found in models " + modelNames,
+            null,
+            classes,
+            List.of(),
+            InterlisProbeStatus.ERROR);
       }
       InterlisStructureLocator locator = new InterlisStructureLocator();
       List<String> structurePaths = locator.multiValuedStructurePaths(schema, classDescriptor);
@@ -88,7 +89,8 @@ public final class InterlisStructureDialogSupport {
                 + " multi-valued structure(s)",
             null,
             classes,
-            structurePaths);
+            structurePaths,
+            InterlisProbeStatus.INFO);
       }
       InterlisStructureProjectionResult projection =
           new ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionService(
@@ -108,10 +110,11 @@ public final class InterlisStructureDialogSupport {
               + " child fields",
           projection,
           classes,
-          structurePaths);
+          structurePaths,
+          InterlisProbeStatus.SUCCESS);
     } catch (Exception e) {
       return new InterlisStructureProbeResult(
-          false, rootCauseMessage(e), null, List.of(), List.of());
+          false, rootCauseMessage(e), null, List.of(), List.of(), InterlisProbeStatus.ERROR);
     }
   }
 

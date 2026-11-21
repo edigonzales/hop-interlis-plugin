@@ -108,8 +108,17 @@ class InterlisStructureLocatorTest {
   void skips_unselected_child_fields() throws Exception {
     ProjectionOptions options =
         new ProjectionOptions(
-            true, true, false, false, false, true, "_", null,
-            java.util.Set.of("Street", "PostCode.Code"));
+            true,
+            true,
+            false,
+            false,
+            false,
+            true,
+            "_",
+            null,
+            java.util.Set.of("Street", "PostCode.Code"),
+            false,
+            true);
     InterlisStructurePlan plan = locator.locate(schema, person, "Addresses", options);
 
     assertThat(plan.childFields())

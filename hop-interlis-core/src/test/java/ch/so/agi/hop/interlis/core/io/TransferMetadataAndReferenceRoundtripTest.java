@@ -13,7 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.io.TempDir;
 
-class P2TransferRegressionTest {
+class TransferMetadataAndReferenceRoundtripTest {
   @TempDir Path dir;
 
   CompiledInterlisModel model() throws Exception {

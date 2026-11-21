@@ -10,23 +10,19 @@ import org.apache.hop.core.annotations.Transform;
 import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.exception.HopTransformException;
 import org.apache.hop.core.row.IRowMeta;
-import org.apache.hop.core.row.RowMeta;
 import org.apache.hop.core.row.value.ValueMetaInteger;
 import org.apache.hop.core.row.value.ValueMetaString;
 import org.apache.hop.core.variables.IVariables;
 import org.apache.hop.metadata.api.IHopMetadataProvider;
-import org.apache.hop.pipeline.Pipeline;
 import org.apache.hop.pipeline.PipelineMeta;
-import org.apache.hop.pipeline.transform.BaseTransform;
-import org.apache.hop.pipeline.transform.BaseTransformData;
 import org.apache.hop.pipeline.transform.BaseTransformMeta;
 import org.apache.hop.pipeline.transform.TransformMeta;
 
 /**
- * Test-only inputless transform emitting configurable synthetic structure child rows, matching
- * the child row schema of INTERLIS Structure Explode for the Addresses structure of the
- * structures test model: {@code _ili_parent_tid, _ili_index, Street, Number, Location,
- * PostCode_Code, PostCode_Town}.
+ * Test-only inputless transform emitting configurable synthetic structure child rows, matching the
+ * child row schema of INTERLIS Structure Explode for the Addresses structure of the structures test
+ * model: {@code _ili_parent_tid, _ili_index, Street, Number, Location, PostCode_Code,
+ * PostCode_Town, _ili_parent_bid}.
  *
  * <p>Used by pipeline tests of INTERLIS Structure Collect to produce orphan children, duplicate
  * indexes and modified structure content without depending on real transfer data.
@@ -84,6 +80,7 @@ public class SyntheticChildRowsMeta
     rowMeta.addValueMeta(new ValueMetaGeometry("Location"));
     rowMeta.addValueMeta(new ValueMetaString("PostCode_Code"));
     rowMeta.addValueMeta(new ValueMetaString("PostCode_Town"));
+    rowMeta.addValueMeta(new ValueMetaString("_ili_parent_bid"));
   }
 
   @Override

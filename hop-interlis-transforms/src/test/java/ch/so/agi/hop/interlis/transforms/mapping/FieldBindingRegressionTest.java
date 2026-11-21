@@ -33,9 +33,10 @@ class FieldBindingRegressionTest {
   void output_rejects_wrong_business_type_before_values_are_read() throws Exception {
     var input = new HopRowSchemaFactory().createRowMeta(plan);
     input.setValueMeta(input.indexOfValue("Name"), new ValueMetaInteger("Name"));
-    var meta = new InterlisOutputMeta();
-    meta.setDefault();
-    assertThatThrownBy(() -> InterlisOutputBindings.bind(input, plan, meta, new Variables()))
+    var config = TestData.mappedInput("source", plan.root().scopedName());
+    var vars = new Variables();
+    var mapped = new MappedClassPlan(plan, config, vars, true);
+    assertThatThrownBy(() -> mapped.bind(input, config, vars, null))
         .hasMessageContaining("Name")
         .hasMessageContaining("String")
         .hasMessageContaining("Integer");
@@ -46,9 +47,10 @@ class FieldBindingRegressionTest {
     var input = new HopRowSchemaFactory().createRowMeta(plan);
     input.addValueMeta(new ValueMetaString("another"));
     input.getValueMeta(input.size() - 1).setName("NAME");
-    var meta = new InterlisOutputMeta();
-    meta.setDefault();
-    assertThatThrownBy(() -> InterlisOutputBindings.bind(input, plan, meta, new Variables()))
+    var config = TestData.mappedInput("source", plan.root().scopedName());
+    var vars = new Variables();
+    var mapped = new MappedClassPlan(plan, config, vars, true);
+    assertThatThrownBy(() -> mapped.bind(input, config, vars, null))
         .hasMessageContaining("Ambiguous");
   }
 
@@ -61,9 +63,10 @@ class FieldBindingRegressionTest {
     var row = new Object[input.size()];
     var bytes = "lazy".getBytes(java.nio.charset.StandardCharsets.UTF_8);
     row[input.indexOfValue("Name")] = bytes;
-    var meta = new InterlisOutputMeta();
-    meta.setDefault();
-    var values = InterlisOutputBindings.bind(input, plan, meta, new Variables()).values(row);
+    var config = TestData.mappedInput("source", plan.root().scopedName());
+    var vars = new Variables();
+    var mapped = new MappedClassPlan(plan, config, vars, true);
+    var values = mapped.bind(input, config, vars, null).values(row);
     assertThat(values[input.indexOfValue("Name")]).isEqualTo("lazy");
     assertThat(row[input.indexOfValue("Name")]).isSameAs(bytes);
   }
@@ -119,21 +122,5 @@ class FieldBindingRegressionTest {
             input, "test", "code", "code", 0, new ValueMetaString("code"), true);
     meta.setStorageType(IValueMeta.STORAGE_TYPE_NORMAL);
     assertThat(binding.read(new Object[] {1})).isEqualTo("one");
-  }
-
-  @Test
-  void carrier_and_operation_are_checked_before_output() throws Exception {
-    var input = new HopRowSchemaFactory().createRowMeta(plan);
-    input.addValueMeta(new ValueMetaString("carrier"));
-    var meta = new InterlisOutputMeta();
-    meta.setDefault();
-    meta.setSourceObjectField("carrier");
-    assertThatThrownBy(() -> InterlisOutputBindings.bind(input, plan, meta, new Variables()))
-        .hasMessageContaining("carrier")
-        .hasMessageContaining("expected");
-    meta.setSourceObjectField("");
-    meta.setOperationField("absent");
-    assertThatThrownBy(() -> InterlisOutputBindings.bind(input, plan, meta, new Variables()))
-        .hasMessageContaining("absent");
   }
 }

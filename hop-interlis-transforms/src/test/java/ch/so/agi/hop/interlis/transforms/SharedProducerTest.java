@@ -38,10 +38,11 @@ class SharedProducerTest {
       source.schema = new RowMeta();
       source.schema.addValueMeta(new ValueMetaString("_ili_tid"));
       source.schema.addValueMeta(new ValueMetaString("Target_ref"));
+      source.schema.addValueMeta(new ValueMetaString("_ili_bid"));
       source.schema.addValueMeta(new ValueMetaString("Name"));
       for (int i = 0; i < 100; i++)
         source.rows.add(
-            new Object[] {String.format("i%04d", i), String.format("i%04d", i), "item" + i});
+            new Object[] {String.format("i%04d", i), String.format("i%04d", i), "b1", "item" + i});
       var join = new InterlisRoleJoinMeta();
       join.setDefault();
       join.setModelNames("HopIli_P1_V1");
@@ -57,7 +58,7 @@ class SharedProducerTest {
       assertThat(engine.getErrors()).isZero();
       assertThat(engine.getResultRows()).hasSize(100);
       for (int i = 0; i < 100; i++)
-        assertThat(engine.getResultRows().get(i).getData()[3]).isEqualTo("item" + i);
+        assertThat(engine.getResultRows().get(i).getData()[4]).isEqualTo("item" + i);
     }
   }
 

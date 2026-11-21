@@ -53,7 +53,7 @@ Prüfungen fest. Historische Phasenberichte bleiben zeitgebundene Nachweise.
    Konkrete Java-Klassen und Methoden, Hop-Plugin-Interfaces, `IRowMeta`-Erzeugung, Mapping-Pläne sowie der exakte `IomObject -> Object[]`- und inverse Algorithmus.
 
 4. [`03-gui-ux.md`](03-gui-ux.md)
-   Aktuelle Dialogcontrols und Defaults, asynchrone Modellprobe, Options-Dialoge, alte/neue Konfigurationssemantik und GUI-Abnahme.
+   Aktuelle Dialogcontrols und Defaults, asynchrone Modellprobe, Options-Dialoge, XML-Persistenz und GUI-Abnahme.
 
 5. [`04-testing-e2e.md`](04-testing-e2e.md)
    Testpyramide, Testmodelle, Mapper-/Geometry-/Structure-/Association-Tests, echte Hop-Pipeline-Integration, `hop-run`-E2E, Distribution- und Release-Smoke-Tests.

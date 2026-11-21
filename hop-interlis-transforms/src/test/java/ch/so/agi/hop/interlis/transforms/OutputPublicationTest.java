@@ -44,13 +44,14 @@ class OutputPublicationTest {
   InterlisOutputMeta writer(Path target) {
     var writer = new InterlisOutputMeta();
     writer.setDefault();
-    writer.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
-    writer.setValidateBeforePublish(false);
     writer.setFileName(target.toString());
     writer.setOverwrite(true);
     writer.setModelNames("HopIli_Collections_V1");
     writer.setModelDirectories(TestData.path("/models").toString());
-    writer.setClassName("HopIli_Collections_V1.Data.Target");
+    var mapping = TestData.mappedInput("source", "HopIli_Collections_V1.Data.Target");
+    writer.setInputs(java.util.List.of(mapping));
+    writer.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    writer.setValidateBeforePublish(false);
     return writer;
   }
 
@@ -73,12 +74,9 @@ class OutputPublicationTest {
       var pm = new PipelineMeta();
       var source = new TransformMeta("source", rows("b1"));
       var writer = new TransformMeta("writer", writer(target));
-      var sink = new TransformMeta("writer result", new RowsToResultMeta());
       pm.addTransform(source);
       pm.addTransform(writer);
-      pm.addTransform(sink);
       pm.addPipelineHop(new PipelineHopMeta(source, writer));
-      pm.addPipelineHop(new PipelineHopMeta(writer, sink));
       ITransformMeta lateMeta = rows("b1");
       if (outcome.equals("validate")) {
         var validate = new InterlisValidateMeta();
@@ -146,18 +144,17 @@ class OutputPublicationTest {
   }
 
   @Test
-  void mapping_validation_and_reappearing_basket_errors_do_not_replace_target() throws Exception {
-    for (String failure : List.of("mapping", "validation", "basket")) {
+  void mapping_and_validation_errors_do_not_replace_target() throws Exception {
+    for (String failure : List.of("mapping", "validation")) {
       var target = temp.resolve(failure + ".xtf");
       Files.writeString(target, "previous");
       var source = rows("b1");
       var writer = writer(target);
-      if (failure.equals("mapping")) source.rows.set(0, new Object[] {"i1", "b1", null});
+      if (failure.equals("mapping")) source.rows.set(0, new Object[] {null, "b1", "item"});
       if (failure.equals("validation")) {
         writer.setValidateBeforePublish(true);
         source.rows.add(new Object[] {"i0", "b1", "item0"}); // duplicate identity
       }
-      if (failure.equals("basket")) source = rows("b1", "b2", "b1");
       var pm = new PipelineMeta();
       var a = new TransformMeta("source", source);
       var b = new TransformMeta("writer", writer);
@@ -283,6 +280,8 @@ class OutputPublicationTest {
             null,
             null,
             ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.NONE,
+            null,
+            null,
             null));
   }
 }

@@ -176,15 +176,6 @@ public final class InterlisDialogUiSupport {
     return Math.max(1, effectiveMessageHeight + 2 * effectivePadding + 2 * effectiveBorderWidth);
   }
 
-  /** Maps a probe result to a non-modal status severity without changing its existing message. */
-  public static StatusSeverity statusSeverity(
-      boolean successful, boolean configured, String message) {
-    if (successful) {
-      return StatusSeverity.SUCCESS;
-    }
-    return configured ? StatusSeverity.INFO : StatusSeverity.ERROR;
-  }
-
   /**
    * Refines a model status with diagnostics from the central schema preview.
    *

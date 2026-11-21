@@ -129,10 +129,9 @@ _ili_transfer_metadata String
 
 Die kanonische **Ausgabe** wird in `InterlisEnvelopeRowLayout` zentral definiert.
 Eingänge werden einmalig anhand ihrer Feldnamen und Typen gebunden; die Reihenfolge
-im eingehenden Hop-Stream ist frei. Nach den vier Basket-Metadatenfeldern folgt
-optional `_ili_transfer_metadata` (String, JSON-Schema-Version 1). Die bisherigen
-14 Felder behalten ihre Positionen und Typen; alte Streams ohne Headerfeld bleiben
-lesbar.
+im eingehenden Hop-Stream ist frei. Im Ereignismodus muss die
+Spalte `_ili_transfer_metadata` (String, JSON-Schema-Version 1) mitgeführt werden.
+Der Wert kann bei Ereignissen ohne Transfer-Header leer bleiben.
 
 ## 4. Typed row projection
 
@@ -499,7 +498,7 @@ Mehrfachattribute werden im Klassenplan ausgelassen und mit einer Diagnose auf E
 
 Kindzeilen tragen `_ili_parent_tid`, standardmässig `_ili_parent_bid` und `_ili_index`. Primitive Sammlungen verwenden `_ili_value` mit dem Elementtyp; Strukturkinder projizierte Strukturfelder sowie optional `_ili_child_object`. BAG-Duplikate bleiben erhalten, BAG-Indizes sind technisch; LIST-Indizes bestimmen die Reihenfolge.
 
-Neue Collect-Konfigurationen verwenden `(BID, Elternschlüssel)` und `PRESERVE`; Eltern- und Kindstrom müssen nach dieser Identität aufsteigend sortiert sein. Alte Dateien behalten die bisherige Schlüsselwahl und REBUILD. Schlüssel werden aus den konfigurierten Feldern gelesen; es gibt keine automatische Erzeugung eines `_ili_parent_key`.
+Collect verwendet `(BID, Elternschlüssel)` und standardmässig `PRESERVE`. Eltern- und Kindstrom müssen nach dieser Identität aufsteigend sortiert sein. Die konfigurierten Felder liefern die Schlüsselwerte.
 
 Collect ersetzt die gesamte ausgewählte Sammlung. Keine Kindzeilen ergeben eine leere Sammlung, sofern die Modellkardinalität dies erlaubt. Strikte LIST-Indizes sind eindeutig, aufsteigend und lückenlos ab 0. Nicht-strikter Modus sortiert innerhalb der aktuellen Gruppe; er sortiert nicht den gesamten Eingang nach Elternidentität. Optionen für doppelte Indizes und verwaiste Kinder bleiben wirksam.
 
@@ -516,7 +515,7 @@ Attribut- und Typkontext abgelehnt und erhalten keinen TEXT-Konverter.
 
 Mehrwertige primitive Attribute erscheinen nicht im skalaren Klassenplan.
 Explode/Collect erzeugen bzw. verbrauchen dafür `_ili_value` mit dem passenden
-Hop-Typ sowie Elternschlüssel, optionaler BID und `_ili_index`. BAG-Duplikate und
+Hop-Typ sowie Elternschlüssel, BID und `_ili_index` für Collect. BAG-Duplikate und
 LIST-Reihenfolge bleiben erhalten. Kardinalität wird nach dem Sammeln geprüft;
 null als einzelnes Sammlungselement ist unzulässig. Die Klassenprojektion weist
 auf diesen separaten Pfad hin. Ein Quellobjekt-Overlay erhält ausgelassene Sammlungen.
@@ -533,9 +532,8 @@ Teil dieses Ausbaus.
 
 Collect ersetzt die gesamte ausgewählte Sammlung. Gefilterte Kinder verschwinden;
 bei strikten LIST-Indizes müssen verbleibende Kinder gegebenenfalls neu nummeriert
-werden. Neue Konfigurationen ordnen Eltern über `(BID, Elternschlüssel)` zu und
-prüfen leere Schlüssel, doppelte Eltern, Sortierung und verwaiste Kinder. Alte
-Dateien behalten ihre bisherige Schlüsselwahl und den Neuaufbau ohne Kind-Carrier.
+werden. Collect prüft leere Schlüssel, doppelte Eltern, Sortierung und verwaiste
+Kinder anhand von `(BID, Elternschlüssel)`.
 
 Die drei Erhaltungszusagen sind verschieden: Projektion bearbeitet ausgewählte
 Felder; Overlay erhält zusätzlich unprojizierte Objektinhalte; der vollständige
@@ -734,7 +732,7 @@ Dies ist für Mapping- und GUI-Pipelines nützlich.
 
 ## 16. OID/TID
 
-TIDs werden als String transportiert und müssen vor dem Writer bereitstehen. Klassenobjekte und identifizierbare Assoziationen benötigen eine TID; bei nicht identifizierbaren Assoziationen ist sie optional. Der aktuelle Writer hat keine UUID-Erzeugung oder Missing-TID-Policy. Identifikatoren müssen zum modellierten OID-/Identitätsraum passen. Eindeutigkeit und Referenzgültigkeit werden mit vollständiger Dateivalidierung geprüft; technische Schlüsselprüfungen ersetzen diese nicht.
+TIDs werden als String transportiert und müssen vor dem Writer bereitstehen. Klassenobjekte und identifizierbare Assoziationen benötigen eine TID; bei nicht identifizierbaren Assoziationen ist sie optional. Identifizierbare Objekte benötigen eine gemappte TID, die zur OID-Domain ihres Typs passt. Eindeutigkeit und Referenzgültigkeit werden mit vollständiger Dateivalidierung geprüft; technische Schlüsselprüfungen ersetzen diese nicht.
 
 ## 17. Baskets
 
@@ -756,7 +754,17 @@ Damit kann ein Transfer mit mehreren Baskets gelesen und gruppiert verarbeitet w
 
 ### 17.2 Writer-Basket-Zuordnung
 
-Der typisierte Writer verwendet `basketIdField` (Default `_ili_bid`) und `basketId` (Default `b1`). Eine leere beziehungsweise nicht nutzbare Feld-BID verwendet den Default. Es gibt keine separate Basket-Policy-Auswahl. BID-Wechsel schliessen den aktiven Basket. Wiederholte abgeschlossene BIDs werden in typisiertem, generischem Objekt- und Ereignismodus zentral abgelehnt. Alle Zeilen derselben BID müssen zusammenhängend vorliegen; eine lexikografische BID-Reihenfolge ist keine Voraussetzung.
+INTERLIS Output gruppiert die Objekte aller gemappten Eingänge nach BID und lagert
+die Gruppierung bei Bedarf auf Disk aus. Die Eingänge dürfen unsortiert sein.
+Mit `PER_TOPIC` erzeugt der Writer pro Topic eine UUID-BID, sofern dessen
+Basket-OID-Domain dies erlaubt. Mit `FROM_FIELD` benötigt jeder Eingang ein
+gemapptes String-Feld mit einer gültigen BID pro Zeile. Eine BID darf nur einem
+Topic zugeordnet werden.
+
+INTERLIS Transfer Output verlangt im Objektmodus zusammenhängende BID-Gruppen.
+Im Ereignismodus geben Start- und End-Ereignisse die Grenzen vor. Ein bereits
+abgeschlossener Basket darf in beiden Modi von Transfer Output nicht erneut
+geöffnet werden.
 
 ### 17.3 Basket-Metadaten
 
@@ -941,12 +949,9 @@ Die Typed Mapping Layer bleibt damit weitgehend identisch. ITF-spezifische Linet
 
 ## 25. Prio 3: getrennte Klasseninputs und selektive Updates
 
-`INTERLIS Output` besitzt zwei persistierte Modi. `MAPPED_INPUTS` ist der Default
-neuer Konfigurationen; fehlendes `mode` lädt `SINGLE_SCHEMA` mit dem bisherigen
-Ausgangsschema und Durchreichen. Im neuen Modus ist Output ein Sink. Jeder
-benannte INFO-Eingang besitzt einen eigenen Klassenplan und eigene Feldbindungen;
-alle physischen RowSets eines vorgelagerten Transforms werden fair gelesen. Es
-entsteht kein gemeinsames, dünn besetztes Zeilenschema.
+`INTERLIS Output` ist ein Sink für einen oder mehrere benannte INFO-Eingänge.
+Jeder Eingang besitzt einen eigenen Klassenplan und eigene Feldbindungen.
+Alle physischen RowSets eines vorgelagerten Transforms werden fair gelesen.
 
 Explizite Feldzuordnungen ersetzen die Namenskonvention. Berechnungen und
 Typkonvertierungen erfolgen davor. TIDs werden zugeordnet, nie erfunden. Der

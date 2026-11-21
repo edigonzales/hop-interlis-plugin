@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.rolejoin;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
 import ch.so.agi.hop.interlis.transforms.testutil.SyntheticLookupRowsMeta;
@@ -30,7 +31,7 @@ class InterlisRoleJoinPipelineTest {
   private InterlisInputMeta personInput() {
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(TestData.path("/models").toString());
     input.setClassName("HopIli_Associations_V1.Data.Person");
     input.setIncludeTid(true);
@@ -133,11 +134,12 @@ class InterlisRoleJoinPipelineTest {
   }
 
   @Test
-  void joins_target_fields_from_a_synthetic_lookup_stream() throws Exception {
+  void joins_target_fields_from_a_synthetic_lookup_stream_with_bid() throws Exception {
     InterlisRoleJoinMeta join = roleJoin("lookup");
     join.setFailOnMissingMandatoryReference(false);
     SyntheticLookupRowsMeta lookupRows = new SyntheticLookupRowsMeta();
-    lookupRows.addRow("a1", "Main Street");
+    lookupRows.setFields("_ili_tid", "Street", "_ili_bid");
+    lookupRows.addRow("a1", "Main Street", "b1");
 
     Pipeline engine =
         run(
@@ -155,7 +157,8 @@ class InterlisRoleJoinPipelineTest {
   void missing_mandatory_reference_fails_by_default() throws Exception {
     InterlisRoleJoinMeta join = roleJoin("lookup");
     SyntheticLookupRowsMeta lookupRows = new SyntheticLookupRowsMeta();
-    lookupRows.addRow("a1", "Main Street");
+    lookupRows.setFields("_ili_tid", "Street", "_ili_bid");
+    lookupRows.addRow("a1", "Main Street", "b1");
 
     Pipeline engine =
         run(
@@ -216,18 +219,13 @@ class InterlisRoleJoinPipelineTest {
     lookup.addRow("a1", "Without BID field");
 
     assertThat(failureLog(run(join, mainRows("b2"), lookup)))
-        .contains(
-            "Role Address",
-            "lookup <lookup>",
-            "TID <a1>",
-            "BID <b2>",
-            "requires a String _ili_bid");
+        .contains("lookup", "field <_ili_bid>");
 
     var lookupWithoutValue = new SyntheticLookupRowsMeta();
     lookupWithoutValue.setFields("_ili_tid", "Street", "_ili_bid");
     lookupWithoutValue.addRow("a1", "Without BID value", null);
     assertThat(failureLog(run(join, mainRows("b2"), lookupWithoutValue)))
-        .contains("TID <a1>", "BID <b2>", "missing its _ili_bid value");
+        .contains("TID <a1>", "requires an _ili_bid value");
   }
 
   @Test
@@ -241,28 +239,52 @@ class InterlisRoleJoinPipelineTest {
     assertThat(failureLog(run(join, mainRows("b2"), lookup)))
         .contains("TID <a1>", "BID <b2>", "duplicate lookup key");
 
-    join.setFailOnDuplicateTid(false);
+    join.setFailOnDuplicateKey(false);
     assertThat(streets(run(join, mainRows("b2"), lookup))).containsExactly("First");
-
-    var legacyLookup = new SyntheticLookupRowsMeta();
-    legacyLookup.addRow("a1", "First");
-    legacyLookup.addRow("a1", "Second");
-    assertThat(failureLog(run(roleJoin("lookup"), mainRows((String) null), legacyLookup)))
-        .contains("TID <a1>", "duplicate lookup key");
   }
 
   @Test
-  void joins_by_tid_when_the_main_stream_has_no_basket_fields() throws Exception {
+  void main_stream_requires_a_basket_field() throws Exception {
     InterlisRoleJoinMeta join = roleJoin("lookup");
     join.setFailOnMissingMandatoryReference(false);
     var input = personInput();
     input.setIncludeBid(false);
     assertThat(
-            streets(
+            failureLog(
                 run(
                     join,
                     new TransformMeta("INTERLIS Input", input),
                     new TransformMeta("lookup", addressInput()))))
-        .containsExactly("Main Street", null, null);
+        .contains("main", "field <_ili_bid>");
+  }
+
+  @Test
+  void local_reference_requires_a_basket_value() throws Exception {
+    var main = new SyntheticLookupRowsMeta();
+    main.setFields("Address_ref", "_ili_bid");
+    main.addRow("a1", " ");
+    var lookup = new SyntheticLookupRowsMeta();
+    lookup.setFields("_ili_tid", "Street", "_ili_bid");
+    lookup.addRow("a1", "Street", "b1");
+
+    assertThat(failureLog(run(roleJoin("lookup"), main, lookup))).contains("TID <a1>", "_ili_bid");
+  }
+
+  @Test
+  void external_role_uses_the_companion_of_the_configured_reference_field() throws Exception {
+    var main = new SyntheticLookupRowsMeta();
+    main.setFields("Renamed", "Address_ref_bid", "_ili_bid");
+    main.addRow("a1", "b2", "b1");
+    var lookup = new SyntheticLookupRowsMeta();
+    lookup.setFields("_ili_tid", "Street", "_ili_bid");
+    lookup.addRow("a1", "Street", "b2");
+    var join = roleJoin("lookup");
+    join.setModelNames("HopIli_ExternalRole_V1");
+    join.setMainClassName("HopIli_ExternalRole_V1.Data.Person");
+    join.setMainReferenceField("Renamed");
+
+    assertThat(failureLog(run(join, main, lookup))).contains("field <Renamed_bid>");
+    main.setFields("Renamed", "Renamed_bid", "_ili_bid");
+    assertThat(streets(run(join, main, lookup))).containsExactly("Street");
   }
 }

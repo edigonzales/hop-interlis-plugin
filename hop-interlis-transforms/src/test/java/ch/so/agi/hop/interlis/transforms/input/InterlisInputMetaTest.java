@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.input;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import java.io.StringReader;
 import java.util.ArrayList;
@@ -27,7 +28,7 @@ class InterlisInputMetaTest {
   private InterlisInputMeta configuredMeta() {
     InterlisInputMeta meta = new InterlisInputMeta();
     meta.setFileName(TestData.path("/data/HopIli_Geometry_V1_valid.xtf").toString());
-    meta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    meta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setClassName("HopIli_Geometry_V1.Data.TestObject");
     meta.setIncludeTid(true);

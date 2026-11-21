@@ -127,9 +127,9 @@ See [`docs/progress/phase-07.md`](docs/progress/phase-07.md).
 - recursive flattening of nested single structures (`Home_Place_Country_Name`)
   with warnings pointing multi-valued structures to Structure Explode.
 
-**Phase 2** (`INTERLIS Output` + typed roundtrip) is implemented:
+**Typed XTF roundtrip** uses explicit input mappings:
 
-- `INTERLIS Output` transform writes typed Hop rows of one INTERLIS class to an XTF file
+- `INTERLIS Output` transform writes one or more typed class streams to an XTF file
   (streaming, multi-basket, overwrite protection, strict mandatory checks);
 - the full roundtrip `XTF → INTERLIS Input → INTERLIS Output → XTF` is verified in unit,
   pipeline and `hop-run` E2E tests – **circular arcs survive the write/read cycle** as

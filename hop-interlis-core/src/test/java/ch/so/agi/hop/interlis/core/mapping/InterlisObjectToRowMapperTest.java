@@ -66,7 +66,9 @@ class InterlisObjectToRowMapperTest {
         object.getobjecttag(),
         object.getobjectoid(),
         InterlisObjectOperation.NONE,
-        object);
+        object,
+        null,
+        null);
   }
 
   private static Iom_jObject building(String tid) {
@@ -177,8 +179,16 @@ class InterlisObjectToRowMapperTest {
             ProjectionOptions.defaults());
     InterlisObjectEnvelope envelope =
         new InterlisObjectEnvelope(
-            InterlisEventType.OBJECT, "HopIli_Geometry_V1", "HopIli_Geometry_V1.Data", "b1",
-            testObject.getobjecttag(), "o1", InterlisObjectOperation.NONE, testObject);
+            InterlisEventType.OBJECT,
+            "HopIli_Geometry_V1",
+            "HopIli_Geometry_V1.Data",
+            "b1",
+            testObject.getobjecttag(),
+            "o1",
+            InterlisObjectOperation.NONE,
+            testObject,
+            null,
+            null);
 
     Object[] row = mapper.map(envelope, plan);
 
@@ -247,8 +257,16 @@ class InterlisObjectToRowMapperTest {
             ProjectionOptions.defaults());
     InterlisObjectEnvelope envelope =
         new InterlisObjectEnvelope(
-            InterlisEventType.OBJECT, "HopIli_Primitives_V1", "HopIli_Primitives_V1.Data", "b1",
-            primitive.getobjecttag(), "p1", InterlisObjectOperation.NONE, primitive);
+            InterlisEventType.OBJECT,
+            "HopIli_Primitives_V1",
+            "HopIli_Primitives_V1.Data",
+            "b1",
+            primitive.getobjecttag(),
+            "p1",
+            InterlisObjectOperation.NONE,
+            primitive,
+            null,
+            null);
 
     Object[] row = mapper.map(envelope, plan);
 

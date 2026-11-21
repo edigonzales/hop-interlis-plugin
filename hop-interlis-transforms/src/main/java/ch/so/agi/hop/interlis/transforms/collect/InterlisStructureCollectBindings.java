@@ -43,7 +43,7 @@ final class InterlisStructureCollectBindings {
         "basket key",
         0,
         new ValueMetaString(name),
-        !name.isBlank());
+        true);
   }
 
   static Parent parent(IRowMeta input, InterlisStructureCollectMeta meta, IVariables vars)

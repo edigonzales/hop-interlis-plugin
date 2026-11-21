@@ -56,6 +56,7 @@
       <xloc>100</xloc>
       <yloc>100</yloc>
     </GUI>
+    <emit_update_reference>N</emit_update_reference>
   </transform>
   <transform>
     <name>collect0</name>
@@ -119,12 +120,7 @@
     <type>INTERLIS_OUTPUT</type>
     <modelNames>HopIli_Collections_V1</modelNames>
     <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
-    <className>HopIli_Collections_V1.Data.Item</className>
     <fileName>${E2E_OUTPUT_DIR}/child-preserve.xtf</fileName>
-    <objectIdField>_ili_tid</objectIdField>
-    <basketIdField>_ili_bid</basketIdField>
-    <basketId>b1</basketId>
-    <sourceObjectField>_ili_source_object</sourceObjectField>
     <overwrite>Y</overwrite>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -132,5 +128,17 @@
       <xloc>100</xloc>
       <yloc>100</yloc>
     </GUI>
+    <basketMode>FROM_FIELD</basketMode>
+    <validateBeforePublish>N</validateBeforePublish>
+    <inputs>
+      <input>
+        <transformName>collect0</transformName>
+        <className>HopIli_Collections_V1.Data.Item</className>
+        <objectIdField>_ili_tid</objectIdField>
+        <basketIdField>_ili_bid</basketIdField>
+        <sourceObjectField>_ili_source_object</sourceObjectField>
+        <fields/>
+      </input>
+    </inputs>
   </transform>
 </pipeline>

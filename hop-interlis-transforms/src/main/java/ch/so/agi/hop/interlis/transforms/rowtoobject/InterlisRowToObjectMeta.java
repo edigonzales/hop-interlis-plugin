@@ -102,7 +102,7 @@ public class InterlisRowToObjectMeta
   /** Builds the projection options from the persisted configuration. */
   public ProjectionOptions projectionOptions() {
     return new ProjectionOptions(
-        true, true, false, false, false, true, "_", null, java.util.Set.of());
+        true, true, false, false, false, true, "_", null, null, false, true);
   }
 
   @Override

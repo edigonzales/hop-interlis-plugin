@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import ch.so.agi.hop.interlis.core.model.InterlisAttributeDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisCardinality;
+import ch.so.agi.hop.interlis.core.model.InterlisGeometryEncoding;
 import ch.so.agi.hop.interlis.core.model.InterlisValueKind;
 import java.math.BigDecimal;
 import java.sql.Timestamp;
@@ -17,9 +18,24 @@ class InterlisPrimitiveCodecTest {
 
   private static InterlisAttributeDescriptor attribute(String name, InterlisValueKind kind) {
     return new InterlisAttributeDescriptor(
-        name, "Model.Topic.Class." + name, new InterlisCardinality(0, 1), false, kind,
-        kind.name(), false, null, null, false, null, false, -1,
-        kind == InterlisValueKind.DECIMAL ? 3 : -1);
+        name,
+        "Model.Topic.Class." + name,
+        new InterlisCardinality(0, 1),
+        false,
+        kind,
+        kind.name(),
+        false,
+        null,
+        null,
+        false,
+        null,
+        false,
+        -1,
+        kind == InterlisValueKind.DECIMAL ? 3 : -1,
+        InterlisGeometryEncoding.NATIVE,
+        null,
+        false,
+        java.util.Set.of());
   }
 
   @Test

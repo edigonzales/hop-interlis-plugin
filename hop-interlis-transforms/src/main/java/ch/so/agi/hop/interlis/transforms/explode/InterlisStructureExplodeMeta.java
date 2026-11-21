@@ -49,8 +49,8 @@ public class InterlisStructureExplodeMeta
   public static final String DEFAULT_PARENT_BID_KEY_FIELD = "_ili_parent_bid";
   public static final String DEFAULT_INDEX_FIELD = "_ili_index";
 
-  @HopMetadataProperty(key = "emit_update_reference")
-  private boolean emitUpdateReference;
+  @HopMetadataProperty(key = "emit_update_reference", defaultBoolean = true)
+  private boolean emitUpdateReference = true;
 
   public boolean isEmitUpdateReference() {
     return emitUpdateReference;
@@ -60,8 +60,8 @@ public class InterlisStructureExplodeMeta
     emitUpdateReference = value;
   }
 
-  @HopMetadataProperty(key = "keep_child_source_object")
-  private boolean keepChildSourceObject;
+  @HopMetadataProperty(key = "keep_child_source_object", defaultBoolean = true)
+  private boolean keepChildSourceObject = true;
 
   public boolean isKeepChildSourceObject() {
     return keepChildSourceObject;
@@ -71,28 +71,27 @@ public class InterlisStructureExplodeMeta
     keepChildSourceObject = value;
   }
 
-  @Override
-  public void loadXml(org.w3c.dom.Node node, IHopMetadataProvider provider)
-      throws org.apache.hop.core.exception.HopXmlException {
-    super.loadXml(node, provider);
-    if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "emit_update_reference") == null)
-      emitUpdateReference = false;
-    if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "keep_child_source_object") == null)
-      keepChildSourceObject = false;
-  }
-
   @HopMetadataProperty private String modelNames;
-  @HopMetadataProperty private String modelDirectories;
+
+  @HopMetadataProperty
+  private String modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
+
   @HopMetadataProperty private String className;
-  @HopMetadataProperty private String sourceObjectField;
-  @HopMetadataProperty private String parentTidField;
-  @HopMetadataProperty private String parentBidField;
-  @HopMetadataProperty private boolean emitParentBid;
+  @HopMetadataProperty private String sourceObjectField = DEFAULT_SOURCE_OBJECT_FIELD;
+  @HopMetadataProperty private String parentTidField = DEFAULT_PARENT_TID_FIELD;
+  @HopMetadataProperty private String parentBidField = DEFAULT_PARENT_BID_FIELD;
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean emitParentBid = true;
+
   @HopMetadataProperty private String structureAttributePath;
-  @HopMetadataProperty private String parentKeyFieldName;
-  @HopMetadataProperty private String parentBidKeyFieldName;
-  @HopMetadataProperty private String indexFieldName;
-  @HopMetadataProperty private boolean emitIndexForBag;
+  @HopMetadataProperty private String parentKeyFieldName = DEFAULT_PARENT_KEY_FIELD;
+  @HopMetadataProperty private String parentBidKeyFieldName = DEFAULT_PARENT_BID_KEY_FIELD;
+  @HopMetadataProperty private String indexFieldName = DEFAULT_INDEX_FIELD;
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean emitIndexForBag = true;
+
   @HopMetadataProperty private List<String> selectedChildFields;
   @HopMetadataProperty private List<String> includeParentFields;
 
@@ -160,7 +159,11 @@ public class InterlisStructureExplodeMeta
         true,
         "_",
         null,
-        new LinkedHashSet<>(selectedChildFields == null ? List.of() : selectedChildFields));
+        selectedChildFields == null || selectedChildFields.isEmpty()
+            ? null
+            : new LinkedHashSet<>(selectedChildFields),
+        false,
+        true);
   }
 
   @Override

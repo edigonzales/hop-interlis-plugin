@@ -13,7 +13,7 @@ import org.apache.hop.core.exception.HopException;
 import org.apache.hop.core.row.value.ValueMetaString;
 import org.apache.hop.pipeline.transform.BaseTransform;
 
-/** Runtime of the heterogeneous-input mode; no mixed Hop row schema is ever created. */
+/** Writes mapped class streams using the row schema of each input. */
 final class MappedOutputWriter {
   private record Bound(
       InterlisRowBindings fields, InterlisFieldBinding carrier, InterlisFieldBinding operation) {}
@@ -33,7 +33,7 @@ final class MappedOutputWriter {
                     session.model,
                     owner.resolve(config.getClassName()),
                     new ProjectionOptions(
-                        true, true, false, false, false, true, "_", null, Set.of(), true, true))
+                        true, true, false, false, false, true, "_", null, null, true, true))
                 .plan();
         plans.add(new MappedClassPlan(available, config, owner, true));
         if (!config.getStructurePath().isBlank())

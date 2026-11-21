@@ -64,6 +64,8 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <emit_update_reference>N</emit_update_reference>
+    <keep_child_source_object>N</keep_child_source_object>
   </transform>
   <transform>
     <type>INTERLIS_STRUCTURE_COLLECT</type>
@@ -92,6 +94,9 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <collect_mode>REBUILD</collect_mode>
+    <parent_bid_field>_ili_bid</parent_bid_field>
+    <child_parent_bid_field>_ili_parent_bid</child_parent_bid_field>
   </transform>
   <transform>
     <type>INTERLIS_OUTPUT</type>
@@ -99,11 +104,6 @@
     <fileName>${E2E_OUTPUT_DIR}/structures-roundtrip.xtf</fileName>
     <modelNames>HopIli_Structures_V1</modelNames>
     <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
-    <className>HopIli_Structures_V1.Data.Person</className>
-    <objectIdField>_ili_tid</objectIdField>
-    <basketIdField>_ili_bid</basketIdField>
-    <basketId>b1</basketId>
-    <sourceObjectField>_ili_source_object</sourceObjectField>
     <overwrite>Y</overwrite>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -116,6 +116,18 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <basketMode>FROM_FIELD</basketMode>
+    <validateBeforePublish>N</validateBeforePublish>
+    <inputs>
+      <input>
+        <transformName>INTERLIS Structure Collect</transformName>
+        <className>HopIli_Structures_V1.Data.Person</className>
+        <objectIdField>_ili_tid</objectIdField>
+        <basketIdField>_ili_bid</basketIdField>
+        <sourceObjectField>_ili_source_object</sourceObjectField>
+        <fields/>
+      </input>
+    </inputs>
   </transform>
   <order>
     <hop>

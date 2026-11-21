@@ -5,13 +5,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import ch.so.agi.hop.interlis.core.io.InterlisEventType;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectEnvelope;
 import ch.so.agi.hop.interlis.core.io.XtfTransferReader;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hop.core.HopEnvironment;
-import org.apache.hop.core.RowMetaAndData;
 import org.apache.hop.pipeline.Pipeline;
 import org.apache.hop.pipeline.PipelineHopMeta;
 import org.apache.hop.pipeline.PipelineMeta;
@@ -20,7 +20,6 @@ import org.apache.hop.pipeline.engine.IPipelineEngine;
 import org.apache.hop.pipeline.engine.PipelineEngineFactory;
 import org.apache.hop.pipeline.engines.local.LocalPipelineRunConfiguration;
 import org.apache.hop.pipeline.transform.TransformMeta;
-import org.apache.hop.pipeline.transforms.rowstoresult.RowsToResultMeta;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -41,7 +40,7 @@ class InterlisOutputPipelineTest {
     // INTERLIS Input (geometry XTF) -> INTERLIS Output -> Rows to result
     InterlisInputMeta inputMeta = new InterlisInputMeta();
     inputMeta.setFileName(TestData.path("/data/HopIli_Geometry_V1_valid.xtf").toString());
-    inputMeta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    inputMeta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     inputMeta.setModelDirectories(TestData.path("/models").toString());
     inputMeta.setClassName("HopIli_Geometry_V1.Data.TestObject");
     inputMeta.setIncludeTid(true);
@@ -51,14 +50,14 @@ class InterlisOutputPipelineTest {
     outputMeta.setFileName(outputFile.toString());
     outputMeta.setModelNames("HopIli_Geometry_V1");
     outputMeta.setModelDirectories(TestData.path("/models").toString());
-    outputMeta.setClassName("HopIli_Geometry_V1.Data.TestObject");
-    outputMeta.setObjectIdField("_ili_tid");
-    outputMeta.setBasketIdField("_ili_bid");
-    outputMeta.setBasketId("b1");
+    var mapping = TestData.mappedInput("INTERLIS Input", "HopIli_Geometry_V1.Data.TestObject");
+    outputMeta.setInputs(java.util.List.of(mapping));
+    outputMeta.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    outputMeta.setValidateBeforePublish(false);
+
     outputMeta.setOverwrite(true);
 
-    List<RowMetaAndData> rows = run(inputMeta, outputMeta).getResultRows();
-    assertThat(rows).hasSize(2);
+    assertThat(run(inputMeta, outputMeta).getErrors()).isZero();
 
     // Re-read the written transfer and compare the objects semantically.
     ch.so.agi.hop.interlis.core.model.CompiledInterlisModel model =
@@ -99,7 +98,7 @@ class InterlisOutputPipelineTest {
 
     InterlisInputMeta inputMeta = new InterlisInputMeta();
     inputMeta.setFileName(TestData.path("/data/HopIli_Spike_V1_valid.xtf").toString());
-    inputMeta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    inputMeta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     inputMeta.setModelDirectories(TestData.path("/models").toString());
     inputMeta.setClassName("HopIli_Spike_V1.Data.Building");
     inputMeta.setIncludeTid(true);
@@ -109,10 +108,11 @@ class InterlisOutputPipelineTest {
     outputMeta.setFileName(outputFile.toString());
     outputMeta.setModelNames("HopIli_Spike_V1");
     outputMeta.setModelDirectories(TestData.path("/models").toString());
-    outputMeta.setClassName("HopIli_Spike_V1.Data.Building");
-    outputMeta.setObjectIdField("_ili_tid");
-    outputMeta.setBasketIdField("_ili_bid");
-    outputMeta.setBasketId("b1");
+    var mapping = TestData.mappedInput("INTERLIS Input", "HopIli_Spike_V1.Data.Building");
+    outputMeta.setInputs(java.util.List.of(mapping));
+    outputMeta.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    outputMeta.setValidateBeforePublish(false);
+
     outputMeta.setOverwrite(true);
 
     run(inputMeta, outputMeta);
@@ -147,7 +147,7 @@ class InterlisOutputPipelineTest {
 
     InterlisInputMeta inputMeta = new InterlisInputMeta();
     inputMeta.setFileName(TestData.path("/data/HopIli_Spike_V1_valid.xtf").toString());
-    inputMeta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    inputMeta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     inputMeta.setModelDirectories(TestData.path("/models").toString());
     inputMeta.setClassName("HopIli_Spike_V1.Data.Building");
     inputMeta.setIncludeTid(true);
@@ -157,9 +157,11 @@ class InterlisOutputPipelineTest {
     outputMeta.setFileName(outputFile.toString());
     outputMeta.setModelNames("HopIli_Spike_V1");
     outputMeta.setModelDirectories(TestData.path("/models").toString());
-    outputMeta.setClassName("HopIli_Spike_V1.Data.Building");
-    outputMeta.setObjectIdField("_ili_tid");
-    outputMeta.setBasketIdField("_ili_bid");
+    var mapping = TestData.mappedInput("INTERLIS Input", "HopIli_Spike_V1.Data.Building");
+    outputMeta.setInputs(java.util.List.of(mapping));
+    outputMeta.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    outputMeta.setValidateBeforePublish(false);
+
     outputMeta.setOverwrite(false);
 
     Pipeline pipeline = run(inputMeta, outputMeta);
@@ -173,13 +175,9 @@ class InterlisOutputPipelineTest {
     source.setLocation(100, 100);
     TransformMeta output = new TransformMeta("INTERLIS_OUTPUT", "INTERLIS Output", outputMeta);
     output.setLocation(300, 100);
-    TransformMeta sink = new TransformMeta("Rows to result", new RowsToResultMeta());
-    sink.setLocation(500, 100);
     pipelineMeta.addTransform(source);
     pipelineMeta.addTransform(output);
-    pipelineMeta.addTransform(sink);
     pipelineMeta.addPipelineHop(new PipelineHopMeta(source, output));
-    pipelineMeta.addPipelineHop(new PipelineHopMeta(output, sink));
 
     PipelineRunConfiguration runConfiguration = new PipelineRunConfiguration();
     LocalPipelineRunConfiguration engineRunConfiguration = new LocalPipelineRunConfiguration();

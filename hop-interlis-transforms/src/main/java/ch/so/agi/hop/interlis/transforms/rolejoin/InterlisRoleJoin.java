@@ -12,9 +12,9 @@ import org.apache.hop.pipeline.transform.TransformMeta;
  * INTERLIS Role Join: appends the fields of a role's target class to the main stream.
  *
  * <p>Both streams are read fairly through explicit input rowsets. The lookup stream is loaded into
- * a spill-backed index once (bounded by {@code maxLookupRows}), keyed by basket and TID when basket
- * fields are available. Missing targets are null fields or an error for mandatory roles, depending
- * on {@code failOnMissingMandatoryReference}.
+ * a spill-backed index once (bounded by {@code maxLookupRows}), keyed by BID and TID. Missing
+ * targets are null fields or an error for mandatory roles, depending on {@code
+ * failOnMissingMandatoryReference}.
  */
 public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, InterlisRoleJoinData> {
 
@@ -30,7 +30,14 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
 
   @Override
   public boolean processRow() throws HopException {
-    Object[] mainRow = data.initialized ? readMainRow() : doInitialize();
+    if (!data.initialized) {
+      doInitialize();
+    }
+    Object[] mainRow = readMainRow();
+    if (!isStopped() && data.mainBindings == null && data.mainRowSet.getRowMeta() != null) {
+      data.mainBindings =
+          InterlisRoleJoinBindings.main(data.mainRowSet.getRowMeta(), data.probe, meta, this);
+    }
     if (mainRow == null || isStopped()) {
       setOutputDone();
       if (isBasic()) {
@@ -43,7 +50,17 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
     String explicitBid = identifier(data.mainBindings.referenceBid().read(mainRow));
     String bid =
         explicitBid == null ? identifier(data.mainBindings.bid().read(mainRow)) : explicitBid;
-    Object[] lookupRow = findTarget(reference, bid, explicitBid != null);
+    if (explicitBid != null && reference == null) {
+      throw new HopException(referenceContext(null, bid) + ": reference BID requires a target TID");
+    }
+    if (reference != null && bid == null) {
+      throw new HopException(
+          referenceContext(reference, null) + ": main row requires _ili_bid for a local reference");
+    }
+    Object[] lookupRow =
+        reference == null || data.lookupIndex == null
+            ? null
+            : data.lookupIndex.get(lookupKey(bid, reference));
     if (lookupRow == null) {
       if (data.probe.role().cardinality().min() >= 1 && meta.isFailOnMissingMandatoryReference()) {
         throw new HopException(referenceContext(reference, bid) + ": mandatory target not found");
@@ -53,47 +70,17 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
       }
     }
 
-    Object[] outputRow = new Object[data.outputRowMeta.size()];
+    IRowMeta output = data.mainBindings.output();
+    Object[] outputRow = new Object[output.size()];
     System.arraycopy(mainRow, 0, outputRow, 0, mainRow.length);
     if (lookupRow != null)
       System.arraycopy(lookupRow, 0, outputRow, mainRow.length, lookupRow.length);
 
-    putRow(data.outputRowMeta, outputRow);
+    putRow(output, outputRow);
     if (checkFeedback(getLinesWritten()) && isBasic()) {
       logBasic("Joined " + getLinesWritten() + " rows of role " + meta.getRoleName());
     }
     return true;
-  }
-
-  private Object[] findTarget(String tid, String bid, boolean explicitBid) throws HopException {
-    if (tid == null) {
-      if (explicitBid) {
-        throw new HopException(
-            referenceContext(null, bid) + ": reference BID requires a target TID");
-      }
-      return null;
-    }
-    if (data.lookupBindings == null) {
-      return null;
-    }
-    if (!data.lookupBindings.bid().present() && explicitBid) {
-      throw new HopException(
-          referenceContext(tid, bid) + ": lookup requires a String _ili_bid field");
-    }
-    if (!useBasketKeys()) {
-      return data.lookupIndex.get(lookupKey(null, tid));
-    }
-    if (bid == null) {
-      throw new HopException(
-          referenceContext(tid, null) + ": main row requires _ili_bid for a local reference");
-    }
-
-    Object[] target = data.lookupIndex.get(lookupKey(bid, tid));
-    if (target == null && explicitBid && data.lookupIndex.containsKey(lookupKey(null, tid))) {
-      throw new HopException(
-          referenceContext(tid, bid) + ": lookup row is missing its _ili_bid value");
-    }
-    return target;
   }
 
   private String referenceContext(String tid, String bid) {
@@ -109,24 +96,14 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
         + (bid == null ? "" : ", BID <" + bid + ">");
   }
 
-  private boolean useBasketKeys() {
-    return data.lookupBindings.bid().present()
-        && (data.mainBindings == null
-            || data.mainBindings.bid().present()
-            || data.mainBindings.referenceBid().present());
-  }
-
   private static String identifier(Object value) {
-    if (value == null) {
-      return null;
-    }
-    String id = value.toString().trim();
-    return id.isEmpty() ? null : id;
+    String id = (String) value;
+    return id == null || id.isBlank() ? null : id;
   }
 
   private static String lookupKey(String bid, String tid) {
-    // The BID length makes arbitrary String identifiers unambiguous across both key forms.
-    return bid == null ? "0:" + tid : bid.length() + ":" + bid + tid;
+    // The length delimits the BID even if a key contains a colon.
+    return bid.length() + ":" + bid + tid;
   }
 
   private Object[] readMainRow() throws HopException {
@@ -137,7 +114,7 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
     }
   }
 
-  private Object[] doInitialize() throws HopException {
+  private void doInitialize() throws HopException {
     ch.so.agi.hop.interlis.transforms.InterlisParallelCopies.requireSingleCopy(
         getTransformMeta(), this, "independent input streams require a single shared collector");
     InterlisRuntimeSupport.initialize();
@@ -168,12 +145,6 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
       data.inputs =
           new ch.so.agi.hop.interlis.transforms.buffer.FairInputReader(
               this, data.storageOptions.divided(2), data.mainRowSet, data.lookupRowSet);
-      // Bind the effective main schema before indexing the lookup. The fair reader
-      // buffers rows from either input while waiting for the first main row.
-      Object[] mainRow = data.inputs.next(0, meta.getMaxLookupRows());
-      if (mainRow != null) {
-        bindMainRowMeta();
-      }
       loadLookup();
       if (data.lookupRowSet.getRowMeta() != null) {
         bindLookupRowMeta();
@@ -189,7 +160,6 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
                 + ")");
       }
       data.initialized = true;
-      return mainRow;
     } catch (HopException e) {
       throw e;
     } catch (Exception e) {
@@ -212,13 +182,16 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
         bindLookupRowMeta();
         String tid = identifier(data.lookupBindings.tid().read(lookupRow));
         if (tid != null) {
-          String bid =
-              useBasketKeys() ? identifier(data.lookupBindings.bid().read(lookupRow)) : null;
-          String key = lookupKey(bid, tid);
-          if (data.lookupIndex.containsKey(key) && meta.isFailOnDuplicateTid()) {
+          String bid = identifier(data.lookupBindings.bid().read(lookupRow));
+          if (bid == null) {
+            throw new HopException(
+                referenceContext(tid, null) + ": lookup row requires an _ili_bid value");
+          }
+          if (!data.lookupIndex.putIfAbsent(
+                  lookupKey(bid, tid), data.lookupBindings.fields().values(lookupRow))
+              && meta.isFailOnDuplicateKey()) {
             throw new HopException(referenceContext(tid, bid) + ": duplicate lookup key");
           }
-          data.lookupIndex.putIfAbsent(key, data.lookupBindings.fields().values(lookupRow));
         }
         count++;
       }
@@ -227,15 +200,6 @@ public class InterlisRoleJoin extends BaseTransform<InterlisRoleJoinMeta, Interl
     } catch (Exception e) {
       throw new HopException("Failed to load the lookup stream: " + e.getMessage(), e);
     }
-  }
-
-  private void bindMainRowMeta() throws HopException {
-    IRowMeta mainRowMeta = data.mainRowSet.getRowMeta();
-    if (mainRowMeta == null) {
-      throw new HopException("Main stream of INTERLIS Role Join has no row metadata");
-    }
-    data.mainBindings = InterlisRoleJoinBindings.main(mainRowMeta, data.probe, meta, this);
-    data.outputRowMeta = data.mainBindings.output();
   }
 
   private void bindLookupRowMeta() throws HopException {

@@ -132,8 +132,10 @@ class InterlisRoleJoinMetaTest {
     InterlisRoleJoinMeta meta = configuredMeta();
     meta.setLookupFields(List.of("Street"));
     meta.setPrefix("Addr_");
+    meta.setFailOnDuplicateKey(false);
 
     String xml = new TransformMeta("INTERLIS Role Join", meta).getXml();
+    assertThat(xml).contains("<failOnDuplicateKey>N</failOnDuplicateKey>");
     Node node =
         DocumentBuilderFactory.newInstance()
             .newDocumentBuilder()
@@ -151,7 +153,20 @@ class InterlisRoleJoinMetaTest {
     assertThat(restored.getLookupFields()).containsExactly("Street");
     assertThat(restored.getPrefix()).isEqualTo("Addr_");
     assertThat(restored.isFailOnMissingMandatoryReference()).isTrue();
-    assertThat(restored.isFailOnDuplicateTid()).isTrue();
+    assertThat(restored.isFailOnDuplicateKey()).isFalse();
+  }
+
+  @Test
+  void omitted_xml_options_use_current_lookup_defaults() throws Exception {
+    var node =
+        org.apache.hop.core.xml.XmlHandler.loadXmlString("<transform/>").getDocumentElement();
+    var restored = new InterlisRoleJoinMeta();
+    restored.loadXml(node, new MemoryMetadataProvider());
+
+    assertThat(restored.getLookupTidField()).isEqualTo("_ili_tid");
+    assertThat(restored.isFailOnDuplicateKey()).isTrue();
+    assertThat(restored.isFailOnMissingMandatoryReference()).isTrue();
+    assertThat(restored.getMaxLookupRows()).isEqualTo(500_000L);
   }
 
   @Test

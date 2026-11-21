@@ -31,33 +31,4 @@ public record InterlisObjectEnvelope(
     IomObject object,
     InterlisBasketMetadata basket,
     InterlisTransferMetadata transferMetadata)
-    implements java.io.Serializable {
-
-  public InterlisObjectEnvelope(
-      InterlisEventType eventType,
-      String modelName,
-      String topicName,
-      String basketId,
-      String className,
-      String objectId,
-      InterlisObjectOperation operation,
-      IomObject object,
-      InterlisBasketMetadata basket) {
-    this(
-        eventType, modelName, topicName, basketId, className, objectId, operation, object, basket,
-        null);
-  }
-
-  /** Backwards-compatible constructor without basket metadata. */
-  public InterlisObjectEnvelope(
-      InterlisEventType eventType,
-      String modelName,
-      String topicName,
-      String basketId,
-      String className,
-      String objectId,
-      InterlisObjectOperation operation,
-      IomObject object) {
-    this(eventType, modelName, topicName, basketId, className, objectId, operation, object, null);
-  }
-}
+    implements java.io.Serializable {}

@@ -2,7 +2,6 @@ package ch.so.agi.hop.interlis.transforms.explode;
 
 import ch.so.agi.hop.interlis.core.structures.InterlisStructurePlan;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
-import ch.so.agi.hop.interlis.transforms.InterlisPreviewRow;
 import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
 import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreviewSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport;
@@ -29,40 +28,10 @@ public final class InterlisStructureExplodeDialogController {
         meta.projectionOptions());
   }
 
-  /** Formats the child row schema for the preview area, including warnings. */
-  public String formatSchemaPreview(InterlisStructurePlan plan) {
-    StringBuilder preview = new StringBuilder();
-    preview.append("Child row schema\n");
-    preview.append("----------------\n");
-    InterlisSchemaPreview schemaPreview = createSchemaPreview(plan);
-    for (InterlisPreviewRow row : schemaPreview.rows()) {
-      preview.append(
-          String.format("%-26s %-14s %s%n", row.fieldName(), row.hopType(), row.source()));
-    }
-    if (schemaPreview.hasError()) {
-      preview.append(schemaPreview.errorMessage()).append('\n');
-    }
-    if (!schemaPreview.warnings().isEmpty()) {
-      preview.append('\n');
-      for (String warning : schemaPreview.warnings()) {
-        preview.append("Warning: ").append(warning).append('\n');
-      }
-    }
-    return preview.toString();
-  }
-
   /** Builds the structured preview consumed by the SWT table. */
   public InterlisSchemaPreview createSchemaPreview(
       InterlisStructurePlan plan, boolean carrier, boolean updateReference) {
     return InterlisSchemaPreviewSupport.createStructurePreview(plan, carrier, updateReference);
-  }
-
-  public InterlisSchemaPreview createSchemaPreview(InterlisStructurePlan plan, boolean carrier) {
-    return InterlisSchemaPreviewSupport.createStructurePreview(plan, carrier);
-  }
-
-  public InterlisSchemaPreview createSchemaPreview(InterlisStructurePlan plan) {
-    return InterlisSchemaPreviewSupport.createStructurePreview(plan);
   }
 
   private static List<String> resolveModelNames(
