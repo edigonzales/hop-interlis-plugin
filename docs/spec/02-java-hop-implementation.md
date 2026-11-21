@@ -1764,12 +1764,12 @@ Der Basket-Puffer hält nur den aktiven Basket. `Batch` ist ein explizit zu schl
   Transfer Output. `PreparedXtfOutput` kann eine Vorbedingung unmittelbar vor der
   Publikation nochmals prüfen (Originaldatei weiterhin unverändert).
 
-Input persistiert `selectFields` getrennt von `selectedFields`: false bzw. fehlend
-bedeutet bisherige vollständige Projektion; true mit leerer Liste bedeutet nur
-aktivierte technische Felder und optional Quellobjekt. Explode persistiert
-`emit_update_reference`: neue Defaults true, fehlendes XML-Feld false. Der
-Herkunftsschlüssel wird nach den Kind-/Quellobjektfeldern und vor zusätzlichen
-Elternfeldern angefügt. Die neue Plugin-ID lautet `INTERLIS_UPDATE`.
+Input verwendet mit `selectFields=false` die vollständige Projektion. Ist
+`selectFields` aktiv und `selectedFields` leer, werden nur aktivierte technische
+Felder und das optionale Quellobjekt projiziert. Explode aktiviert
+`emit_update_reference` standardmässig. Der Herkunftsschlüssel wird nach den
+Kind- und Quellobjektfeldern vor zusätzlichen Elternfeldern angefügt.
+Die Plugin-ID lautet `INTERLIS_UPDATE`.
 
 Neue Dateisinks bleiben Single-copy. Beliebig viele vorgelagerte Kopien sind
 zulässig. Keine neue Bibliothek, kein geänderter INTERLIS-/Hop-/CI-Pin und keine

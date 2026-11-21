@@ -236,9 +236,8 @@ Das Budget betrifft Puffer. Ein einzelnes IOM-Objekt, seine Geometrien und sein 
 
 === Mehrere Klassen gemeinsam schreiben
 
-Der neue Mehrklassenmodus von INTERLIS Output nimmt die typisierten Klassenströme
-direkt entgegen und übernimmt die Basket-Gruppierung. Für explizite
-Ereignisverarbeitung besteht daneben weiterhin folgender Weg:
+INTERLIS Output nimmt typisierte Klassenströme direkt entgegen und übernimmt die
+Basket-Gruppierung. Transfer Output verarbeitet Envelope-Ströme.
 
 Ein typisierter Zweig pro Klasse kann mit Row to Object zurück in dasselbe Envelope-Schema wechseln. Vor einem Transfer Output im Objektmodus müssen zusammengeführte Zeilen nach BID gruppiert werden. Stimmen Identitäten oder Referenzräume nicht überein, müssen sie vorher fachlich abgestimmt werden.
 
