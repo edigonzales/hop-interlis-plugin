@@ -43,7 +43,10 @@ class HopSpillCodecTest {
             false,
             -1,
             -1,
-            InterlisGeometryEncoding.NATIVE);
+            InterlisGeometryEncoding.NATIVE,
+            null,
+            false,
+            java.util.Set.of());
     var line = new Iom_jObject("POLYLINE", null);
     var sequence = line.addattrobj("sequence", "SEGMENTS");
     var coord = sequence.addattrobj("segment", "COORD");

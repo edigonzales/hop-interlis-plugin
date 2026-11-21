@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.input;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import org.apache.hop.core.HopEnvironment;
@@ -21,7 +22,7 @@ class InterlisInputDialogControllerTest {
   private InterlisInputMeta validMeta() {
     InterlisInputMeta meta = new InterlisInputMeta();
     meta.setFileName(TestData.path("/data/HopIli_Geometry_V1_valid.xtf").toString());
-    meta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    meta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setClassName("HopIli_Geometry_V1.Data.TestObject");
     meta.setIncludeTid(true);
@@ -69,8 +70,8 @@ class InterlisInputDialogControllerTest {
     InterlisProbeResult projected = controller.probe(meta, new Variables());
 
     assertThat(projected.successful()).isTrue();
-    assertThat(controller.formatSchemaPreview(projected.projection().plan()))
-        .contains("Projected Hop schema", "Center", "Geometry");
+    assertThat(controller.createSchemaPreview(projected.projection().plan()).rows())
+        .anyMatch(row -> row.fieldName().equals("Center") && row.hopType().equals("Geometry"));
   }
 
   @Test
@@ -145,15 +146,6 @@ class InterlisInputDialogControllerTest {
     assertThat(structured.rows())
         .anyMatch(row -> row.fieldName().equals("Center") && row.hopType().equals("Geometry"));
     assertThat(structured.errorMessage()).isNull();
-
-    String preview = controller.formatSchemaPreview(result.projection().plan());
-
-    assertThat(preview).contains("Projected Hop schema");
-    assertThat(preview).contains("_ili_tid");
-    assertThat(preview).contains("_ili_bid");
-    assertThat(preview).contains("Name");
-    assertThat(preview).contains("Center");
-    assertThat(preview).contains("Geometry");
   }
 
   @Test
@@ -169,11 +161,6 @@ class InterlisInputDialogControllerTest {
 
     assertThat(structured.warnings()).anyMatch(warning -> warning.contains("Qualities"));
     assertThat(structured.rows()).extracting(row -> row.fieldName()).contains("Name");
-
-    String preview = controller.formatSchemaPreview(result.projection().plan());
-
-    assertThat(preview).contains("Qualities");
-    assertThat(preview).contains("Structure Explode");
   }
 
   @Test
@@ -186,9 +173,9 @@ class InterlisInputDialogControllerTest {
                   "com/atolcd/hop/core/row/value/ValueMetaGeometry");
             });
 
-    String preview = failingController.formatSchemaPreview(result.projection().plan());
+    var preview = failingController.createSchemaPreview(result.projection().plan());
 
-    assertThat(preview)
+    assertThat(preview.errorMessage())
         .contains(
             "Geometry Type Plugin fehlt, ist inkompatibel oder Hop muss neu gestartet werden.");
   }

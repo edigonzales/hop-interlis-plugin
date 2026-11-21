@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.generic;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
 import org.apache.hop.core.HopEnvironment;
@@ -53,7 +54,7 @@ class ParallelCopiesPolicyTest {
   private static InterlisInputMeta primitivesInput() {
     InterlisInputMeta meta = new InterlisInputMeta();
     meta.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
-    meta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    meta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setClassName("HopIli_Associations_V1.Data.Person");
     return meta;
@@ -102,7 +103,7 @@ class ParallelCopiesPolicyTest {
     ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta sourceMeta =
         new ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta();
     sourceMeta.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
-    sourceMeta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    sourceMeta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     sourceMeta.setModelDirectories(TestData.path("/models").toString());
 
     TransformMeta source = new TransformMeta("INTERLIS Transfer Input", sourceMeta);

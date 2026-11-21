@@ -39,8 +39,7 @@ public final class MappedInputSchemaService {
     if (cls.isBlank()) return new Result(classes, List.of());
     String path = InterlisFieldBinding.resolve(variables, input.getStructurePath());
     var options =
-        new ProjectionOptions(
-            true, true, false, false, false, true, "_", null, Set.of(), true, true);
+        new ProjectionOptions(true, true, false, false, false, true, "_", null, null, true, true);
     var fields =
         path.isBlank()
             ? service.project(context, cls, options).plan().fields()

@@ -15,16 +15,7 @@ final class InterlisRoleJoinBindings {
       InterlisFieldBinding reference,
       InterlisFieldBinding referenceBid,
       InterlisFieldBinding bid,
-      IRowMeta output) {
-    Main {
-      output = output.clone();
-    }
-
-    @Override
-    public IRowMeta output() {
-      return output.clone();
-    }
-  }
+      IRowMeta output) {}
 
   record Lookup(InterlisFieldBinding tid, InterlisFieldBinding bid, InterlisRowBindings fields) {}
 
@@ -36,7 +27,8 @@ final class InterlisRoleJoinBindings {
       selected.add(InterlisFieldBinding.resolve(vars, field));
     try {
       var options =
-          new ProjectionOptions(false, false, false, false, false, true, "_", null, selected);
+          new ProjectionOptions(
+              false, false, false, false, false, true, "_", null, selected, false, true);
       var fields =
           new InterlisRowSchemaBuilder()
               .build(probe.schema(), probe.target(), options).fields().stream()
@@ -69,24 +61,17 @@ final class InterlisRoleJoinBindings {
       throws HopTransformException {
     String name = InterlisFieldBinding.resolve(vars, meta.resolvedMainReferenceField(probe));
     String context = "INTERLIS Role Join main";
-    var reference =
-        InterlisFieldBinding.bind(
-            input, context, name, "reference", 0, new ValueMetaString(name), true);
-    var referenceBid = optionalString(input, context, name + "_bid");
-    if (!referenceBid.present()) {
-      referenceBid = optionalString(input, context, probe.role().name() + "_ref_bid");
-    }
     return new Main(
-        reference,
-        referenceBid,
-        optionalString(input, context, InterlisEnvelopeRowLayout.BID),
+        stringField(input, context, name, true),
+        stringField(input, context, name + "_bid", probe.role().external()),
+        stringField(input, context, InterlisEnvelopeRowLayout.BID, true),
         output(input, probe, meta, vars));
   }
 
-  private static InterlisFieldBinding optionalString(IRowMeta input, String context, String name)
-      throws HopTransformException {
+  private static InterlisFieldBinding stringField(
+      IRowMeta input, String context, String name, boolean required) throws HopTransformException {
     return InterlisFieldBinding.bind(
-        input, context, name, name, 0, new ValueMetaString(name), false);
+        input, context, name, name, 0, new ValueMetaString(name), required);
   }
 
   static IRowMeta output(
@@ -111,6 +96,7 @@ final class InterlisRoleJoinBindings {
     var tid =
         InterlisFieldBinding.bind(
             input, context, name, "lookup TID", 0, new ValueMetaString(name), true);
+    var bid = stringField(input, context, InterlisEnvelopeRowLayout.BID, true);
     var bindings = new ArrayList<InterlisFieldBinding>();
     var factory = new HopRowSchemaFactory();
     for (var field : fields(probe, meta, vars))
@@ -123,9 +109,6 @@ final class InterlisRoleJoinBindings {
               field.outputIndex(),
               factory.createValueMeta(field),
               true));
-    return new Lookup(
-        tid,
-        optionalString(input, context, InterlisEnvelopeRowLayout.BID),
-        new InterlisRowBindings(bindings));
+    return new Lookup(tid, bid, new InterlisRowBindings(bindings));
   }
 }

@@ -1028,66 +1028,29 @@ Objektoperation DELETE wird innerhalb des OBJECT-Pfads behandelt. Bei erforderli
 
 # 15. Transform: INTERLIS Output
 
-## 15.1 Zweck
+## 15.1 Zweck und Metadaten
 
-Komfort-Writer für einen normalen typisierten Input-Stream und genau eine konfigurierte Klasse.
+Datei-Sink für einen oder mehrere typisierte Klassenströme. Jeder benannte
+Eingang ordnet eine Zielklasse, Identitätsfelder und explizite Fachfeldzuordnungen
+zu. Ein Quellobjektträger und ein Operationsfeld sind pro Eingang möglich.
 
-## 15.2 Meta
+Gemeinsame Einstellungen sind Zieldatei, explizite Modellnamen und
+Modellverzeichnisse, Basket-Strategie, Validierung und Spill-Budget.
+Überschreiben ist standardmässig aus, Validierung vor Publikation an.
 
-```text
-fileName, modelNames, modelDirectories, className
-basketId="b1", basketIdField="_ili_bid", objectIdField="_ili_tid"
-operationField="", sourceObjectField="", overwrite=false
-validateBeforePublish=false, validationConfigFile=""
-```
+## 15.2 Runtime
 
-Keine UUID-Erzeugung, Basket-Policy oder Inline-Zeilenvalidierung. Feldbindung erfolgt einmalig anhand der erwarteten Mappingnamen.
+Output kompiliert je Eingang einen Klassenplan und bindet die Hop-Felder einmal
+pro physischem RowSet. Die Zeilen werden fair gelesen. Die Gruppierung nach
+BID verwendet bei Bedarf Spill-Speicher. Mit `FROM_FIELD` kommt der BID aus dem
+gemappten String-Feld, mit `PER_TOPIC` wird bei passender OID-Domain je Topic eine
+UUID gewählt. Eine BID darf nur zu einem Topic gehören.
 
-## 15.3 `getFields`
+Ein optionales Operationsfeld steuert unter anderem DELETE. Der Writer schliesst
+und validiert die vorbereitete XTF-Datei und veröffentlicht sie über
+`InterlisPipelineCompletion` am erfolgreichen Pipeline-Ende.
 
-Output Writer verändert das Schema normalerweise nicht.
-
-## 15.4 Runtime
-
-Beim ersten Input-Row:
-
-1. Modell laden.
-2. InterlisRowMappingPlan für Write erstellen.
-3. Binding gegen `getInputRowMeta()` erstellen.
-4. Writer auf eindeutiger temporärer Zieldatei öffnen.
-5. StartTransfer schreiben.
-6. Basket-Verwaltung initialisieren.
-
-Pro Row:
-
-1. BID bestimmen.
-2. Wenn BID wechselt: bisherigen Basket schliessen, neuen öffnen; bereits abgeschlossene BIDs ablehnen.
-3. Row -> Envelope.
-4. Object/Delete schreiben.
-
-Am Ende:
-
-1. Basket schliessen.
-2. Transfer schliessen.
-3. Writer close.
-4. Optional vollständige temporäre Datei validieren und Ausgabe vorbereiten.
-5. Am erfolgreichen Pipeline-Ende über `InterlisPipelineCompletion` veröffentlichen.
-4. optional Validierung durchführen bzw. integrierten Validator finalisieren.
-
-## 15.5 Sortieranforderung für mehrere Baskets
-
-Ein streaming Writer kann Baskets nicht beliebig verschachteln. Bei `GROUP_BY_BID` muss Input nach BID gruppiert sein.
-
-GUI-Hinweis:
-
-```text
-Input rows must be grouped by Basket ID. If the same BID appears again
-later after another basket was closed, the transform fails.
-```
-
-Eine spätere buffered mode ist möglich, aber nicht Default.
-
-## 15.5 Rückschreiben und Envelope-Projektion
+## 15.3 Rückschreiben und Envelope-Projektion
 
 - `InterlisFieldPlan.structurePath` enthält die vorab aufgelösten Einzelstrukturen.
   Das Schreiben benötigt keine erneute Modellnavigation pro Row.
@@ -1099,12 +1062,10 @@ Eine spätere buffered mode ist möglich, aber nicht Default.
   leer sind. Nicht projizierte Inhalte, insbesondere gesammelte BAG/LIST-Werte,
   bleiben erhalten. Pflichtfelder werden am fertig aufgebauten Objekt geprüft.
   DELETE enthält nur Identität/Operation und erzeugt keine zusätzlichen Links.
-- `InterlisOutputBindings` bindet fachliche Felder nach Namen und Identitäten
-  nach Konfiguration. `objectIdField` gewinnt vor einem zusätzlichen `_ili_tid`.
-  Ein leeres `basketIdField` verwendet den konstanten Basket; ein benanntes Feld
-  muss existieren. Null-/Leerwerte verwenden den konstanten Ersatzwert.
-  Nicht identifizierbare Assoziationen benötigen kein TID-Feld. Runtime, `check()`
-  und Mapping-Anzeige verwenden diese Bindung.
+- `MappedClassPlan` bindet die konfigurierten Fach- und Identitätsfelder.
+  `FROM_FIELD` verlangt pro Eingang ein vorhandenes BID-Feld und pro Objekt
+  einen Wert. Mit `PER_TOPIC` wird die Topic-BID direkt gebunden.
+  Nicht identifizierbare Assoziationen benötigen kein TID-Feld.
 - `InterlisObjectToRowOutputPlan` bestimmt Designzeit-Metadaten und Runtime-Werte.
   Append erhält Eingabefelder und ihre Reihenfolge. Kompatible technische
   Identitätsfelder werden einmalig übernommen, fachliche Namenskollisionen und
@@ -1361,11 +1322,11 @@ else:
 
 # 21. Transform: INTERLIS Structure Collect
 
-Eltern-/Kind-Eingänge werden mit `FairInputReader` koordiniert. Ausstehende Eltern und die aktuelle Kindgruppe nutzen Spill-Speicher. Beide Ströme müssen nach Elternidentität aufsteigend sortiert sein, mit neuen Defaults nach `(BID, Elternschlüssel)`. Strikte LIST-Indizes verlangen zusätzlich eine aufsteigende, lückenlose Folge; sonst wird innerhalb der Gruppe sortiert.
+Eltern-/Kind-Eingänge werden mit `FairInputReader` koordiniert. Ausstehende Eltern und die aktuelle Kindgruppe nutzen Spill-Speicher. Beide Ströme müssen nach Elternidentität aufsteigend sortiert sein, nach `(BID, Elternschlüssel)`. Strikte LIST-Indizes verlangen zusätzlich eine aufsteigende, lückenlose Folge; sonst wird innerhalb der Gruppe sortiert.
 
 Meta enthält Modellquelle/Klasse, `structureAttributePath`, `sourceObjectField`, `selectedChildFields`, die beiden Eingangstransforms, `parentKeyField`, `childParentKeyField`, `childIndexField`, `parentBidField`, `childParentBidField`, `collectMode`, `strictOrdering`, `failOnDuplicateIndex`, `failOnChildWithoutParent` und Pufferoptionen.
 
-Neue Konfigurationen verwenden PRESERVE und BID-Felder; alte XML-Dateien laden REBUILD und die bisherigen Schlüssel. PRESERVE prüft und kopiert `_ili_child_object`, REBUILD erzeugt das Strukturkind aus gewählten Feldern. Primitive Kindzeilen verwenden `_ili_value`. Kardinalität wird nach dem Sammeln geprüft.
+Collect verwendet standardmässig PRESERVE und verlangt BID-Felder. PRESERVE prüft und kopiert `_ili_child_object`, REBUILD erzeugt das Strukturkind aus gewählten Feldern. Primitive Kindzeilen verwenden `_ili_value`. Kardinalität wird nach dem Sammeln geprüft.
 
 Ausgabe ist die Elternzeile mit aktualisiertem `_ili_source_object`. Collect ersetzt die gesamte gewählte Sammlung; gefilterte Kinder dürfen nicht aus dem Elternträger wieder auftauchen. Row to Object beziehungsweise typisierter Output übernimmt den geänderten Carrier als Overlay.
 
@@ -1392,11 +1353,17 @@ lookupTidField          (Default _ili_tid)
 lookupFields[]          (Default: alle Attribute der Zielklasse)
 prefix                  (Default <role>_)
 failOnMissingMandatoryReference
-failOnDuplicateTid
+failOnDuplicateKey
 maxLookupRows
 ```
 
 Runtime verwendet einen Spill-Lookup statt einer vollständigen Heap-Map sowie einen Spill-Puffer für ausstehende Hauptzeilen. `FairInputReader` bedient beide Eingänge abwechselnd; die erste Ausgabe wartet auf das vollständige Lookup. `maxLookupRows=500000` zählt Eingangszeilen, 0 bedeutet unbegrenzt. Überschreitung und negative Limits scheitern.
+
+Die Join-Identität ist `(BID, TID)`. Beide Eingänge enthalten `_ili_bid` als
+String. Das Ziel-BID-Feld heisst `<Referenzfeld>_bid` und ist für EXTERNAL-Rollen
+im Schema erforderlich. Eine leere Ziel-BID verwendet die BID der Hauptzeile.
+Fehlende BID-Werte für benötigte Schlüssel sind Fehler. Die Duplikatoption
+prüft das gesamte Schlüsselpaar.
 
 Die Rolle wird in der zentralen Modellanalyse aufgelöst. `getFields()` und Laufzeit verwenden dieselbe Auswahl typisierter Zielfelder. Konfigurationsnamen sind `mainClassName` und `roleName`; ein gesonderter `rolePath` ist kein Meta-Feld.
 
@@ -1490,17 +1457,9 @@ public final class InterlisUiModelService {
 
 ## 25.2 `InterlisSchemaPreviewFormatter`
 
-```java
-public String formatClass(InterlisClassDescriptor descriptor, ProjectionOptions options);
-public String formatStructure(...);
-public String formatAssociation(...);
-```
+Die UI-neutrale Vorschau verwendet `InterlisSchemaPreview` mit typisierten
+Tabellenzeilen und einem separaten Diagnosebereich.
 
-In der SWT-Implementierung liefert die Preview-Erzeugung zusätzlich das
-strukturierte `InterlisSchemaPreview` aus Abschnitt „Strukturierte
-Schema-Preview“. Die bisherigen Textformatierer bleiben nur für
-Abwärtskompatibilität und Tests verfügbar; Dialoge verwenden für die Anzeige
-die Tabelle und einen separaten Diagnosebereich.
 
 ## 25.3 `InterlisModelTreeBuilder`
 
@@ -1561,12 +1520,10 @@ Persistente Einstellungen werden mit `@HopMetadataProperty` gespeichert.
 `selectedFieldsJson`-Feld oder eine editierbare Klassenfeldliste existiert im
 aktuellen Plugin nicht.
 
-Neue Explode-Konfigurationen aktivieren `keep_child_source_object`; neue Collect-
-Konfigurationen verwenden `collect_mode=PRESERVE`, `parent_bid_field=_ili_bid` und
-`child_parent_bid_field=_ili_parent_bid`. Die `loadXml`-Kompatibilität behandelt
-fehlende neue Optionen ausdrücklich als bisherige Semantik: Explode ohne
-Kindträger, Collect REBUILD ohne BID-Schlüssel. Speichern und erneutes Laden müssen
-diese Unterscheidung sowie die Feldprojektion und Pufferoptionen erhalten.
+Explode aktiviert standardmässig `keep_child_source_object` und
+`emit_update_reference`. Collect verwendet `collect_mode=PRESERVE`,
+`parent_bid_field=_ili_bid` und `child_parent_bid_field=_ili_parent_bid`.
+Für neu aufgebaute Strukturkinder wird `REBUILD` ausdrücklich gewählt.
 
 # 29. `check(...)`-Strategie aller Meta-Klassen
 
@@ -1652,7 +1609,7 @@ Eingangsströme bleiben nach Elternidentität zu sortieren. Explode liefert Kind
 über einen Cursor einzeln. Das bestehende Role-Join-Limit bleibt 500'000
 Eingangszeilen; 0 bedeutet unbegrenzt, negative Werte sind Fehler.
 
-Beide Hop-Writer verwenden `PreparedXtfOutput`: eindeutige temporäre Datei im
+Die XTF-Dateisinks verwenden `PreparedXtfOutput`: eindeutige temporäre Datei im
 Zielverzeichnis, vollständiges Transferende, erfolgreiches Schliessen und optional
 Vollvalidierung, dann Vorbereitung. `InterlisPipelineCompletion` veröffentlicht
 am Pipeline-Ende erst nach allen aufgeschobenen Validate-Fehlern und nur ohne
@@ -1663,7 +1620,7 @@ nicht ersetzt. Eine nicht unterstützte Operation scheitert ohne unsicheren
 Fallback. Die Garantie gilt pro Datei; mehrere Ziele sind keine gemeinsame
 Dateisystemtransaktion.
 
-`validateBeforePublish=false` bleibt Default. Eine optionale Konfigurationsdatei
+Output und Update validieren standardmässig vor Veröffentlichung. Bei Transfer Output ist die Option standardmässig aus. Eine optionale Konfigurationsdatei
 und `InterlisValidationService` ermöglichen Vollvalidierung einschliesslich zweitem
 Durchlauf. Fehler oder unvollständige Validierung verhindern die Veröffentlichung.
 Der Validate-Transform verwendet denselben Dienst und liefert vor dem Pipelinefehler
@@ -1733,13 +1690,15 @@ design, gebaut für CLI-Tools). Die Architektur trägt dem wie folgt Rechnung:
 Ein Concurrency-Stresstest (zwei parallele Inputs + zwei parallele Validates
 auf dem geteilten Modell) sichert diese Invarianten ab.
 
-# 32. Backward compatibility
+# 32. Pre-production plugin contracts
 
-Ab erster öffentlicher 0.x-Version gelten stabile Plugin IDs. Namen dürfen übersetzt/verbessert werden, IDs nicht.
+Während der Vorproduktion gilt jeweils die aktuelle Plugin-Konfiguration und
+API. Überholte XML-Felder, historische Defaults, Aliase und alte API-Varianten
+werden entfernt. Repositorytests und Beispielpipelines werden bei Änderungen
+des Vertrags aktualisiert.
 
-Konfigurations-JSONs tragen Versionsnummern.
-
-Bei Schema-Änderungen braucht es Migration in Meta-Klassen oder tolerant lesbare Defaults.
+Unterstützte INTERLIS- und XTF-Versionen, notwendige Bibliotheks-Workarounds
+und fachliche Modellmigration sind Teil der aktuellen Funktionalität.
 
 # 33. Sicherheits-/Qualitätsregeln für die Implementierung
 
@@ -1805,12 +1764,12 @@ Der Basket-Puffer hält nur den aktiven Basket. `Batch` ist ein explizit zu schl
   Transfer Output. `PreparedXtfOutput` kann eine Vorbedingung unmittelbar vor der
   Publikation nochmals prüfen (Originaldatei weiterhin unverändert).
 
-Input persistiert `selectFields` getrennt von `selectedFields`: false bzw. fehlend
-bedeutet bisherige vollständige Projektion; true mit leerer Liste bedeutet nur
-aktivierte technische Felder und optional Quellobjekt. Explode persistiert
-`emit_update_reference`: neue Defaults true, fehlendes XML-Feld false. Der
-Herkunftsschlüssel wird nach den Kind-/Quellobjektfeldern und vor zusätzlichen
-Elternfeldern angefügt. Die neue Plugin-ID lautet `INTERLIS_UPDATE`.
+Input verwendet mit `selectFields=false` die vollständige Projektion. Ist
+`selectFields` aktiv und `selectedFields` leer, werden nur aktivierte technische
+Felder und das optionale Quellobjekt projiziert. Explode aktiviert
+`emit_update_reference` standardmässig. Der Herkunftsschlüssel wird nach den
+Kind- und Quellobjektfeldern vor zusätzlichen Elternfeldern angefügt.
+Die Plugin-ID lautet `INTERLIS_UPDATE`.
 
 Neue Dateisinks bleiben Single-copy. Beliebig viele vorgelagerte Kopien sind
 zulässig. Keine neue Bibliothek, kein geänderter INTERLIS-/Hop-/CI-Pin und keine

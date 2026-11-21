@@ -86,11 +86,6 @@ public final class InterlisEnvelopeRowLayout {
 
   public static final int FIELD_COUNT = FIELD_NAMES.size();
 
-  /** The number of envelope fields. */
-  public static int fieldCount() {
-    return FIELD_COUNT;
-  }
-
   private InterlisEnvelopeRowLayout() {}
 
   /** Maps an envelope to row values in layout order. */
@@ -120,7 +115,7 @@ public final class InterlisEnvelopeRowLayout {
 
   /** Parses row values back into an envelope. */
   public static InterlisObjectEnvelope fromRow(Object[] values) {
-    if (values == null || values.length < 14) {
+    if (values == null || values.length != FIELD_COUNT) {
       throw new IllegalArgumentException(
           "Envelope row must have "
               + FIELD_COUNT
@@ -162,38 +157,7 @@ public final class InterlisEnvelopeRowLayout {
         operation,
         object,
         basket.isEmpty() ? null : basket,
-        values.length > TRANSFER_METADATA_INDEX
-            ? InterlisTransferMetadata.fromJson(string(values[TRANSFER_METADATA_INDEX]))
-            : null);
-  }
-
-  /** The event type value of a row, or {@code null} when absent. */
-  public static String eventType(Object[] values) {
-    return values == null ? null : string(values[EVENT_TYPE_INDEX]);
-  }
-
-  /** The basket id of a row, or {@code null} when absent. */
-  public static String basketId(Object[] values) {
-    return values == null ? null : string(values[BID_INDEX]);
-  }
-
-  /** The object id of a row, or {@code null} when absent. */
-  public static String objectId(Object[] values) {
-    return values == null ? null : string(values[TID_INDEX]);
-  }
-
-  /** The class name of a row, or {@code null} when absent. */
-  public static String className(Object[] values) {
-    return values == null ? null : string(values[CLASS_INDEX]);
-  }
-
-  /** The IOM object of a row, or {@code null} when absent. */
-  public static IomObject object(Object[] values) {
-    if (values == null) {
-      return null;
-    }
-    Object value = values[OBJECT_INDEX];
-    return value instanceof IomObject iomObject ? iomObject : null;
+        InterlisTransferMetadata.fromJson(string(values[TRANSFER_METADATA_INDEX])));
   }
 
   /**
@@ -216,6 +180,7 @@ public final class InterlisEnvelopeRowLayout {
             object == null ? null : object.getobjectoid(),
             operation == null ? InterlisObjectOperation.NONE : operation,
             object,
+            null,
             null);
     return toRow(envelope);
   }

@@ -44,11 +44,6 @@
     <fileName>${E2E_OUTPUT_DIR}/delete-roundtrip.xtf</fileName>
     <modelNames>HopIli_Associations_V1</modelNames>
     <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
-    <className>HopIli_Associations_V1.Data.Person</className>
-    <objectIdField>_ili_tid</objectIdField>
-    <basketIdField>_ili_bid</basketIdField>
-    <basketId>b1</basketId>
-    <operationField>_ili_operation</operationField>
     <overwrite>Y</overwrite>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -61,6 +56,31 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <basketMode>FROM_FIELD</basketMode>
+    <validateBeforePublish>N</validateBeforePublish>
+    <inputs>
+      <input>
+        <transformName>INTERLIS Input</transformName>
+        <className>HopIli_Associations_V1.Data.Person</className>
+        <objectIdField>_ili_tid</objectIdField>
+        <basketIdField>_ili_bid</basketIdField>
+        <operationField>_ili_operation</operationField>
+        <fields>
+          <field>
+            <sourceField>Name</sourceField>
+            <targetPath>Name</targetPath>
+          </field>
+          <field>
+            <sourceField>Address_ref</sourceField>
+            <targetPath>Address_ref</targetPath>
+          </field>
+          <field>
+            <sourceField>Address_Share</sourceField>
+            <targetPath>Address_Share</targetPath>
+          </field>
+        </fields>
+      </input>
+    </inputs>
   </transform>
   <order>
     <hop>

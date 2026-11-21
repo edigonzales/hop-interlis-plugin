@@ -22,7 +22,9 @@ class InterlisEnvelopeRowLayoutTest {
             "Model.Topic.ClassA",
             "t1",
             InterlisObjectOperation.DELETE,
-            object);
+            object,
+            null,
+            null);
 
     Object[] row = InterlisEnvelopeRowLayout.toRow(envelope);
 
@@ -43,7 +45,7 @@ class InterlisEnvelopeRowLayoutTest {
             null,
             null,
             null);
-    assertThat(InterlisEnvelopeRowLayout.fieldCount()).isEqualTo(15);
+    assertThat(InterlisEnvelopeRowLayout.FIELD_COUNT).isEqualTo(15);
   }
 
   @Test
@@ -59,6 +61,7 @@ class InterlisEnvelopeRowLayoutTest {
           "t1",
           "DELETE",
           object,
+          null,
           null,
           null,
           null,
@@ -80,6 +83,15 @@ class InterlisEnvelopeRowLayoutTest {
   }
 
   @Test
+  void requires_the_transfer_metadata_slot_in_the_canonical_row() {
+    assertThatThrownBy(
+            () ->
+                InterlisEnvelopeRowLayout.fromRow(
+                    new Object[InterlisEnvelopeRowLayout.TRANSFER_METADATA_INDEX]))
+        .hasMessageContaining("must have 15 values");
+  }
+
+  @Test
   void rejects_unknown_event_and_operation_values() {
     Object[] row =
         new Object[] {
@@ -90,6 +102,7 @@ class InterlisEnvelopeRowLayoutTest {
           null,
           null,
           "WHATEVER",
+          null,
           null,
           null,
           null,
@@ -114,12 +127,13 @@ class InterlisEnvelopeRowLayoutTest {
         InterlisEnvelopeRowLayout.objectRow(
             object, "b1", "Model.Topic", InterlisObjectOperation.INSERT);
 
-    assertThat(InterlisEnvelopeRowLayout.eventType(row)).isEqualTo("OBJECT");
-    assertThat(InterlisEnvelopeRowLayout.basketId(row)).isEqualTo("b1");
-    assertThat(InterlisEnvelopeRowLayout.objectId(row)).isEqualTo("t1");
-    assertThat(InterlisEnvelopeRowLayout.className(row)).isEqualTo("Model.Topic.ClassA");
-    assertThat(InterlisEnvelopeRowLayout.object(row)).isSameAs(object);
-    assertThat(row[InterlisEnvelopeRowLayout.MODEL_INDEX]).isEqualTo("Model");
+    var envelope = InterlisEnvelopeRowLayout.fromRow(row);
+    assertThat(envelope.eventType()).isEqualTo(InterlisEventType.OBJECT);
+    assertThat(envelope.basketId()).isEqualTo("b1");
+    assertThat(envelope.objectId()).isEqualTo("t1");
+    assertThat(envelope.className()).isEqualTo("Model.Topic.ClassA");
+    assertThat(envelope.object()).isSameAs(object);
+    assertThat(envelope.modelName()).isEqualTo("Model");
   }
 
   @Test

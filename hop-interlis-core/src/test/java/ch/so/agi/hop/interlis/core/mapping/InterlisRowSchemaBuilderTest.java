@@ -79,7 +79,18 @@ class InterlisRowSchemaBuilderTest {
         builder.build(
             geometry,
             classOf(geometry, "HopIli_Geometry_V1.Data.TestObject"),
-            new ProjectionOptions(true, false, true, true, true, true, "_", null, java.util.Set.of("Name")));
+            new ProjectionOptions(
+                true,
+                false,
+                true,
+                true,
+                true,
+                true,
+                "_",
+                null,
+                java.util.Set.of("Name"),
+                false,
+                true));
 
     assertThat(plan.fields())
         .extracting(InterlisFieldPlan::hopFieldName)
@@ -127,8 +138,18 @@ class InterlisRowSchemaBuilderTest {
         builder.build(
             geometry,
             classOf(geometry, "HopIli_Geometry_V1.Data.TestObject"),
-            new ProjectionOptions(true, true, false, false, false, true, "_", null,
-                java.util.Set.of("Name", "Boundary")));
+            new ProjectionOptions(
+                true,
+                true,
+                false,
+                false,
+                false,
+                true,
+                "_",
+                null,
+                java.util.Set.of("Name", "Boundary"),
+                false,
+                true));
 
     assertThat(plan.fields())
         .extracting(InterlisFieldPlan::hopFieldName)
@@ -277,8 +298,8 @@ class InterlisRowSchemaBuilderTest {
         builder.build(
             structures,
             classOf(structures, "HopIli_Structures_V1.Data.Person"),
-            new ProjectionOptions(true, true, false, false, false, true, "__", null,
-                java.util.Set.of()));
+            new ProjectionOptions(
+                true, true, false, false, false, true, "__", null, null, false, true));
 
     assertThat(plan.fields())
         .extracting(InterlisFieldPlan::hopFieldName)

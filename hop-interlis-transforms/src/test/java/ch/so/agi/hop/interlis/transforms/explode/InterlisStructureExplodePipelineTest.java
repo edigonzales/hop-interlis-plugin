@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.explode;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
 import java.util.List;
@@ -31,7 +32,7 @@ class InterlisStructureExplodePipelineTest {
       throws Exception {
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(TestData.path("/data/HopIli_Structures_V1_valid.xtf").toString());
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(TestData.path("/models").toString());
     input.setClassName("HopIli_Structures_V1.Data.Person");
     input.setIncludeTid(true);
@@ -145,7 +146,7 @@ class InterlisStructureExplodePipelineTest {
   void missing_carrier_fails_with_actionable_error() throws Exception {
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(TestData.path("/data/HopIli_Structures_V1_valid.xtf").toString());
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(TestData.path("/models").toString());
     input.setClassName("HopIli_Structures_V1.Data.Person");
     input.setIncludeTid(true);

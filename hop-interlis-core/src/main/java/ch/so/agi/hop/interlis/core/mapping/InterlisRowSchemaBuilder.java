@@ -176,7 +176,14 @@ public final class InterlisRowSchemaBuilder {
     usedNames.add(name);
     fields.add(
         new InterlisFieldPlan(
-            index, name, source, InterlisPropertyPath.root(name), null, null, null));
+            index,
+            name,
+            source,
+            InterlisPropertyPath.root(name),
+            null,
+            null,
+            null,
+            java.util.List.of()));
     return index + 1;
   }
 
@@ -463,7 +470,8 @@ public final class InterlisRowSchemaBuilder {
                 InterlisPropertyPath.root(attribute.name()),
                 attribute,
                 role,
-                association.get()));
+                association.get(),
+                java.util.List.of()));
         index++;
       }
       return index;
@@ -526,7 +534,14 @@ public final class InterlisRowSchemaBuilder {
     }
     fields.add(
         new InterlisFieldPlan(
-            index, hopFieldName, source, InterlisPropertyPath.root(role.name()), null, role, null));
+            index,
+            hopFieldName,
+            source,
+            InterlisPropertyPath.root(role.name()),
+            null,
+            role,
+            null,
+            java.util.List.of()));
     return index + 1;
   }
 

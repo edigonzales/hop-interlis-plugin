@@ -1,10 +1,7 @@
 package ch.so.agi.hop.interlis.transforms;
 
 import ch.so.agi.hop.interlis.core.mapping.InterlisFieldPlan;
-import ch.so.agi.hop.interlis.core.mapping.InterlisFieldSource;
-import ch.so.agi.hop.interlis.core.mapping.InterlisPropertyPath;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowMappingPlan;
-import ch.so.agi.hop.interlis.core.model.InterlisAttributeDescriptor;
 import ch.so.agi.hop.interlis.core.structures.InterlisStructurePlan;
 import java.util.ArrayList;
 import java.util.List;
@@ -72,15 +69,6 @@ public final class InterlisSchemaPreviewSupport {
   }
 
   /** Builds the child-row preview used by Structure Explode. */
-  public static InterlisSchemaPreview createStructurePreview(InterlisStructurePlan plan) {
-    return createStructurePreview(plan, false);
-  }
-
-  public static InterlisSchemaPreview createStructurePreview(
-      InterlisStructurePlan plan, boolean carrier) {
-    return createStructurePreview(plan, carrier, false);
-  }
-
   public static InterlisSchemaPreview createStructurePreview(
       InterlisStructurePlan plan, boolean carrier, boolean updateReference) {
     List<InterlisPreviewRow> prefixRows =
@@ -129,17 +117,6 @@ public final class InterlisSchemaPreviewSupport {
       case ROLE_REFERENCE -> "-> " + field.roleDescriptor().targetClassScopedName();
       default -> field.attributeDescriptor() == null ? "" : field.attributeDescriptor().typeName();
     };
-  }
-
-  /** Creates a field plan suitable for previews of target-class fields such as Role Join. */
-  public static InterlisFieldPlan attributeFieldPlan(
-      String outputName, InterlisAttributeDescriptor attribute) {
-    InterlisFieldSource source =
-        attribute.kind().isGeometry()
-            ? InterlisFieldSource.GEOMETRY_ATTRIBUTE
-            : InterlisFieldSource.PRIMITIVE_ATTRIBUTE;
-    return new InterlisFieldPlan(
-        0, outputName, source, InterlisPropertyPath.root(attribute.name()), attribute, null, null);
   }
 
   private static String message(Throwable throwable) {

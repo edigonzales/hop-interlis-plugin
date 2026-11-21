@@ -7,7 +7,6 @@ import ch.interlis.iom_j.Iom_jObject;
 import ch.so.agi.hop.interlis.core.TestResources;
 import ch.so.agi.hop.interlis.core.geometry.InterlisGeometryMapper;
 import ch.so.agi.hop.interlis.core.mapping.DefaultInterlisObjectToRowMapper;
-import ch.so.agi.hop.interlis.core.mapping.InterlisObjectToRowMapper;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowMappingPlan;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowSchemaBuilder;
 import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
@@ -212,7 +211,9 @@ class Chlv95GeometryMappingTest {
         object.getobjecttag(),
         object.getobjectoid(),
         InterlisObjectOperation.NONE,
-        object);
+        object,
+        null,
+        null);
   }
 
   private static IomObject legacySurface() {

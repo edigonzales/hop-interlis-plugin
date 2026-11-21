@@ -247,11 +247,7 @@ public final class InterlisStructureCollector {
   }
 
   /** One collected child row. */
-  public record StructureChild(int index, Object[] values, IomObject source) {
-    public StructureChild(int index, Object[] values) {
-      this(index, values, null);
-    }
-  }
+  public record StructureChild(int index, Object[] values, IomObject source) {}
 
   /**
    * Collect options.
@@ -265,13 +261,8 @@ public final class InterlisStructureCollector {
       boolean failOnDuplicateIndex,
       RowWriteOptions rowWriteOptions,
       boolean preserve) {
-    public StructureCollectOptions(
-        boolean strictOrdering, boolean failOnDuplicateIndex, RowWriteOptions rowWriteOptions) {
-      this(strictOrdering, failOnDuplicateIndex, rowWriteOptions, false);
-    }
-
     public static StructureCollectOptions defaults() {
-      return new StructureCollectOptions(true, true, RowWriteOptions.defaults());
+      return new StructureCollectOptions(true, true, RowWriteOptions.defaults(), false);
     }
   }
 }

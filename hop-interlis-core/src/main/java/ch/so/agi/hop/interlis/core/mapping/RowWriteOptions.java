@@ -16,10 +16,6 @@ public record RowWriteOptions(boolean strict, String basketId, InterlisObjectOpe
     return new RowWriteOptions(true, "b1", InterlisObjectOperation.NONE);
   }
 
-  public RowWriteOptions(boolean strict, String basketId) {
-    this(strict, basketId, InterlisObjectOperation.NONE);
-  }
-
   /** {@code true} when the mapped object is a delete operation. */
   public boolean isDelete() {
     return operation == InterlisObjectOperation.DELETE;

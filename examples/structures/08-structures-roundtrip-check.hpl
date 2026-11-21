@@ -64,6 +64,8 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <emit_update_reference>N</emit_update_reference>
+    <keep_child_source_object>N</keep_child_source_object>
   </transform>
   <transform>
     <type>SelectValues</type>

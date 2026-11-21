@@ -270,7 +270,8 @@ public final class InterlisSchemaExtractor {
           -1,
           InterlisGeometryEncoding.NATIVE,
           reference.getReferred() == null ? null : reference.getReferred().getScopedName(null),
-          reference.isExternal());
+          reference.isExternal(),
+          java.util.Set.of());
     }
     if (type instanceof CompositionType composition) {
       Table component = composition.getComponentType();

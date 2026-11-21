@@ -140,7 +140,9 @@ public class InterlisObjectToRowMeta
         true,
         "_",
         resolvedDefaultSrid(variables).orElse(null),
-        java.util.Set.of());
+        null,
+        false,
+        true);
   }
 
   /** Resolves the configured default SRID; empty or unparsable yields {@code null}. */

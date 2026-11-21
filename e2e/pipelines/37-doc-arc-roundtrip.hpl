@@ -32,16 +32,38 @@
     <fileName>${E2E_OUTPUT_DIR}/doc-bogen-roundtrip.xtf</fileName>
     <modelNames>DemoBogen</modelNames>
     <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
-    <className>DemoBogen.Verkehr.Strassenachse</className>
-    <objectIdField>_ili_tid</objectIdField>
-    <basketIdField>_ili_bid</basketIdField>
-    <basketId>b1</basketId>
     <overwrite>Y</overwrite>
     <distribute>N</distribute>
     <copies>1</copies>
-    <GUI><xloc>350</xloc><yloc>100</yloc></GUI>
-    <partitioning><method>none</method><schema_name/></partitioning>
+    <GUI>
+      <xloc>350</xloc>
+      <yloc>100</yloc>
+    </GUI>
+    <partitioning>
+      <method>none</method>
+      <schema_name/>
+    </partitioning>
     <attributes/>
+    <basketMode>FROM_FIELD</basketMode>
+    <validateBeforePublish>N</validateBeforePublish>
+    <inputs>
+      <input>
+        <transformName>Input</transformName>
+        <className>DemoBogen.Verkehr.Strassenachse</className>
+        <objectIdField>_ili_tid</objectIdField>
+        <basketIdField>_ili_bid</basketIdField>
+        <fields>
+          <field>
+            <sourceField>Name</sourceField>
+            <targetPath>Name</targetPath>
+          </field>
+          <field>
+            <sourceField>Geometrie</sourceField>
+            <targetPath>Geometrie</targetPath>
+          </field>
+        </fields>
+      </input>
+    </inputs>
   </transform>
   <transform>
     <type>TextFileOutput</type>

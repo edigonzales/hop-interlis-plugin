@@ -32,8 +32,6 @@ public class MappedSinkDialog extends BaseTransformDialog {
     original = meta;
     draftMeta = (BaseTransformMeta<?, ?>) meta.clone();
     draft = (MappedSinkSettings) draftMeta;
-    if (draftMeta instanceof InterlisOutputMeta output)
-      output.setMode(InterlisOutputMeta.Mode.MAPPED_INPUTS);
   }
 
   @Override
@@ -102,8 +100,6 @@ public class MappedSinkDialog extends BaseTransformDialog {
             refreshInputs();
           }
         });
-    if (draft instanceof InterlisOutputMeta)
-      button(actions, "Legacy single-class mode…", this::legacy);
     status = new Label(shell, SWT.WRAP);
     status.setText(
         draft instanceof InterlisUpdateMeta
@@ -236,18 +232,6 @@ public class MappedSinkDialog extends BaseTransformDialog {
         throw new IllegalArgumentException("Add at least one input mapping");
       draft.setInputs(draft.getInputs());
       commit(draftMeta, wTransformName.getText());
-    } catch (Exception e) {
-      error(e);
-    }
-  }
-
-  private void legacy() {
-    try {
-      readSettings();
-      var legacy = (InterlisOutputMeta) draftMeta.clone();
-      legacy.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
-      String name = new InterlisOutputDialog(shell, variables, legacy, pipelineMeta).open();
-      if (name != null) commit(legacy, name);
     } catch (Exception e) {
       error(e);
     }

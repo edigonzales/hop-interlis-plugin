@@ -62,6 +62,12 @@
         <length>-2</length>
         <precision>-2</precision>
       </field>
+      <field>
+        <name>_ili_bid</name>
+        <rename>_ili_bid</rename>
+        <length>-2</length>
+        <precision>-2</precision>
+      </field>
       <select_unspecified>N</select_unspecified>
     </fields>
     <distribute>Y</distribute>
@@ -90,7 +96,7 @@
     <prefix/>
     <lookupFields>Street</lookupFields>
     <failOnMissingMandatoryReference>N</failOnMissingMandatoryReference>
-    <failOnDuplicateTid>Y</failOnDuplicateTid>
+    <failOnDuplicateKey>Y</failOnDuplicateKey>
     <maxLookupRows>500000</maxLookupRows>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -185,6 +191,12 @@
       <field>
         <name>_ili_tid</name>
         <rename>key</rename>
+        <length>-2</length>
+        <precision>-2</precision>
+      </field>
+      <field>
+        <name>_ili_bid</name>
+        <rename>_ili_bid</rename>
         <length>-2</length>
         <precision>-2</precision>
       </field>

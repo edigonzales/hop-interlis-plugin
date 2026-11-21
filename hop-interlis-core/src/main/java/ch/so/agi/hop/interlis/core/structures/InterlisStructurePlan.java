@@ -27,23 +27,6 @@ public record InterlisStructurePlan(
     List<String> warnings,
     java.util.Set<String> allowedChildTypes) {
 
-  public InterlisStructurePlan(
-      InterlisClassDescriptor parentClass,
-      List<InterlisAttributeDescriptor> pathAttributes,
-      InterlisAttributeDescriptor structureAttribute,
-      InterlisStructureDescriptor structure,
-      List<InterlisFieldPlan> childFields,
-      List<String> warnings) {
-    this(
-        parentClass,
-        pathAttributes,
-        structureAttribute,
-        structure,
-        childFields,
-        warnings,
-        structure == null ? java.util.Set.of() : java.util.Set.of(structure.scopedName()));
-  }
-
   public String childTypeName() {
     return primitive() ? structureAttribute.typeName() : structure.scopedName();
   }

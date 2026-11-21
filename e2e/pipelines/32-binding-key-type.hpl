@@ -94,7 +94,7 @@
     <emitParentBid>Y</emitParentBid>
     <structureAttributePath>Children</structureAttributePath>
     <parentKeyFieldName>_ili_parent_tid</parentKeyFieldName>
-    <parentBidKeyFieldName>_ili_parent_bid</parentBidKeyFieldName>
+    <parentBidKeyFieldName>_ili_bid</parentBidKeyFieldName>
     <indexFieldName>_ili_index</indexFieldName>
     <emitIndexForBag>Y</emitIndexForBag>
     <includeParentFields>Name</includeParentFields>
@@ -109,6 +109,8 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <emit_update_reference>N</emit_update_reference>
+    <keep_child_source_object>N</keep_child_source_object>
   </transform>
   <transform>
     <type>INTERLIS_ROLE_JOIN</type>
@@ -124,7 +126,7 @@
     <prefix/>
     <lookupFields>Street</lookupFields>
     <failOnMissingMandatoryReference>N</failOnMissingMandatoryReference>
-    <failOnDuplicateTid>Y</failOnDuplicateTid>
+    <failOnDuplicateKey>Y</failOnDuplicateKey>
     <maxLookupRows>500000</maxLookupRows>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -178,6 +180,12 @@
       <field>
         <name>_ili_tid</name>
         <rename>key</rename>
+        <length>-2</length>
+        <precision>-2</precision>
+      </field>
+      <field>
+        <name>_ili_bid</name>
+        <rename>_ili_bid</rename>
         <length>-2</length>
         <precision>-2</precision>
       </field>

@@ -19,33 +19,16 @@ class InterlisDialogUiSupportTest {
   }
 
   @Test
-  void class_selection_request_is_an_informational_status() {
-    assertThat(
-            InterlisDialogUiSupport.statusSeverity(
-                false, true, "Model loaded. Select an INTERLIS class."))
-        .isEqualTo(InterlisDialogUiSupport.StatusSeverity.INFO);
-  }
-
-  @Test
   void incomplete_configuration_is_an_informational_status() {
     var result =
-        new InterlisProbeResult(false, "Any translated message", null, List.of())
-            .withStatus(InterlisProbeStatus.INFO);
+        new InterlisProbeResult(
+            false,
+            "Any translated message",
+            null,
+            List.of(),
+            java.util.List.of(),
+            InterlisProbeStatus.INFO);
     assertThat(result.status()).isEqualTo(InterlisProbeStatus.INFO);
-  }
-
-  @Test
-  void model_resolution_failure_is_an_error_status() {
-    assertThat(
-            InterlisDialogUiSupport.statusSeverity(
-                false, false, "Model NoSuchModel was not found in the repositories."))
-        .isEqualTo(InterlisDialogUiSupport.StatusSeverity.ERROR);
-  }
-
-  @Test
-  void successful_probe_is_a_success_status() {
-    assertThat(InterlisDialogUiSupport.statusSeverity(true, true, "Model loaded"))
-        .isEqualTo(InterlisDialogUiSupport.StatusSeverity.SUCCESS);
   }
 
   @Test

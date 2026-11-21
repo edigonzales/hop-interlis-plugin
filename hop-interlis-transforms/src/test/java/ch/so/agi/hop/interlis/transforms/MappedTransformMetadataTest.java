@@ -17,7 +17,7 @@ import org.apache.hop.metadata.serializer.xml.XmlMetadataUtil;
 import org.apache.hop.pipeline.transform.*;
 import org.junit.jupiter.api.*;
 
-class Prio3MetadataTest {
+class MappedTransformMetadataTest {
   @BeforeAll
   static void init() throws Exception {
     HopEnvironment.init();
@@ -34,7 +34,7 @@ class Prio3MetadataTest {
   }
 
   @Test
-  void nested_mappings_and_output_mode_survive_hop_serialization() throws Exception {
+  void nested_mappings_survive_hop_serialization() throws Exception {
     var meta = new InterlisOutputMeta();
     meta.setDefault();
     var mapping = new InterlisMappedInput();
@@ -43,7 +43,6 @@ class Prio3MetadataTest {
     mapping.setFields(List.of(new InterlisFieldAssignment("label", "Address.Name")));
     meta.setInputs(List.of(mapping));
     var copy = reload(meta, "");
-    assertThat(copy.getMode()).isEqualTo(InterlisOutputMeta.Mode.MAPPED_INPUTS);
     assertThat(copy.isValidateBeforePublish()).isTrue();
     assertThat(copy.getInputs()).hasSize(1);
     assertThat(copy.getInputs().getFirst().getFields().getFirst().getTargetPath())
@@ -51,19 +50,10 @@ class Prio3MetadataTest {
     assertThat(copy.getInputs().getFirst().getFields().getFirst().getSourceField())
         .isEqualTo("label");
     assertThat(copy.getTransformIOMeta().isOutputProducer()).isFalse();
-    assertThat(reload(meta, "mode|validateBeforePublish").getMode())
-        .isEqualTo(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
-    assertThat(reload(meta, "mode|validateBeforePublish").isValidateBeforePublish()).isFalse();
-    var xml =
-        XmlHandler.loadXmlString("<transform><className>Old.Data.Class</className></transform>")
-            .getDocumentElement();
-    meta.loadXml(xml, new MemoryMetadataProvider());
-    assertThat(meta.getMode()).isEqualTo(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
   }
 
   @Test
-  void update_and_explode_options_survive_and_old_explode_layout_stays_unchanged()
-      throws Exception {
+  void update_and_explode_options_survive() throws Exception {
     var update = new InterlisUpdateMeta();
     update.setOriginalFile("${ORIGINAL}");
     var input = new InterlisMappedInput();
@@ -76,7 +66,8 @@ class Prio3MetadataTest {
     var explode = new InterlisStructureExplodeMeta();
     explode.setDefault();
     assertThat(reload(explode, "").isEmitUpdateReference()).isTrue();
-    assertThat(reload(explode, "emit_update_reference").isEmitUpdateReference()).isFalse();
+    explode.setEmitUpdateReference(false);
+    assertThat(reload(explode, "").isEmitUpdateReference()).isFalse();
   }
 
   @Test

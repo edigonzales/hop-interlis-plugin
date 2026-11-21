@@ -25,7 +25,7 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.io.TempDir;
 
 @Timeout(60)
-class Prio3PipelineTest {
+class MappedOutputAndUpdatePipelineTest {
   static final String MODEL = "HopIli_Collections_V1", CLS = MODEL + ".Data.";
   @TempDir Path temp;
 

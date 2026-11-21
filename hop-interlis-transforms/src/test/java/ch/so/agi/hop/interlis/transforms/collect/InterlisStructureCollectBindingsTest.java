@@ -26,11 +26,11 @@ class InterlisStructureCollectBindingsTest {
     carrier.setStorageType(IValueMeta.STORAGE_TYPE_INDEXED);
     carrier.setIndex(new Object[] {object});
     input.addValueMeta(carrier);
+    input.addValueMeta(new ValueMetaString("_ili_bid"));
     var meta = new InterlisStructureCollectMeta();
     meta.setDefault();
-    meta.setParentBidField("");
     var binding = InterlisStructureCollectBindings.parent(input, meta, new Variables());
-    assertThat(binding.carrier().read(new Object[] {"p1", 0})).isSameAs(object);
+    assertThat(binding.carrier().read(new Object[] {"p1", 0, "b1"})).isSameAs(object);
     var output = input.clone();
     meta.getFields(output, "collect", null, null, new Variables(), null);
     assertThat(output.getFieldNames()).containsExactly(input.getFieldNames());
@@ -45,9 +45,9 @@ class InterlisStructureCollectBindingsTest {
     var input = new RowMeta();
     input.addValueMeta(new ValueMetaInteger("_ili_tid"));
     input.addValueMeta(new ValueMetaInterlisObject("_ili_source_object"));
+    input.addValueMeta(new ValueMetaString("_ili_bid"));
     var meta = new InterlisStructureCollectMeta();
     meta.setDefault();
-    meta.setParentBidField("");
     assertThatThrownBy(() -> InterlisStructureCollectBindings.parent(input, meta, new Variables()))
         .hasMessageContaining("parent")
         .hasMessageContaining("expected String, actual Integer");

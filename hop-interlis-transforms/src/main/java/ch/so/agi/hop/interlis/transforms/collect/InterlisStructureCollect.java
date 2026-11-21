@@ -297,7 +297,8 @@ public class InterlisStructureCollect
     return new StructureCollectOptions(
         meta.isStrictOrdering(),
         meta.isFailOnDuplicateIndex(),
-        new RowWriteOptions(true, null),
+        new RowWriteOptions(
+            true, null, ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.NONE),
         meta.getCollectMode() == InterlisStructureCollectMeta.CollectMode.PRESERVE);
   }
 
@@ -333,27 +334,21 @@ public class InterlisStructureCollect
   }
 
   private String parentKey(Object[] row) throws HopException {
-    return identity(
-        data.parentBindings.bid().read(row),
-        data.parentBindings.key().read(row),
-        !res(meta.getParentBidField()).isBlank());
+    return identity(data.parentBindings.bid().read(row), data.parentBindings.key().read(row));
   }
 
   private String childKey(Object[] row) throws HopException {
-    return identity(
-        data.childBindings.bid().read(row),
-        data.childBindings.key().read(row),
-        !res(meta.getChildParentBidField()).isBlank());
+    return identity(data.childBindings.bid().read(row), data.childBindings.key().read(row));
   }
 
-  private String identity(Object bid, Object tid, boolean bidRequired) throws HopException {
+  private String identity(Object bid, Object tid) throws HopException {
     String key = key(tid);
     if (key.isEmpty()) throw new HopException("Collect parent key is empty");
-    if (bidRequired && key(bid).isEmpty())
-      throw new HopException("Collect basket key is empty for parent " + key);
-    if (key.indexOf(0) >= 0 || key(bid).indexOf(0) >= 0)
+    String basket = key(bid);
+    if (basket.isEmpty()) throw new HopException("Collect basket key is empty for parent " + key);
+    if (key.indexOf(0) >= 0 || basket.indexOf(0) >= 0)
       throw new HopException("Collect identity contains a NUL character");
-    return key(bid) + "\u0000" + key;
+    return basket + "\u0000" + key;
   }
 
   private static String display(String key) {

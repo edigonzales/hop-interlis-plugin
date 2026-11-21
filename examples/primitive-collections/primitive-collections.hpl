@@ -66,6 +66,7 @@
       <xloc>500</xloc>
       <yloc>100</yloc>
     </GUI>
+    <emit_update_reference>N</emit_update_reference>
   </transform>
   <transform>
     <name>collect0</name>
@@ -215,6 +216,7 @@
       <xloc>100</xloc>
       <yloc>260</yloc>
     </GUI>
+    <emit_update_reference>N</emit_update_reference>
   </transform>
   <transform>
     <name>collect1</name>
@@ -277,6 +279,7 @@
       <xloc>700</xloc>
       <yloc>260</yloc>
     </GUI>
+    <emit_update_reference>N</emit_update_reference>
   </transform>
   <transform>
     <name>collect2</name>
@@ -339,6 +342,7 @@
       <xloc>300</xloc>
       <yloc>420</yloc>
     </GUI>
+    <emit_update_reference>N</emit_update_reference>
   </transform>
   <transform>
     <name>collect3</name>
@@ -374,12 +378,7 @@
     <type>INTERLIS_OUTPUT</type>
     <modelNames>DemoSammlungen</modelNames>
     <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
-    <className>DemoSammlungen.Daten.Objekt</className>
     <fileName>${E2E_OUTPUT_DIR}/doc-sammlungen.xtf</fileName>
-    <objectIdField>_ili_tid</objectIdField>
-    <basketIdField>_ili_bid</basketIdField>
-    <basketId>b1</basketId>
-    <sourceObjectField>_ili_source_object</sourceObjectField>
     <overwrite>Y</overwrite>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -388,5 +387,16 @@
       <yloc>420</yloc>
     </GUI>
     <validateBeforePublish>Y</validateBeforePublish>
+    <basketMode>FROM_FIELD</basketMode>
+    <inputs>
+      <input>
+        <transformName>collect3</transformName>
+        <className>DemoSammlungen.Daten.Objekt</className>
+        <objectIdField>_ili_tid</objectIdField>
+        <basketIdField>_ili_bid</basketIdField>
+        <sourceObjectField>_ili_source_object</sourceObjectField>
+        <fields/>
+      </input>
+    </inputs>
   </transform>
 </pipeline>

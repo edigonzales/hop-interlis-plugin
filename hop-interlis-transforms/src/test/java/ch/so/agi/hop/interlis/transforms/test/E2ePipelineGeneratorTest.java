@@ -1,5 +1,6 @@
 package ch.so.agi.hop.interlis.transforms.test;
 
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
 import ch.so.agi.hop.interlis.transforms.output.InterlisOutputMeta;
@@ -252,11 +253,13 @@ class E2ePipelineGeneratorTest {
     output.setFileName(outputFile(out, "p1-roundtrip.xtf"));
     output.setModelNames("HopIli_P1_V1");
     output.setModelDirectories(dirs);
-    output.setClassName("HopIli_P1_V1.Data.Item");
-    output.setSourceObjectField("_ili_object");
-    output.setObjectIdField("custom_tid");
-    output.setBasketIdField("");
-    output.setBasketId("constant");
+    var mapping = TestData.mappedInput("step1", "HopIli_P1_V1.Data.Item");
+    mapping.setSourceObjectField("_ili_object");
+    mapping.setObjectIdField("custom_tid");
+    output.setInputs(java.util.List.of(mapping));
+    output.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    output.setValidateBeforePublish(false);
+
     output.setOverwrite(true);
     write(out.resolve("21-p1-overlay-3d.hpl"), chain("21-p1-overlay-3d", input, edit, output));
 
@@ -441,6 +444,8 @@ class E2ePipelineGeneratorTest {
     explode.setParentTidField("parent_key");
     explode.setParentBidField("basket_key");
     explode.setIncludeParentFields(List.of("Name"));
+    explode.setKeepChildSourceObject(false);
+    explode.setEmitUpdateReference(false);
     var csvFields =
         selectFields(
             List.of(
@@ -473,6 +478,9 @@ class E2ePipelineGeneratorTest {
     collect.setStructureAttributePath("Children");
     collect.setSourceObjectField("carrier");
     collect.setParentKeyField("parent_key");
+    collect.setParentBidField("basket_key");
+    collect.setCollectMode(
+        ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta.CollectMode.REBUILD);
     collect.setParentInputTransform("step1");
     collect.setChildInputTransform("children");
     var collector = new TransformMeta("collect", collect);
@@ -501,7 +509,8 @@ class E2ePipelineGeneratorTest {
             List.of(
                 selectField("Name", "Name"),
                 selectField("Address_ref", "reference"),
-                selectField("_ili_tid", "_ili_tid")));
+                selectField("_ili_tid", "_ili_tid"),
+                selectField("_ili_bid", "_ili_bid")));
     var join = new ch.so.agi.hop.interlis.transforms.rolejoin.InterlisRoleJoinMeta();
     join.setDefault();
     join.setMainInputTransform("step1");
@@ -533,7 +542,10 @@ class E2ePipelineGeneratorTest {
     var numeric = (ch.so.agi.hop.interlis.transforms.rolejoin.InterlisRoleJoinMeta) join.clone();
     numeric.setMainInputTransform("step2");
     numeric.setMainReferenceField("_ili_index");
-    var invalid = chain("32-binding-key-type", input, reordered, explode, numeric);
+    var numericParent =
+        (ch.so.agi.hop.interlis.transforms.explode.InterlisStructureExplodeMeta) explode.clone();
+    numericParent.setParentBidKeyFieldName("_ili_bid");
+    var invalid = chain("32-binding-key-type", input, reordered, numericParent, numeric);
     addBindingLookup(invalid, person, "step3");
     write(out.resolve("32-binding-key-type.hpl"), invalid);
   }
@@ -547,7 +559,11 @@ class E2ePipelineGeneratorTest {
     var fields =
         new TransformMeta(
             "lookup fields",
-            selectFields(List.of(selectField("Street", "Street"), selectField("_ili_tid", "key"))));
+            selectFields(
+                List.of(
+                    selectField("Street", "Street"),
+                    selectField("_ili_tid", "key"),
+                    selectField("_ili_bid", "_ili_bid"))));
     pipeline.addTransform(fields);
     pipeline.addPipelineHop(new PipelineHopMeta(source, fields));
     pipeline.addPipelineHop(new PipelineHopMeta(fields, pipeline.findTransform(target)));
@@ -615,7 +631,7 @@ class E2ePipelineGeneratorTest {
 
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(inputFile);
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     input.setClassName("HopIli_Geometry_V1.Data.TestObject");
@@ -627,10 +643,11 @@ class E2ePipelineGeneratorTest {
     output.setModelNames("HopIli_Geometry_V1");
     output.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
-    output.setClassName("HopIli_Geometry_V1.Data.TestObject");
-    output.setObjectIdField("_ili_tid");
-    output.setBasketIdField("_ili_bid");
-    output.setBasketId("b1");
+    var mapping = TestData.mappedInput("INTERLIS Input", "HopIli_Geometry_V1.Data.TestObject");
+    output.setInputs(java.util.List.of(mapping));
+    output.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    output.setValidateBeforePublish(false);
+
     output.setOverwrite(true);
 
     return twoStepPipeline(pipelineMeta, input, output);
@@ -665,7 +682,7 @@ class E2ePipelineGeneratorTest {
 
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(inputFile);
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     input.setClassName("HopIli_Geometry_V1.Data.TestObject");
@@ -686,7 +703,7 @@ class E2ePipelineGeneratorTest {
 
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(inputFile);
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     input.setClassName("HopIli_Spike_V1.Data.Building");
@@ -751,7 +768,7 @@ class E2ePipelineGeneratorTest {
     ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta input =
         new ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta();
     input.setFileName(inputFile);
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     input.setClassName("HopIli_Structures_V1.Data.Person");
@@ -767,6 +784,8 @@ class E2ePipelineGeneratorTest {
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     explode.setClassName("HopIli_Structures_V1.Data.Person");
     explode.setStructureAttributePath("Addresses");
+    explode.setKeepChildSourceObject(false);
+    explode.setEmitUpdateReference(false);
 
     ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta collect =
         new ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta();
@@ -778,19 +797,22 @@ class E2ePipelineGeneratorTest {
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     collect.setClassName("HopIli_Structures_V1.Data.Person");
     collect.setStructureAttributePath("Addresses");
+    collect.setCollectMode(
+        ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta.CollectMode.REBUILD);
 
     InterlisOutputMeta output = new InterlisOutputMeta();
     output.setFileName(outputFile);
     output.setModelNames("HopIli_Structures_V1");
     output.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
-    output.setClassName("HopIli_Structures_V1.Data.Person");
-    output.setObjectIdField("_ili_tid");
-    output.setBasketIdField("_ili_bid");
-    output.setBasketId("b1");
-    output.setSourceObjectField(
-        ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta
-            .DEFAULT_SOURCE_OBJECT_FIELD);
+    var mapping =
+        TestData.mappedInput("INTERLIS Structure Collect", "HopIli_Structures_V1.Data.Person");
+    mapping.setSourceObjectField("_ili_source_object");
+    mapping.getFields().clear();
+    output.setInputs(java.util.List.of(mapping));
+    output.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    output.setValidateBeforePublish(false);
+
     output.setOverwrite(true);
 
     TransformMeta source = new TransformMeta("INTERLIS_INPUT", "INTERLIS Input", input);
@@ -840,6 +862,8 @@ class E2ePipelineGeneratorTest {
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     explode.setClassName("HopIli_Structures_V1.Data.Person");
     explode.setStructureAttributePath("Addresses");
+    explode.setKeepChildSourceObject(false);
+    explode.setEmitUpdateReference(false);
 
     TransformMeta source = new TransformMeta("INTERLIS_INPUT", "INTERLIS Input", input);
     source.setLocation(100, 100);
@@ -880,7 +904,7 @@ class E2ePipelineGeneratorTest {
 
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(inputFile);
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     input.setClassName("HopIli_Associations_V1.Data.Person");
@@ -923,7 +947,7 @@ class E2ePipelineGeneratorTest {
 
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(inputFile);
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     input.setClassName("HopIli_Associations_V1.Data.PersonTask");
@@ -966,10 +990,11 @@ class E2ePipelineGeneratorTest {
     output.setModelNames("HopIli_Associations_V1");
     output.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
-    output.setClassName(className);
-    output.setObjectIdField("_ili_tid");
-    output.setBasketIdField("_ili_bid");
-    output.setBasketId("b1");
+    var mapping = TestData.mappedInput("INTERLIS Input", className);
+    output.setInputs(java.util.List.of(mapping));
+    output.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    output.setValidateBeforePublish(false);
+
     output.setOverwrite(true);
     return output;
   }
@@ -1060,7 +1085,7 @@ class E2ePipelineGeneratorTest {
     ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta input =
         new ch.so.agi.hop.interlis.transforms.transferinput.InterlisTransferInputMeta();
     input.setFileName(inputFile);
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     input.setMode(mode);
@@ -1087,7 +1112,7 @@ class E2ePipelineGeneratorTest {
     ch.so.agi.hop.interlis.transforms.validate.InterlisValidateMeta validate =
         new ch.so.agi.hop.interlis.transforms.validate.InterlisValidateMeta();
     validate.setFileName(inputFile);
-    validate.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    validate.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     validate.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
 
@@ -1128,7 +1153,7 @@ class E2ePipelineGeneratorTest {
 
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(inputFile);
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
     input.setClassName("HopIli_Associations_V1.Data.Person");
@@ -1141,11 +1166,12 @@ class E2ePipelineGeneratorTest {
     output.setModelNames("HopIli_Associations_V1");
     output.setModelDirectories(
         PARAMETERIZED ? "${E2E_INPUT_DIR}" : Path.of(inputFile).getParent().toString());
-    output.setClassName("HopIli_Associations_V1.Data.Person");
-    output.setObjectIdField("_ili_tid");
-    output.setBasketIdField("_ili_bid");
-    output.setBasketId("b1");
-    output.setOperationField("_ili_operation");
+    var mapping = TestData.mappedInput("INTERLIS Input", "HopIli_Associations_V1.Data.Person");
+    mapping.setOperationField("_ili_operation");
+    output.setInputs(java.util.List.of(mapping));
+    output.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    output.setValidateBeforePublish(false);
+
     output.setOverwrite(true);
 
     return twoStepPipeline(pipelineMeta, input, output);

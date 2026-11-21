@@ -97,16 +97,16 @@ public class InterlisStructureCollectMeta
   }
 
   @HopMetadataProperty(key = "collect_mode")
-  private CollectMode collectMode;
+  private CollectMode collectMode = CollectMode.PRESERVE;
 
   @HopMetadataProperty(key = "parent_bid_field")
-  private String parentBidField;
+  private String parentBidField = "_ili_bid";
 
   @HopMetadataProperty(key = "child_parent_bid_field")
-  private String childParentBidField;
+  private String childParentBidField = "_ili_parent_bid";
 
   public CollectMode getCollectMode() {
-    return collectMode == null ? CollectMode.REBUILD : collectMode;
+    return collectMode;
   }
 
   public void setCollectMode(CollectMode value) {
@@ -129,30 +129,28 @@ public class InterlisStructureCollectMeta
     childParentBidField = value;
   }
 
-  @Override
-  public void loadXml(org.w3c.dom.Node node, IHopMetadataProvider provider)
-      throws org.apache.hop.core.exception.HopXmlException {
-    super.loadXml(node, provider);
-    if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "collect_mode") == null) {
-      collectMode = CollectMode.REBUILD;
-      parentBidField = "";
-      childParentBidField = "";
-    }
-  }
-
   @HopMetadataProperty private String parentInputTransform;
   @HopMetadataProperty private String childInputTransform;
-  @HopMetadataProperty private String parentKeyField;
-  @HopMetadataProperty private String childParentKeyField;
-  @HopMetadataProperty private String childIndexField;
+  @HopMetadataProperty private String parentKeyField = DEFAULT_PARENT_KEY_FIELD;
+  @HopMetadataProperty private String childParentKeyField = DEFAULT_CHILD_PARENT_KEY_FIELD;
+  @HopMetadataProperty private String childIndexField = DEFAULT_CHILD_INDEX_FIELD;
   @HopMetadataProperty private String modelNames;
-  @HopMetadataProperty private String modelDirectories;
+
+  @HopMetadataProperty
+  private String modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
+
   @HopMetadataProperty private String className;
   @HopMetadataProperty private String structureAttributePath;
-  @HopMetadataProperty private String sourceObjectField;
-  @HopMetadataProperty private boolean strictOrdering;
-  @HopMetadataProperty private boolean failOnDuplicateIndex;
-  @HopMetadataProperty private boolean failOnChildWithoutParent;
+  @HopMetadataProperty private String sourceObjectField = DEFAULT_SOURCE_OBJECT_FIELD;
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean strictOrdering = true;
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean failOnDuplicateIndex = true;
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean failOnChildWithoutParent = true;
 
   public InterlisStructureCollectMeta() {
     super();
@@ -220,7 +218,11 @@ public class InterlisStructureCollectMeta
         true,
         "_",
         null,
-        new java.util.LinkedHashSet<>(getSelectedChildFields()));
+        getSelectedChildFields().isEmpty()
+            ? null
+            : new java.util.LinkedHashSet<>(getSelectedChildFields()),
+        false,
+        true);
   }
 
   @Override

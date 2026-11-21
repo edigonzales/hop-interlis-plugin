@@ -81,7 +81,9 @@ class CollectionsMappingTest {
   }
 
   static InterlisStructurePlan collection(String path, Set<String> selected) throws Exception {
-    var options = new ProjectionOptions(true, true, false, false, false, true, "_", null, selected);
+    var options =
+        new ProjectionOptions(
+            true, true, false, false, false, true, "_", null, selected, false, true);
     return new InterlisStructureLocator()
         .locate(
             projection.schema(), projection.schema().findClass(ITEM).orElseThrow(), path, options);
@@ -152,17 +154,28 @@ class CollectionsMappingTest {
             null,
             false,
             -1,
-            -1);
+            -1,
+            InterlisGeometryEncoding.NATIVE,
+            null,
+            false,
+            java.util.Set.of());
     var root =
         new InterlisClassDescriptor(
-            "Item", ITEM, TOPIC, false, List.of(unsupported), List.of(unsupported));
-    var schema = new InterlisSchemaDescriptor(List.of(root), List.of());
+            "Item",
+            ITEM,
+            TOPIC,
+            false,
+            List.of(unsupported),
+            List.of(unsupported),
+            ch.so.agi.hop.interlis.core.model.InterlisModelKind.DATA);
+    var schema = new InterlisSchemaDescriptor(List.of(root), List.of(), java.util.List.of());
     assertThatThrownBy(
             () -> new InterlisRowSchemaBuilder().build(schema, root, ProjectionOptions.defaults()))
         .hasMessageContaining(ITEM + ".Opaque")
         .hasMessageContaining("UnsupportedVendorType");
     var selected =
-        new ProjectionOptions(true, true, false, false, false, true, "_", null, Set.of("Other"));
+        new ProjectionOptions(
+            true, true, false, false, false, true, "_", null, Set.of("Other"), false, true);
     assertThat(new InterlisRowSchemaBuilder().build(schema, root, selected).fields())
         .extracting(InterlisFieldPlan::hopFieldName)
         .doesNotContain("Opaque");
@@ -223,7 +236,7 @@ class CollectionsMappingTest {
           .containsExactly("_ili_value");
       var rows =
           children.stream()
-              .map(c -> new InterlisStructureCollector.StructureChild(c.index(), c.values()))
+              .map(c -> new InterlisStructureCollector.StructureChild(c.index(), c.values(), null))
               .toList();
       source =
           new Iom_jObject(
@@ -242,8 +255,8 @@ class CollectionsMappingTest {
         collector.collect(
             source,
             List.of(
-                new InterlisStructureCollector.StructureChild(1, new Object[] {"first"}),
-                new InterlisStructureCollector.StructureChild(0, new Object[] {"second"})),
+                new InterlisStructureCollector.StructureChild(1, new Object[] {"first"}, null),
+                new InterlisStructureCollector.StructureChild(0, new Object[] {"second"}, null)),
             texts,
             InterlisStructureCollector.StructureCollectOptions.defaults());
     assertThat(reversed.getattrprim("Texts", 0)).isEqualTo("second");
@@ -270,7 +283,9 @@ class CollectionsMappingTest {
             () ->
                 collector.collect(
                     original,
-                    List.of(new InterlisStructureCollector.StructureChild(0, new Object[] {null})),
+                    List.of(
+                        new InterlisStructureCollector.StructureChild(
+                            0, new Object[] {null}, null)),
                     texts,
                     InterlisStructureCollector.StructureCollectOptions.defaults()))
         .hasMessageContaining("Null");
@@ -278,15 +293,17 @@ class CollectionsMappingTest {
             () ->
                 collector.collect(
                     original,
-                    List.of(new InterlisStructureCollector.StructureChild(-1, new Object[] {"x"})),
+                    List.of(
+                        new InterlisStructureCollector.StructureChild(
+                            -1, new Object[] {"x"}, null)),
                     texts,
                     InterlisStructureCollector.StructureCollectOptions.defaults()))
         .hasMessageContaining("index");
     var many =
         List.of(
-            new InterlisStructureCollector.StructureChild(0, new Object[] {"a"}),
-            new InterlisStructureCollector.StructureChild(1, new Object[] {"b"}),
-            new InterlisStructureCollector.StructureChild(2, new Object[] {"c"}));
+            new InterlisStructureCollector.StructureChild(0, new Object[] {"a"}, null),
+            new InterlisStructureCollector.StructureChild(1, new Object[] {"b"}, null),
+            new InterlisStructureCollector.StructureChild(2, new Object[] {"c"}, null));
     assertThatThrownBy(
             () ->
                 collector.collect(
@@ -334,7 +351,8 @@ class CollectionsMappingTest {
                     .collect(
                         source,
                         List.of(
-                            new InterlisStructureCollector.StructureChild(0, new Object[] {"x"})),
+                            new InterlisStructureCollector.StructureChild(
+                                0, new Object[] {"x"}, null)),
                         plan,
                         options))
         .hasMessageContaining("child source");
@@ -379,7 +397,8 @@ class CollectionsMappingTest {
                     .collect(
                         item(),
                         List.of(
-                            new InterlisStructureCollector.StructureChild(0, new Object[] {"x"})),
+                            new InterlisStructureCollector.StructureChild(
+                                0, new Object[] {"x"}, null)),
                         plan,
                         InterlisStructureCollector.StructureCollectOptions.defaults()))
         .hasMessageContaining("restricted");

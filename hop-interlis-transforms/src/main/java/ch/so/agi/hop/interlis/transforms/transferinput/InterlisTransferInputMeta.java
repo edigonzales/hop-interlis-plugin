@@ -17,9 +17,9 @@ import org.apache.hop.pipeline.transform.BaseTransformMeta;
 import org.apache.hop.pipeline.transform.TransformMeta;
 
 /**
- * Metadata of the INTERLIS Transfer Input transform: reads the complete XTF event stream and
- * emits canonical envelope rows with a constant schema, so any number of classes can travel in
- * one Hop stream.
+ * Metadata of the INTERLIS Transfer Input transform: reads the complete XTF event stream and emits
+ * canonical envelope rows with a constant schema, so any number of classes can travel in one Hop
+ * stream.
  */
 @Transform(
     id = "INTERLIS_TRANSFER_INPUT",
@@ -44,7 +44,7 @@ public class InterlisTransferInputMeta
   @Override
   public void setDefault() {
     fileName = "";
-    modelNames = ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA;
+    modelNames = InterlisModelSourceSupport.MODELS_FROM_DATA;
     modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
     mode = TransferInputMode.OBJECTS.name();
   }

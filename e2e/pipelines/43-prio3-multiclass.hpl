@@ -75,7 +75,6 @@
       <yloc>100</yloc>
       <draw>Y</draw>
     </GUI>
-    <mode>MAPPED_INPUTS</mode>
     <basketMode>FROM_FIELD</basketMode>
     <inputs>
       <input>
@@ -96,7 +95,7 @@
         <objectIdField>_ili_tid</objectIdField>
         <basketIdField>_ili_bid</basketIdField>
         <sourceObjectField>_ili_source_object</sourceObjectField>
-        <fields />
+        <fields/>
       </input>
     </inputs>
   </transform>

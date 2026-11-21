@@ -34,7 +34,9 @@ class InterlisBasketProjectionBufferTest {
         object.getobjecttag(),
         object.getobjectoid(),
         InterlisObjectOperation.NONE,
-        object);
+        object,
+        null,
+        null);
   }
 
   static Iom_jObject link(String tid) {
@@ -46,7 +48,11 @@ class InterlisBasketProjectionBufferTest {
 
   @Test
   void drains_link_only_baskets_and_keeps_batches_independent() throws Exception {
-    var buffer = new InterlisBasketProjectionBuffer<Object>(plan());
+    var buffer =
+        new InterlisBasketProjectionBuffer<Object>(
+            plan(),
+            new ch.so.agi.hop.interlis.core.buffer.JavaRecordCodec<>(),
+            ch.so.agi.hop.interlis.core.buffer.SpillOptions.defaults());
     var firstLink = link("p1");
     buffer.add(envelope("one", firstLink), new Object());
     assertThat(buffer.bufferedLinkCount()).isEqualTo(1);
@@ -70,7 +76,11 @@ class InterlisBasketProjectionBufferTest {
 
   @Test
   void clear_releases_context_and_large_basket_state_and_allows_reuse() throws Exception {
-    var buffer = new InterlisBasketProjectionBuffer<Object>(plan());
+    var buffer =
+        new InterlisBasketProjectionBuffer<Object>(
+            plan(),
+            new ch.so.agi.hop.interlis.core.buffer.JavaRecordCodec<>(),
+            ch.so.agi.hop.interlis.core.buffer.SpillOptions.defaults());
     Object context = "context";
     for (int i = 0; i < 10_000; i++)
       buffer.add(envelope("large", new Iom_jObject(TOPIC + ".Person", "p" + i)), context);
@@ -292,7 +302,11 @@ class InterlisBasketProjectionBufferTest {
   /** Executed in an isolated JVM; fixture generation itself never retains previous baskets. */
   public static class HeapWorker {
     public static void main(String[] args) throws Exception {
-      var buffer = new InterlisBasketProjectionBuffer<byte[]>(plan());
+      var buffer =
+          new InterlisBasketProjectionBuffer<byte[]>(
+              plan(),
+              new ch.so.agi.hop.interlis.core.buffer.JavaRecordCodec<>(),
+              ch.so.agi.hop.interlis.core.buffer.SpillOptions.defaults());
       long rows = 0, checksum = 0, expected = 0;
       int payloadSize = 16 * 1024;
       for (int basket = 0; basket < 256; basket++) {

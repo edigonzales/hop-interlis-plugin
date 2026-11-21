@@ -32,25 +32,6 @@ public record InterlisFieldPlan(
         structurePath == null ? java.util.List.of() : java.util.List.copyOf(structurePath);
   }
 
-  public InterlisFieldPlan(
-      int outputIndex,
-      String hopFieldName,
-      InterlisFieldSource source,
-      InterlisPropertyPath propertyPath,
-      InterlisAttributeDescriptor attributeDescriptor,
-      InterlisRoleDescriptor roleDescriptor,
-      InterlisAssociationDescriptor associationDescriptor) {
-    this(
-        outputIndex,
-        hopFieldName,
-        source,
-        propertyPath,
-        attributeDescriptor,
-        roleDescriptor,
-        associationDescriptor,
-        java.util.List.of());
-  }
-
   /** {@code true} if the field carries a geometry value. */
   public boolean isGeometry() {
     return attributeDescriptor != null

@@ -73,16 +73,24 @@ public class InterlisRoleJoinMeta
   @HopMetadataProperty private String mainInputTransform;
   @HopMetadataProperty private String lookupInputTransform;
   @HopMetadataProperty private String modelNames;
-  @HopMetadataProperty private String modelDirectories;
+
+  @HopMetadataProperty
+  private String modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
+
   @HopMetadataProperty private String mainClassName;
   @HopMetadataProperty private String roleName;
   @HopMetadataProperty private String mainReferenceField;
-  @HopMetadataProperty private String lookupTidField;
+  @HopMetadataProperty private String lookupTidField = DEFAULT_LOOKUP_TID_FIELD;
   @HopMetadataProperty private String prefix;
   @HopMetadataProperty private List<String> lookupFields;
-  @HopMetadataProperty private boolean failOnMissingMandatoryReference;
-  @HopMetadataProperty private boolean failOnDuplicateTid;
-  @HopMetadataProperty private long maxLookupRows;
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean failOnMissingMandatoryReference = true;
+
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean failOnDuplicateKey = true;
+
+  @HopMetadataProperty private long maxLookupRows = DEFAULT_MAX_LOOKUP_ROWS;
 
   public InterlisRoleJoinMeta() {
     super();
@@ -104,7 +112,7 @@ public class InterlisRoleJoinMeta
     prefix = "";
     lookupFields = new java.util.ArrayList<>();
     failOnMissingMandatoryReference = true;
-    failOnDuplicateTid = true;
+    failOnDuplicateKey = true;
     maxLookupRows = DEFAULT_MAX_LOOKUP_ROWS;
   }
 
@@ -394,12 +402,12 @@ public class InterlisRoleJoinMeta
     this.failOnMissingMandatoryReference = failOnMissingMandatoryReference;
   }
 
-  public boolean isFailOnDuplicateTid() {
-    return failOnDuplicateTid;
+  public boolean isFailOnDuplicateKey() {
+    return failOnDuplicateKey;
   }
 
-  public void setFailOnDuplicateTid(boolean failOnDuplicateTid) {
-    this.failOnDuplicateTid = failOnDuplicateTid;
+  public void setFailOnDuplicateKey(boolean failOnDuplicateKey) {
+    this.failOnDuplicateKey = failOnDuplicateKey;
   }
 
   public long getMaxLookupRows() {

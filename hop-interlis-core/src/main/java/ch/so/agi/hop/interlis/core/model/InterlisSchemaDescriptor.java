@@ -24,12 +24,6 @@ public record InterlisSchemaDescriptor(
     associations = associations == null ? List.of() : List.copyOf(associations);
   }
 
-  /** Backwards-compatible constructor for callers without associations. */
-  public InterlisSchemaDescriptor(
-      List<InterlisClassDescriptor> classes, List<InterlisStructureDescriptor> structures) {
-    this(classes, structures, List.of());
-  }
-
   public Optional<InterlisClassDescriptor> findClass(String scopedName) {
     return classes.stream().filter(c -> c.scopedName().equals(scopedName)).findFirst();
   }

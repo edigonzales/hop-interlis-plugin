@@ -23,24 +23,6 @@ public record InterlisClassDescriptor(
     InterlisModelKind modelKind)
     implements InterlisPlanRoot {
 
-  /** Backwards-compatible constructor for descriptors created outside the extractor. */
-  public InterlisClassDescriptor(
-      String name,
-      String scopedName,
-      String topicScopedName,
-      boolean isAbstract,
-      List<InterlisPropertyDescriptor> declaredProperties,
-      List<InterlisPropertyDescriptor> effectiveProperties) {
-    this(
-        name,
-        scopedName,
-        topicScopedName,
-        isAbstract,
-        declaredProperties,
-        effectiveProperties,
-        InterlisModelKind.DATA);
-  }
-
   public InterlisClassDescriptor {
     declaredProperties =
         declaredProperties == null ? List.of() : List.copyOf(declaredProperties);

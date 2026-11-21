@@ -60,7 +60,7 @@ Die Reihenfolge ist genau die Tabellenreihenfolge, innerhalb zusammengefasster Z
 
 Konfigurieren Sie `Data file`, `Models`, `Model dirs`, `Overwrite existing file` und `Event mode`. Default ist Objektmodus (`Event mode` aus). `Options…` enthält dieselbe Validierung vor Veröffentlichung wie der typisierte Writer.
 
-Im Objektmodus müssen die BIDs zusammenhängend gruppiert sein. Im Ereignismodus muss die Reihenfolge vollständig und gültig sein:
+Im Objektmodus müssen die BIDs zusammenhängend gruppiert sein. Im Ereignismodus führen Sie `+_ili_transfer_metadata+` bis zum Writer mit. Die Ereignisfolge muss vollständig und gültig sein.
 
 [source,text]
 ----
@@ -139,7 +139,7 @@ Unter `Options…` finden Sie neben den Puffereinstellungen:
 
 [cols="2,2,3"]
 |===
-| Control | Default für neue Konfigurationen | Bedeutung
+| Control | Default | Bedeutung
 | Child attribute paths (comma separated, empty: all) | leer | Projizierte Kindattribute auswählen
 | Collect mode | `PRESERVE` | Strukturkind kopieren und nur projizierte Werte überschreiben
 | Parent basket field | `+_ili_bid+` | BID der Elternzeile
@@ -148,30 +148,33 @@ Unter `Options…` finden Sie neben den Puffereinstellungen:
 
 `PRESERVE` verlangt ein kompatibles `+_ili_child_object+`. Konkrete zulässige Untertypen, ungewählte Attribute und verschachtelte Sammlungen bleiben erhalten. Fehlende oder inkompatible Carrier sind Fehler. `REBUILD` erzeugt das Strukturkind allein aus den projizierten Feldern; weitere Inhalte und der ursprüngliche Untertyp werden dabei nicht zugesichert. Bei primitiven Sammlungen wird `+_ili_value+` verwendet; ein Kind-Carrier ist dafür nicht erforderlich.
 
-Eltern und Kinder müssen nach demselben Elternschlüssel aufsteigend sortiert sein. Mit BID-Feldern ist dies `(BID, Elternschlüssel)`. Elternschlüssel müssen eindeutig sein. Bei striktem LIST-Modus müssen Kindpositionen innerhalb einer Gruppe zusätzlich aufsteigend und lückenlos sein. Nach dem Filtern können Lücken entstehen: nummerieren Sie die verbleibenden Kinder pro Elternschlüssel ab 0 neu. Bei deaktivierter strikter Reihenfolge sortiert Collect die aktuelle Gruppe nach Index im Spill-Speicher; die Sortierung der Elternschlüssel bleibt Voraussetzung.
+Eltern und Kinder müssen aufsteigend nach `(BID, Elternschlüssel)` sortiert sein. Diese Identität muss im Elternstrom eindeutig sein. Bei striktem LIST-Modus müssen Kindpositionen innerhalb einer Gruppe zusätzlich aufsteigend und lückenlos sein. Nach dem Filtern können Lücken entstehen: nummerieren Sie die verbleibenden Kinder pro Elternschlüssel ab 0 neu. Bei deaktivierter strikter Reihenfolge sortiert Collect die aktuelle Gruppe nach Index im Spill-Speicher; die Sortierung der Elternschlüssel bleibt Voraussetzung.
 
 Ungültige Indizes, Kardinalitätsverletzungen und mehrdeutige Zuordnungen werden abgelehnt. Das Verhalten für doppelte Indizes und Kinder ohne Eltern richtet sich nach den gleichnamigen Optionen. Die Standardwerte sind strikt.
-
-==== Alte und neue Pipeline-Dateien
-
-Neue Explode-Konfigurationen führen den Kind-Carrier mit; neue Collect-Konfigurationen verwenden `PRESERVE` sowie BID plus Elternschlüssel. Beim Laden alter `.hpl`-Dateien ohne die neuen Optionen gilt das bisherige Verhalten: Explode ohne Kind-Carrier, Collect mit `REBUILD` und bisheriger Schlüsselwahl ohne BID. Das Laden migriert diese Semantik nicht automatisch. Wählen Sie für eine Umstellung die Optionen ausdrücklich und kontrollieren Sie beide Eingangsschemas.
 
 [[role-join]]
 === INTERLIS Role Join
 
 Role Join ergänzt Zielattribute einer einfachen Assoziationsrolle. Der Dialog enthält `Main input`, `Lookup input`, `Models`, `Model dirs`, `Class`, `Role`, `Main ref field`, `Lookup TID field`, `Output prefix`, `Fields to add` und `Max lookup rows`.
 
-Die Lookup-TID ist standardmässig `+_ili_tid+`. Ein leeres Präfix wird aus dem Rollennamen abgeleitet, etwa `+Gemeinde_+`. `Fields to add` ist eine kommagetrennte Auswahl. `Fail on missing mandatory reference` und `Fail on duplicate lookup TID` sind standardmässig aktiv.
+Die Lookup-TID ist standardmässig `+_ili_tid+`. Ein leeres Präfix wird aus dem Rollennamen abgeleitet, etwa `+Gemeinde_+`. `Fields to add` ist eine kommagetrennte Auswahl. `Fail on missing mandatory reference` und `Fail on duplicate lookup key (BID + TID)` sind standardmässig aktiv.
 
 Der Join liest beide Eingänge abwechselnd. Noch nicht verarbeitbare Hauptzeilen werden gepuffert; die erste Ergebniszeile folgt erst nach vollständigem Lookup. Dadurch kann ein gemeinsamer Produzent beide Zweige versorgen. Nutzdaten und Index werden bei Bedarf auf Disk ausgelagert.
 
 `Max lookup rows` begrenzt die Zahl gelesener Lookup-Zeilen auf standardmässig 500'000. `0` erlaubt unbegrenzt viele. Dieser Grenzwert gilt unabhängig vom Speicherbudget.
 
-Der Hauptstrom liefert die Ziel-TID im konfigurierten Referenzfeld. Der optionale String `+<Rolle>_ref_bid+` legt den Zielbasket ausdrücklich fest. Role Join verwendet das Begleitfeld des konfigurierten Referenzfeldes mit Suffix `+_bid+`, sofern es vorhanden ist. Bei einem umbenannten Referenzfeld bleibt das rollenbasierte Feld als Alternative verfügbar. Die Modellprojektion liefert das Feld für als `EXTERNAL` deklarierte Rollen. Führen Sie es bis zum Join mit.
+Beide Eingänge benötigen das String-Feld `+_ili_bid+`. Der Lookup liefert ausserdem die
+TID im konfigurierten Feld. Der Hauptstrom liefert die Ziel-TID standardmässig
+in `+<Rolle>_ref+`. Das Begleitfeld für die Ziel-BID heisst immer
+`+<Referenzfeld>_bid+`. Es ist im Schema für modellseitig als `EXTERNAL`
+deklarierte Rollen erforderlich. Wird das Referenzfeld umbenannt, benennen Sie
+sein Begleitfeld entsprechend um.
 
-Ohne explizite Ziel-BID gilt bei vorhandenem Basketkontext die `+_ili_bid+` der Hauptzeile. Für eine explizite Ziel-BID muss der Lookup eine passende `+_ili_bid+` als String liefern. Fehlt das Feld oder hat ein Objekt mit der Ziel-TID keine BID und fehlt der Treffer im verlangten Basket, meldet Role Join den fehlenden Basketkontext. Fehlt der Zielschlüssel, gelten die Einstellungen für fehlende Pflichtreferenzen.
-
-Bei Streams ohne Basketfelder im Hauptstrom oder ohne `+_ili_bid+` im Lookup bleibt der TID-Lookup für Referenzen ohne explizite BID verfügbar. Andernfalls prüft `Fail on duplicate lookup TID` das Paar aus BID und TID. Ist die Prüfung deaktiviert, bleibt die erste Zeile mit demselben Lookup-Schlüssel massgeblich.
+Ist der Wert des Begleitfelds leer, wird die Ziel-TID im Basket der Hauptzeile
+gesucht. Eine explizite Ziel-BID beschränkt die Suche auf diesen Basket.
+Ein fehlender BID-Wert für eine benötigte Identität ist ein Fehler.
+Die Duplikatprüfung vergleicht das Paar aus BID und TID. Ist sie deaktiviert,
+bleibt die erste Lookup-Zeile pro Paar massgeblich.
 
 [[validierung]]
 === INTERLIS Validate
@@ -233,9 +236,8 @@ Das Budget betrifft Puffer. Ein einzelnes IOM-Objekt, seine Geometrien und sein 
 
 === Mehrere Klassen gemeinsam schreiben
 
-Der neue Mehrklassenmodus von INTERLIS Output nimmt die typisierten Klassenströme
-direkt entgegen und übernimmt die Basket-Gruppierung. Für explizite
-Ereignisverarbeitung besteht daneben weiterhin folgender Weg:
+INTERLIS Output nimmt typisierte Klassenströme direkt entgegen und übernimmt die
+Basket-Gruppierung. Transfer Output verarbeitet Envelope-Ströme.
 
 Ein typisierter Zweig pro Klasse kann mit Row to Object zurück in dasselbe Envelope-Schema wechseln. Vor einem Transfer Output im Objektmodus müssen zusammengeführte Zeilen nach BID gruppiert werden. Stimmen Identitäten oder Referenzräume nicht überein, müssen sie vorher fachlich abgestimmt werden.
 
@@ -280,10 +282,9 @@ INTERLIS Input (Quellobjekt mitführen)
   → INTERLIS Update (Original, Ziel, Strukturpfad, Feldzuordnungen)
 ----
 
-Neue Explode-Konfigurationen geben `+_ili_update_ref+` standardmässig aus. Alte
-Konfigurationen müssen `Emit structure update reference` unter `Options…`
-aktivieren; ihr bisheriges Schema bleibt sonst unverändert. Explode benötigt
-TID, BID und das ursprüngliche Elternobjekt. `Fields…` begrenzt die Kindfelder.
+Explode gibt `+_ili_update_ref+` standardmässig aus und benötigt dafür TID,
+BID und das ursprüngliche Elternobjekt. Die Option heisst
+`Emit structure update reference`. `Fields…` begrenzt die Kindfelder.
 
 Im Update wählen Sie dieselbe Elternklasse, den Sammlungspfad (etwa
 `Kontrollen` oder `Details.Tags`) und das Herkunftsfeld. Zielattribute der

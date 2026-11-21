@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 
 import ch.so.agi.hop.interlis.core.mapping.*;
 import ch.so.agi.hop.interlis.transforms.*;
+import ch.so.agi.hop.interlis.transforms.mapping.MappedClassPlan;
 import ch.so.agi.hop.interlis.transforms.objecttorow.*;
 import ch.so.agi.hop.interlis.transforms.output.*;
 import java.util.*;
@@ -11,11 +12,9 @@ import org.apache.hop.core.*;
 import org.apache.hop.core.row.*;
 import org.apache.hop.core.row.value.*;
 import org.apache.hop.core.variables.Variables;
-import org.apache.hop.pipeline.PipelineMeta;
-import org.apache.hop.pipeline.transform.TransformMeta;
 import org.junit.jupiter.api.*;
 
-class P1BindingAndLayoutTest {
+class EnvelopeBindingAndLayoutTest {
   static InterlisRowMappingPlan plan;
   static final Variables VARS = new Variables();
 
@@ -32,64 +31,6 @@ class P1BindingAndLayoutTest {
             .plan();
   }
 
-  InterlisOutputMeta output() {
-    var meta = new InterlisOutputMeta();
-    meta.setDefault();
-    meta.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
-    meta.setValidateBeforePublish(false);
-    meta.setFileName("result.xtf");
-    meta.setModelNames("HopIli_P1_V1");
-    meta.setModelDirectories(TestData.path("/models").toString());
-    meta.setClassName(plan.root().scopedName());
-    return meta;
-  }
-
-  @Test
-  void configured_fields_are_checked_consistently_and_constant_basket_needs_no_column()
-      throws Exception {
-    var input = new HopRowSchemaFactory().createRowMeta(plan);
-    var meta = output();
-    meta.setObjectIdField("custom");
-    assertThatThrownBy(() -> InterlisOutputBindings.bind(input, plan, meta, VARS))
-        .hasMessageContaining("custom");
-    var remarks = new ArrayList<ICheckResult>();
-    meta.check(
-        remarks,
-        new PipelineMeta(),
-        new TransformMeta("output", meta),
-        input,
-        new String[] {"source"},
-        new String[0],
-        null,
-        VARS,
-        null);
-    assertThat(remarks)
-        .anyMatch(
-            r -> r.getType() == ICheckResult.TYPE_RESULT_ERROR && r.getText().contains("custom"));
-    input.getValueMeta(input.indexOfValue("_ili_tid")).setName("custom");
-    meta.setBasketIdField("missing");
-    assertThatThrownBy(() -> InterlisOutputBindings.bind(input, plan, meta, VARS))
-        .hasMessageContaining("missing");
-    meta.setBasketIdField("");
-    meta.setBasketId("constant");
-    input.removeValueMeta(input.indexOfValue("_ili_bid"));
-    var binding = InterlisOutputBindings.bind(input, plan, meta, VARS);
-    assertThat(binding.values(new Object[input.size()])[binding.basketIndex()])
-        .isEqualTo("constant");
-    assertThat(new InterlisOutputDialogController().mapping(plan, meta, VARS))
-        .anySatisfy(
-            m -> {
-              assertThat(m.property()).isEqualTo("@TID");
-              assertThat(m.hopField()).isEqualTo("custom");
-            });
-    meta.setBasketIdField("basket");
-    input.addValueMeta(new ValueMetaString("basket"));
-    binding = InterlisOutputBindings.bind(input, plan, meta, VARS);
-    Object[] row = new Object[input.size()];
-    row[input.indexOfValue("basket")] = " ";
-    assertThat(binding.values(row)[binding.basketIndex()]).isEqualTo("constant");
-  }
-
   @Test
   void non_identifiable_association_has_no_tid_binding() throws Exception {
     var association =
@@ -103,10 +44,13 @@ class P1BindingAndLayoutTest {
                 ProjectionOptions.defaults())
             .plan();
     var input = new HopRowSchemaFactory().createRowMeta(association);
-    var meta = output();
-    meta.setObjectIdField("");
+    var config = TestData.mappedInput("source", association.root().scopedName());
+    config.setObjectIdField("");
     assertThat(input.indexOfValue("_ili_tid")).isNegative();
-    assertThatCode(() -> InterlisOutputBindings.bind(input, association, meta, VARS))
+    assertThatCode(
+            () ->
+                new MappedClassPlan(association, config, VARS, true)
+                    .bind(input, config, VARS, null))
         .doesNotThrowAnyException();
   }
 

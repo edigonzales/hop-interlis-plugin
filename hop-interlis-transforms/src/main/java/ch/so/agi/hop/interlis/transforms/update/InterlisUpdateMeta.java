@@ -70,7 +70,8 @@ public class InterlisUpdateMeta extends BaseTransformMeta<InterlisUpdate, Interl
     overwrite = value;
   }
 
-  @HopMetadataProperty private boolean validateBeforePublish = true;
+  @HopMetadataProperty(defaultBoolean = true)
+  private boolean validateBeforePublish = true;
 
   public boolean isValidateBeforePublish() {
     return validateBeforePublish;

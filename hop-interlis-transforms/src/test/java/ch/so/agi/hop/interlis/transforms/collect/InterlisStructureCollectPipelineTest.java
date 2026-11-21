@@ -10,6 +10,7 @@ import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.explode.InterlisStructureExplodeMeta;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
@@ -42,7 +43,7 @@ class InterlisStructureCollectPipelineTest {
   private InterlisInputMeta inputMeta() {
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(TestData.path("/data/HopIli_Structures_V1_valid.xtf").toString());
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(TestData.path("/models").toString());
     input.setClassName("HopIli_Structures_V1.Data.Person");
     input.setIncludeTid(true);
@@ -78,11 +79,13 @@ class InterlisStructureCollectPipelineTest {
     output.setFileName(outputFile.toString());
     output.setModelNames("HopIli_Structures_V1");
     output.setModelDirectories(TestData.path("/models").toString());
-    output.setClassName("HopIli_Structures_V1.Data.Person");
-    output.setObjectIdField("_ili_tid");
-    output.setBasketIdField("_ili_bid");
-    output.setBasketId("b1");
-    output.setSourceObjectField(InterlisStructureCollectMeta.DEFAULT_SOURCE_OBJECT_FIELD);
+    var mapping =
+        TestData.mappedInput("INTERLIS Structure Collect", "HopIli_Structures_V1.Data.Person");
+    mapping.setSourceObjectField(InterlisStructureCollectMeta.DEFAULT_SOURCE_OBJECT_FIELD);
+    output.setInputs(java.util.List.of(mapping));
+    output.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    output.setValidateBeforePublish(false);
+
     output.setOverwrite(true);
     return output;
   }
@@ -127,10 +130,8 @@ class InterlisStructureCollectPipelineTest {
       InterlisOutputMeta output,
       SyntheticChildRowsMeta children)
       throws Exception {
-    // This fixture intentionally creates children without a source carrier (legacy rebuild).
+    // This fixture intentionally creates children without a source carrier (REBUILD).
     collect.setCollectMode(InterlisStructureCollectMeta.CollectMode.REBUILD);
-    collect.setParentBidField("");
-    collect.setChildParentBidField("");
     PipelineMeta pipelineMeta = new PipelineMeta();
     TransformMeta source = new TransformMeta("INTERLIS Input", inputMeta());
     TransformMeta childTransform = new TransformMeta("child rows", children);
