@@ -411,16 +411,9 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     suppressRefresh = true;
     try {
       String current = wRoleName.getText();
-      wRoleName.removeAll();
-      for (String role : controller.roleNames(result)) {
-        wRoleName.add(role);
-      }
-      if (controller.roleNames(result).contains(current)) {
-        wRoleName.setText(current);
-      } else if (!result.mainClass().roles().isEmpty()
-          && result.mainClass().roles().stream().noneMatch(r -> r.name().equals(current))) {
-        // keep as-is: the user may still be typing
-      }
+      List<String> choices = controller.roleNames(result);
+      wRoleName.setItems(choices.toArray(String[]::new));
+      wRoleName.setText(controller.selectedRoleLabel(choices, current));
     } finally {
       suppressRefresh = false;
     }
@@ -433,12 +426,7 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
       input.setModelNames(wModelNames.getText());
       input.setModelDirectories(wModelDirectories.getText());
       input.setMainClassName(wClassName.getText());
-      // The role combo shows "name -> target {card}"; extract the bare role name.
-      String role = wRoleName.getText();
-      if (role != null && role.contains(" -> ")) {
-        role = role.substring(0, role.indexOf(" -> ")).trim();
-      }
-      input.setRoleName(role);
+      input.setRoleName(InterlisRoleJoinDialogController.roleName(wRoleName.getText()));
       input.setMainReferenceField(wMainReferenceField.getText());
       input.setLookupTidField(wLookupTidField.getText());
       input.setPrefix(wPrefix.getText());

@@ -33,6 +33,19 @@ public final class InterlisRoleJoinDialogController {
         .toList();
   }
 
+  String selectedRoleLabel(List<String> choices, String current) {
+    String name = roleName(current);
+    return choices.stream()
+        .filter(choice -> roleName(choice).equals(name))
+        .findFirst()
+        .orElse(current);
+  }
+
+  static String roleName(String label) {
+    int target = label.indexOf(" -> ");
+    return target < 0 ? label : label.substring(0, target).trim();
+  }
+
   /** Previews the key fields and the same target projection used by the runtime. */
   public InterlisSchemaPreview createSchemaPreview(
       InterlisRoleJoinMeta meta, InterlisRoleJoinProbeResult result, IVariables vars)
