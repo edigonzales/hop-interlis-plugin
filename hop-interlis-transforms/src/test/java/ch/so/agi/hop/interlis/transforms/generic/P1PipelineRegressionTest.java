@@ -6,6 +6,7 @@ import ch.interlis.iom_j.Iom_jObject;
 import ch.so.agi.hop.interlis.core.io.*;
 import ch.so.agi.hop.interlis.core.mapping.*;
 import ch.so.agi.hop.interlis.transforms.*;
+import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.objecttorow.*;
 import ch.so.agi.hop.interlis.transforms.output.*;
 import ch.so.agi.hop.interlis.transforms.testutil.*;
@@ -296,24 +297,25 @@ class P1PipelineRegressionTest {
     source.rows.add(row);
     var out = new InterlisOutputMeta();
     out.setDefault();
-    out.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
+
     out.setValidateBeforePublish(false);
-    out.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
+
     out.setValidateBeforePublish(false);
     out.setFileName(temp.resolve("custom-bid.xtf").toString());
     out.setModelNames(MODEL);
     out.setModelDirectories(dirs);
-    out.setClassName(ITEM);
-    out.setBasketIdField(" custom_bid ");
-    out.setBasketId("fallback");
+    var mapping = TestData.mappedInput("step0", ITEM);
+    mapping.setBasketIdField(" custom_bid ");
+    out.setInputs(java.util.List.of(mapping));
+    out.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    out.setValidateBeforePublish(false);
+
     assertThat(run(1, false, source, out).getErrors()).isZero();
-    assertThat(Files.readString(Path.of(out.getFileName())))
-        .contains("ili:bid=\"field-basket\"")
-        .doesNotContain("ili:bid=\"fallback\"");
+    assertThat(Files.readString(Path.of(out.getFileName()))).contains("ili:bid=\"field-basket\"");
   }
 
   @Test
-  void output_uses_custom_tid_and_constant_basket_without_reserved_fields() throws Exception {
+  void output_uses_explicit_custom_tid_and_bid() throws Exception {
     var p =
         new InterlisProjectionService()
             .project(
@@ -325,24 +327,29 @@ class P1PipelineRegressionTest {
     source.schema.getValueMeta(source.schema.indexOfValue("_ili_tid")).setName("custom_id");
     source.schema.removeValueMeta(source.schema.indexOfValue("_ili_bid"));
     source.schema.addValueMeta(new ValueMetaString("_ili_tid"));
+    source.schema.addValueMeta(new ValueMetaString("basket"));
     var row = new Object[source.schema.size()];
     row[source.schema.indexOfValue("custom_id")] = "wanted";
     row[source.schema.indexOfValue("_ili_tid")] = "wrong";
+    row[source.schema.indexOfValue("basket")] = "constant";
     row[source.schema.indexOfValue("Name")] = "item";
     source.rows.add(row);
     var out = new InterlisOutputMeta();
     out.setDefault();
-    out.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
+
     out.setValidateBeforePublish(false);
-    out.setMode(InterlisOutputMeta.Mode.SINGLE_SCHEMA);
+
     out.setValidateBeforePublish(false);
     out.setFileName(temp.resolve("out.xtf").toString());
     out.setModelNames(MODEL);
     out.setModelDirectories(dirs);
-    out.setClassName(ITEM);
-    out.setObjectIdField("custom_id");
-    out.setBasketIdField("");
-    out.setBasketId("constant");
+    var mapping = TestData.mappedInput("step0", ITEM);
+    mapping.setObjectIdField("custom_id");
+    mapping.setBasketIdField("basket");
+    out.setInputs(java.util.List.of(mapping));
+    out.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    out.setValidateBeforePublish(false);
+
     var pipeline = run(1, false, source, out);
     assertThat(pipeline.getErrors()).isZero();
     try (var reader =

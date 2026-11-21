@@ -2,11 +2,9 @@ package ch.so.agi.hop.interlis.core.mapping;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import ch.interlis.iom.IomObject;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectEnvelope;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import java.math.BigDecimal;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.BeforeAll;
@@ -75,7 +73,7 @@ class InterlisObjectToRowMapperAssociationTest {
             schema,
             AssociationsTestSupport.root(schema, AssociationsTestSupport.ASSOC_PERSON_TASK),
             new ProjectionOptions(
-                true, true, false, false, false, true, "_", null, java.util.Set.of(), true, true));
+                true, true, false, false, false, true, "_", null, null, true, true));
     List<InterlisObjectEnvelope> links =
         AssociationsTestSupport.allObjectsExtRef().get(AssociationsTestSupport.ASSOC_PERSON_TASK);
 

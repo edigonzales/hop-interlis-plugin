@@ -633,31 +633,10 @@ GUI muss eingehendes Hop-Schema gegen gewählte INTERLIS-Klasse abgleichen.
 
 # 18. Output Mapping GUI
 
-```text
-+-------------------------------------------------------------------+
-| INTERLIS Output                                                   |
-+-------------------------------------------------------------------+
-| File       [ result.xtf                                ] [Browse] |
-| Model      [ HopIli_Geometry_V1                       ] [Select] |
-| Class      [ HopIli_Geometry_V1.Data.TestObject       ] [Select] |
-|                                                                   |
-| Field mapping                                                     |
-| +----------------------+------------------------+----------------+ |
-| | INTERLIS property   | Hop field              | Status         | |
-| +----------------------+------------------------+----------------+ |
-| | TID                 | _ili_tid               | OK             | |
-| | Name                | name                   | OK             | |
-| | Center              | center                 | Geometry       | |
-| | Boundary            | boundary               | Geometry       | |
-| +----------------------+------------------------+----------------+ |
-|                                                                   |
-| Basket                                                            |
-|   BID field          [ _ili_bid                         ]          |
-|   Default BID        [ b1                               ]          |
-|                                                                   |
-| [Validate mapping]                                      [OK][Cancel]|
-+-------------------------------------------------------------------+
-```
+Der Dialog ordnet je Eingang eine Zielklasse sowie Identitäts- und Fachfelder
+zu. Ein Mapping genügt für einen einzelnen Klassenstrom. Die aktuellen
+Bedienelemente sind in [Prio-3-Dialoge](03-gui-ux.md#12-prio-3-dialoge)
+beschrieben.
 
 ---
 
@@ -1806,7 +1785,7 @@ P2 gilt erst nach vollständigem Verify, Paket-E2E und UI-Prüfung als abgeschlo
 ## Prio 3 nach Prio 1/2
 
 1. Mehrklassenexport direkt im Output, separate typisierte INFO-Eingänge und
-   auslagerbare Basket-Gruppierung; bestehende Einklassenpipelines bleiben kompatibel.
+   auslagerbare Basket-Gruppierung; ein Mapping genügt für einen Klassenstrom.
 2. `INTERLIS Update` mit selektiven Fachattribut-Patches und vollständigem
    Originaltransfer; explizite Input-Feldauswahl.
 3. Struktur- und primitive Sammlungs-Updates im selben Transform mit stabilen

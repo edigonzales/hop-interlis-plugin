@@ -516,7 +516,7 @@ Attribut- und Typkontext abgelehnt und erhalten keinen TEXT-Konverter.
 
 Mehrwertige primitive Attribute erscheinen nicht im skalaren Klassenplan.
 Explode/Collect erzeugen bzw. verbrauchen dafür `_ili_value` mit dem passenden
-Hop-Typ sowie Elternschlüssel, optionaler BID und `_ili_index`. BAG-Duplikate und
+Hop-Typ sowie Elternschlüssel, BID und `_ili_index` für Collect. BAG-Duplikate und
 LIST-Reihenfolge bleiben erhalten. Kardinalität wird nach dem Sammeln geprüft;
 null als einzelnes Sammlungselement ist unzulässig. Die Klassenprojektion weist
 auf diesen separaten Pfad hin. Ein Quellobjekt-Overlay erhält ausgelassene Sammlungen.
@@ -941,12 +941,9 @@ Die Typed Mapping Layer bleibt damit weitgehend identisch. ITF-spezifische Linet
 
 ## 25. Prio 3: getrennte Klasseninputs und selektive Updates
 
-`INTERLIS Output` besitzt zwei persistierte Modi. `MAPPED_INPUTS` ist der Default
-neuer Konfigurationen; fehlendes `mode` lädt `SINGLE_SCHEMA` mit dem bisherigen
-Ausgangsschema und Durchreichen. Im neuen Modus ist Output ein Sink. Jeder
-benannte INFO-Eingang besitzt einen eigenen Klassenplan und eigene Feldbindungen;
-alle physischen RowSets eines vorgelagerten Transforms werden fair gelesen. Es
-entsteht kein gemeinsames, dünn besetztes Zeilenschema.
+`INTERLIS Output` ist ein Sink für einen oder mehrere benannte INFO-Eingänge.
+Jeder Eingang besitzt einen eigenen Klassenplan und eigene Feldbindungen.
+Alle physischen RowSets eines vorgelagerten Transforms werden fair gelesen.
 
 Explizite Feldzuordnungen ersetzen die Namenskonvention. Berechnungen und
 Typkonvertierungen erfolgen davor. TIDs werden zugeordnet, nie erfunden. Der

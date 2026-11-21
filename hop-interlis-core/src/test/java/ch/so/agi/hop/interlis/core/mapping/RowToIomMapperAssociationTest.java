@@ -58,7 +58,7 @@ class RowToIomMapperAssociationTest {
             schema,
             AssociationsTestSupport.root(schema, AssociationsTestSupport.ASSOC_PERSON_TASK),
             new ProjectionOptions(
-                true, true, false, false, false, true, "_", null, java.util.Set.of(), true, true));
+                true, true, false, false, false, true, "_", null, null, true, true));
     // _ili_bid, Person_ref, Person_ref_bid, Task_ref, Task_ref_bid, Task_order_pos
     Object[] values = {"b1", "p2", null, "t2", "b2", 1L};
 
@@ -78,7 +78,7 @@ class RowToIomMapperAssociationTest {
             schema,
             AssociationsTestSupport.root(schema, AssociationsTestSupport.ASSOC_PERSON_TASK),
             new ProjectionOptions(
-                true, true, false, false, false, true, "_", null, java.util.Set.of(), true, true));
+                true, true, false, false, false, true, "_", null, null, true, true));
     var carrier =
         mapper.map(
             new Object[] {"b1", "p2", null, "t2", "external", 1L},

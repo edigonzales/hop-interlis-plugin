@@ -245,7 +245,12 @@ class RowToIomMapperTest {
     values[1] = "b1";
     values[8] = new BigDecimal("1.5"); // Value is optional, fine
 
-    IomObject object = mapper.map(values, plan, new RowWriteOptions(false, "b1"));
+    IomObject object =
+        mapper.map(
+            values,
+            plan,
+            new RowWriteOptions(
+                false, "b1", ch.so.agi.hop.interlis.core.io.InterlisObjectOperation.NONE));
 
     assertThat(object.getattrvalue("Text")).isNull();
     assertThat(object.getattrvalue("Value")).isEqualTo("1.5");

@@ -1,12 +1,7 @@
 package ch.so.agi.hop.interlis.transforms.output;
 
-import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
-import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
-import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
-import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import java.util.List;
-import java.util.Optional;
 import org.apache.hop.core.CheckResult;
 import org.apache.hop.core.ICheckResult;
 import org.apache.hop.core.annotations.Transform;
@@ -19,10 +14,7 @@ import org.apache.hop.pipeline.PipelineMeta;
 import org.apache.hop.pipeline.transform.BaseTransformMeta;
 import org.apache.hop.pipeline.transform.TransformMeta;
 
-/**
- * Metadata of the INTERLIS Output transform: writes one INTERLIS class from typed Hop rows to an
- * XTF file.
- */
+/** Settings for writing explicitly mapped class streams to one XTF file. */
 @Transform(
     id = "INTERLIS_OUTPUT",
     name = "INTERLIS Output",
@@ -35,31 +27,16 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, InterlisOutputData>
     implements ch.so.agi.hop.interlis.transforms.mapping.MappedSinkSettings {
 
-  public enum Mode {
-    SINGLE_SCHEMA,
-    MAPPED_INPUTS
-  }
-
   public enum BasketMode {
     PER_TOPIC,
     FROM_FIELD
   }
 
-  @HopMetadataProperty private Mode mode = Mode.SINGLE_SCHEMA;
   @HopMetadataProperty private BasketMode basketMode = BasketMode.PER_TOPIC;
 
   @HopMetadataProperty(groupKey = "inputs", key = "input")
   private List<ch.so.agi.hop.interlis.transforms.mapping.InterlisMappedInput> inputs =
       new java.util.ArrayList<>();
-
-  public Mode getMode() {
-    return mode;
-  }
-
-  public void setMode(Mode value) {
-    mode = value;
-    super.resetTransformIoMeta();
-  }
 
   public BasketMode getBasketMode() {
     return basketMode;
@@ -93,17 +70,11 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
   public void loadXml(org.w3c.dom.Node node, IHopMetadataProvider provider)
       throws org.apache.hop.core.exception.HopXmlException {
     super.loadXml(node, provider);
-    if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "mode") == null) {
-      mode = Mode.SINGLE_SCHEMA;
-      if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "validateBeforePublish") == null)
-        validateBeforePublish = false;
-    }
     super.resetTransformIoMeta();
   }
 
   @Override
   public org.apache.hop.pipeline.transform.ITransformIOMeta getTransformIOMeta() {
-    if (mode == Mode.SINGLE_SCHEMA) return super.getTransformIOMeta();
     var io = super.getTransformIOMeta(false);
     if (io == null) {
       io = ch.so.agi.hop.interlis.transforms.mapping.MappedInputStreams.create(inputs);
@@ -113,16 +84,12 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
   }
 
   @Override
-  public void resetTransformIoMeta() {
-    if (mode == Mode.SINGLE_SCHEMA) super.resetTransformIoMeta();
-  }
+  public void resetTransformIoMeta() {}
 
   @Override
   public void searchInfoAndTargetTransforms(List<TransformMeta> transforms) {
-    if (mode == Mode.MAPPED_INPUTS)
-      ch.so.agi.hop.interlis.transforms.mapping.MappedInputStreams.resolve(
-          getTransformIOMeta(), inputs, transforms);
-    else super.searchInfoAndTargetTransforms(transforms);
+    ch.so.agi.hop.interlis.transforms.mapping.MappedInputStreams.resolve(
+        getTransformIOMeta(), inputs, transforms);
   }
 
   @HopMetadataProperty private long bufferMemoryMiB = 64;
@@ -155,7 +122,7 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
     maxSpillMiB = value;
   }
 
-  @HopMetadataProperty private boolean validateBeforePublish;
+  @HopMetadataProperty private boolean validateBeforePublish = true;
   @HopMetadataProperty private String validationConfigFile = "";
 
   public boolean isValidateBeforePublish() {
@@ -177,12 +144,6 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
   @HopMetadataProperty private String fileName;
   @HopMetadataProperty private String modelNames;
   @HopMetadataProperty private String modelDirectories;
-  @HopMetadataProperty private String className;
-  @HopMetadataProperty private String objectIdField;
-  @HopMetadataProperty private String basketIdField;
-  @HopMetadataProperty private String basketId;
-  @HopMetadataProperty private String operationField;
-  @HopMetadataProperty private String sourceObjectField;
   @HopMetadataProperty private boolean overwrite;
 
   public InterlisOutputMeta() {
@@ -191,7 +152,6 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
 
   @Override
   public void setDefault() {
-    mode = Mode.MAPPED_INPUTS;
     inputs = new java.util.ArrayList<>();
     basketMode = BasketMode.PER_TOPIC;
     validateBeforePublish = true;
@@ -199,12 +159,6 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
     fileName = "";
     modelNames = "";
     modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
-    className = "";
-    objectIdField = "_ili_tid";
-    basketIdField = "_ili_bid";
-    basketId = "b1";
-    operationField = "";
-    sourceObjectField = "";
     overwrite = false;
   }
 
@@ -217,43 +171,7 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
       IVariables variables,
       IHopMetadataProvider metadataProvider)
       throws HopTransformException {
-    if (mode == Mode.MAPPED_INPUTS) rowMeta.clear();
-  }
-
-  /**
-   * Tries to build the projection for the current configuration; returns empty if the configuration
-   * is incomplete (e.g. unresolved variables) and throws if models or the class cannot be resolved.
-   */
-  public Optional<InterlisProjectionResult> tryProject(IVariables variables)
-      throws ch.so.agi.hop.interlis.core.model.InterlisModelException,
-          ch.so.agi.hop.interlis.core.mapping.InterlisMappingException {
-    String resolvedFile = resolve(variables, fileName);
-    if (resolvedFile.isBlank() || resolvedFile.contains("${")) {
-      return Optional.empty();
-    }
-    List<String> resolvedDirs = resolveModelDirectories(variables);
-    if (resolvedDirs.stream().anyMatch(d -> d.contains("${"))) {
-      return Optional.empty();
-    }
-    if (resolve(variables, className).isBlank()) {
-      return Optional.empty();
-    }
-    List<String> resolvedModels = resolveModelNames(variables);
-    if (resolvedModels.isEmpty()) {
-      throw new ch.so.agi.hop.interlis.core.model.InterlisModelException(
-          "INTERLIS Output requires explicit model names; %DATA cannot be used because no "
-              + "transfer file is read");
-    }
-    InterlisModelRequest request = new InterlisModelRequest(null, resolvedModels, resolvedDirs);
-    return Optional.of(
-        new InterlisProjectionService()
-            .project(request, resolve(variables, className), projectionOptions(variables)));
-  }
-
-  /** Builds the projection options from the persisted configuration. */
-  public ProjectionOptions projectionOptions(IVariables variables) {
-    return new ProjectionOptions(
-        true, true, false, false, false, true, "_", null, java.util.Set.of());
+    rowMeta.clear();
   }
 
   @Override
@@ -273,68 +191,13 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
               ICheckResult.TYPE_RESULT_ERROR, "INTERLIS output file is required", transformMeta));
       return;
     }
-    if (mode == Mode.MAPPED_INPUTS) {
-      remarks.add(
-          new CheckResult(
-              inputs.isEmpty() ? ICheckResult.TYPE_RESULT_ERROR : ICheckResult.TYPE_RESULT_OK,
-              inputs.isEmpty()
-                  ? "Configure INTERLIS input mappings"
-                  : "Separate INTERLIS input mappings configured",
-              transformMeta));
-      return;
-    }
-    if (className == null || className.isBlank()) {
-      remarks.add(
-          new CheckResult(
-              ICheckResult.TYPE_RESULT_ERROR, "INTERLIS class must be selected", transformMeta));
-      return;
-    }
-    try {
-      InterlisProjectionResult projection = tryProject(variables).orElse(null);
-      if (projection == null) {
-        remarks.add(
-            new CheckResult(
-                ICheckResult.TYPE_RESULT_WARNING,
-                "INTERLIS model cannot be resolved yet (variables or repositories unresolved)",
-                transformMeta));
-        return;
-      }
-      if (prev != null) InterlisOutputBindings.bind(prev, projection.plan(), this, variables);
-      remarks.add(
-          new CheckResult(
-              ICheckResult.TYPE_RESULT_OK,
-              "INTERLIS Output is configured: writing class "
-                  + className
-                  + " to "
-                  + resolve(variables, fileName),
-              transformMeta));
-    } catch (Exception e) {
-      remarks.add(
-          new CheckResult(
-              ICheckResult.TYPE_RESULT_ERROR,
-              "INTERLIS model check failed: " + e.getMessage(),
-              transformMeta));
-    }
-  }
-
-  private List<String> resolveModelNames(IVariables variables) {
-    String resolved = resolve(variables, modelNames);
-    return InterlisModelSourceSupport.parseModelNames(resolved);
-  }
-
-  private List<String> resolveModelDirectories(IVariables variables) {
-    String resolved = resolve(variables, modelDirectories);
-    if (resolved.isBlank()) {
-      return List.of();
-    }
-    return InterlisModelSourceSupport.parseModelDirectories(resolved);
-  }
-
-  private static String resolve(IVariables variables, String value) {
-    if (value == null) {
-      return "";
-    }
-    return variables == null ? value.trim() : variables.resolve(value).trim();
+    remarks.add(
+        new CheckResult(
+            inputs.isEmpty() ? ICheckResult.TYPE_RESULT_ERROR : ICheckResult.TYPE_RESULT_OK,
+            inputs.isEmpty()
+                ? "Configure INTERLIS input mappings"
+                : "INTERLIS input mappings configured",
+            transformMeta));
   }
 
   // -- accessors -----------------------------------------------------------
@@ -363,59 +226,11 @@ public class InterlisOutputMeta extends BaseTransformMeta<InterlisOutput, Interl
     this.modelDirectories = modelDirectories;
   }
 
-  public String getClassName() {
-    return className;
-  }
-
-  public void setClassName(String className) {
-    this.className = className;
-  }
-
-  public String getObjectIdField() {
-    return objectIdField;
-  }
-
-  public void setObjectIdField(String objectIdField) {
-    this.objectIdField = objectIdField;
-  }
-
-  public String getBasketIdField() {
-    return basketIdField;
-  }
-
-  public void setBasketIdField(String basketIdField) {
-    this.basketIdField = basketIdField;
-  }
-
-  public String getBasketId() {
-    return basketId;
-  }
-
-  public void setBasketId(String basketId) {
-    this.basketId = basketId;
-  }
-
   public boolean isOverwrite() {
     return overwrite;
   }
 
   public void setOverwrite(boolean overwrite) {
     this.overwrite = overwrite;
-  }
-
-  public String getSourceObjectField() {
-    return sourceObjectField;
-  }
-
-  public void setSourceObjectField(String sourceObjectField) {
-    this.sourceObjectField = sourceObjectField;
-  }
-
-  public String getOperationField() {
-    return operationField;
-  }
-
-  public void setOperationField(String operationField) {
-    this.operationField = operationField;
   }
 }

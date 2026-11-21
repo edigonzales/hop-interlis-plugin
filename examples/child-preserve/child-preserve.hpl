@@ -67,6 +67,7 @@
       <xloc>500</xloc>
       <yloc>100</yloc>
     </GUI>
+    <emit_update_reference>N</emit_update_reference>
   </transform>
   <transform>
     <name>collect0</name>
@@ -140,12 +141,7 @@
     <type>INTERLIS_OUTPUT</type>
     <modelNames>DemoErhaltung</modelNames>
     <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
-    <className>DemoErhaltung.Daten.Eltern</className>
     <fileName>${E2E_OUTPUT_DIR}/doc-erhaltung.xtf</fileName>
-    <objectIdField>_ili_tid</objectIdField>
-    <basketIdField>_ili_bid</basketIdField>
-    <basketId>b1</basketId>
-    <sourceObjectField>_ili_source_object</sourceObjectField>
     <overwrite>Y</overwrite>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -154,6 +150,18 @@
       <yloc>100</yloc>
     </GUI>
     <validateBeforePublish>Y</validateBeforePublish>
+    <basketMode>FROM_FIELD</basketMode>
+    <validateBeforePublish>N</validateBeforePublish>
+    <inputs>
+      <input>
+        <transformName>collect0</transformName>
+        <className>DemoErhaltung.Daten.Eltern</className>
+        <objectIdField>_ili_tid</objectIdField>
+        <basketIdField>_ili_bid</basketIdField>
+        <sourceObjectField>_ili_source_object</sourceObjectField>
+        <fields/>
+      </input>
+    </inputs>
   </transform>
   <transform>
     <type>FilterRows</type>

@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.validate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import java.util.List;
 import org.apache.hop.core.HopEnvironment;
@@ -28,7 +29,7 @@ class InterlisValidatePipelineTest {
   private InterlisValidateMeta validateMeta(String fixture) {
     InterlisValidateMeta meta = new InterlisValidateMeta();
     meta.setFileName(TestData.path(fixture).toString());
-    meta.setModelNames(ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA);
+    meta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     return meta;
   }

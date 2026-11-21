@@ -16,7 +16,7 @@ Prüfen Sie `Keep source object for Structure Explode` im Input und den passende
 |===
 | Befund | Korrektur
 | Fehlendes / inkompatibles `+_ili_child_object+` | Kind-Carrier in Explode aktivieren und bis Collect mitführen; der konkrete Typ muss zulässig sein.
-| Alte Pipeline lädt `REBUILD` | `PRESERVE` und passende BID-Felder ausdrücklich wählen; alte Dateien behalten ihre Semantik.
+| Fehlender Basket-Schlüssel | In Collect beide BID-Felder auf String-Spalten binden und beide Eingänge nach BID und Elternschlüssel sortieren. Bei Role Join `+_ili_bid+` in beiden Eingängen mitführen.
 | Kind ohne Elternobjekt | Eltern- und Kindschlüssel sowie beide BID-Felder vergleichen; gleiche aufsteigende Sortierung herstellen.
 | Doppelte Eltern / mehrdeutige Zuordnung | Identitäten bereinigen und bei mehreren Baskets BID plus Elternschlüssel verwenden.
 | LIST-Indizes mit Lücken | Nach Filtern pro Elternschlüssel ab 0 neu nummerieren.

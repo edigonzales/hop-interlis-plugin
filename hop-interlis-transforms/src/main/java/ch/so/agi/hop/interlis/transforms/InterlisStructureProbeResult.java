@@ -22,28 +22,6 @@ public record InterlisStructureProbeResult(
     List<String> structurePaths,
     InterlisProbeStatus status) {
 
-  public InterlisStructureProbeResult(
-      boolean ok,
-      String message,
-      InterlisStructureProjectionResult projection,
-      List<InterlisClassDescriptor> classes,
-      List<String> structurePaths) {
-    this(
-        ok,
-        message,
-        projection,
-        classes,
-        structurePaths,
-        projection != null
-            ? InterlisProbeStatus.SUCCESS
-            : ok ? InterlisProbeStatus.INFO : InterlisProbeStatus.ERROR);
-  }
-
-  public InterlisStructureProbeResult withStatus(InterlisProbeStatus value) {
-    return new InterlisStructureProbeResult(
-        ok, message, projection, classes, structurePaths, value);
-  }
-
   public InterlisStructureProbeResult {
     classes = classes == null ? List.of() : List.copyOf(classes);
     structurePaths = structurePaths == null ? List.of() : List.copyOf(structurePaths);

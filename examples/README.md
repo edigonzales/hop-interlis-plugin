@@ -7,7 +7,7 @@ explains settings and expected values.
 
 Every pipeline uses `E2E_INPUT_DIR` (absolute model/transfer directory) and
 `E2E_OUTPUT_DIR` (existing output directory). The new handbook pipelines declare
-these as pipeline parameters; the legacy examples use the same names as Hop
+these as pipeline parameters; other examples use the same names as Hop
 variables. Pass both with `-p` to `hop-run.sh`.
 
 Use a local pipeline run configuration named `local`, or replace `-r local` with
@@ -69,7 +69,7 @@ imports to a common input directory and use the same `-p` invocation above.
 |---|---|
 | `xtf-to-csv/` | One typed class to CSV |
 | `xtf-roundtrip/` | Typed write, followed by a separate re-read check |
-| `structures/` | Legacy Explode/Collect roundtrip; omitted new options retain REBUILD semantics |
+| `structures/` | Explode/Collect roundtrip with explicit REBUILD and basket-aware keys |
 | `associations/` | Flattened association attributes and association rows |
 | `validation/` | Validation diagnostics to CSV |
 | `advanced-envelope/` | Supported generic EVENTS roundtrip and DELETE preservation |

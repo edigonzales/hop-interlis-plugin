@@ -154,12 +154,6 @@
     <fileName>${E2E_OUTPUT_DIR}/p1-roundtrip.xtf</fileName>
     <modelNames>HopIli_P1_V1</modelNames>
     <modelDirectories>${E2E_INPUT_DIR}</modelDirectories>
-    <className>HopIli_P1_V1.Data.Item</className>
-    <objectIdField>custom_tid</objectIdField>
-    <basketIdField/>
-    <basketId>constant</basketId>
-    <operationField/>
-    <sourceObjectField>_ili_object</sourceObjectField>
     <overwrite>Y</overwrite>
     <distribute>Y</distribute>
     <copies>1</copies>
@@ -172,6 +166,63 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <basketMode>FROM_FIELD</basketMode>
+    <validateBeforePublish>N</validateBeforePublish>
+    <inputs>
+      <input>
+        <transformName>step1</transformName>
+        <className>HopIli_P1_V1.Data.Item</className>
+        <objectIdField>custom_tid</objectIdField>
+        <basketIdField>_ili_bid</basketIdField>
+        <sourceObjectField>_ili_object</sourceObjectField>
+        <fields>
+          <field>
+            <sourceField>Location</sourceField>
+            <targetPath>Location</targetPath>
+          </field>
+          <field>
+            <sourceField>Axis</sourceField>
+            <targetPath>Axis</targetPath>
+          </field>
+          <field>
+            <sourceField>Face</sourceField>
+            <targetPath>Face</targetPath>
+          </field>
+          <field>
+            <sourceField>Axes</sourceField>
+            <targetPath>Axes</targetPath>
+          </field>
+          <field>
+            <sourceField>Faces</sourceField>
+            <targetPath>Faces</targetPath>
+          </field>
+          <field>
+            <sourceField>Details_Code</sourceField>
+            <targetPath>Details.Code</targetPath>
+          </field>
+          <field>
+            <sourceField>Details_Note</sourceField>
+            <targetPath>Details.Note</targetPath>
+          </field>
+          <field>
+            <sourceField>Details_Location</sourceField>
+            <targetPath>Details.Location</targetPath>
+          </field>
+          <field>
+            <sourceField>Target_ref</sourceField>
+            <targetPath>Target_ref</targetPath>
+          </field>
+          <field>
+            <sourceField>Name</sourceField>
+            <targetPath>Name</targetPath>
+          </field>
+          <field>
+            <sourceField>InheritedAxis</sourceField>
+            <targetPath>InheritedAxis</targetPath>
+          </field>
+        </fields>
+      </input>
+    </inputs>
   </transform>
   <order>
     <hop>

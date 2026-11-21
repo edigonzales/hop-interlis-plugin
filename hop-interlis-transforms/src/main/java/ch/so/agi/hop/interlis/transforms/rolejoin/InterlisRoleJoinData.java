@@ -1,7 +1,6 @@
 package ch.so.agi.hop.interlis.transforms.rolejoin;
 
 import org.apache.hop.core.IRowSet;
-import org.apache.hop.core.row.IRowMeta;
 import org.apache.hop.pipeline.transform.BaseTransformData;
 
 /** Runtime state of the {@link InterlisRoleJoin} transform. */
@@ -16,5 +15,4 @@ public class InterlisRoleJoinData extends BaseTransformData {
   IRowSet lookupRowSet;
   ch.so.agi.hop.interlis.core.buffer.SpillStore<Object[]> lookupIndex;
   ch.so.agi.hop.interlis.transforms.buffer.FairInputReader inputs;
-  IRowMeta outputRowMeta;
 }

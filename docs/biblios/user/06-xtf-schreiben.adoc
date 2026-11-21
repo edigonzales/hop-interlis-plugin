@@ -1,11 +1,11 @@
 [[xtf-schreiben]]
 == XTF schreiben: INTERLIS Output
 
-`INTERLIS Output` kann mehrere typisierte Klassenströme direkt in eine gemeinsame
-XTF-Datei schreiben. Neue Konfigurationen öffnen den Mehrklassenmodus. Bestehende
-Pipelines bleiben im bisherigen Einklassenmodus, bis Sie ausdrücklich wechseln.
+`INTERLIS Output` schreibt einen oder mehrere separat zugeordnete
+Klassenströme in eine gemeinsame XTF-Datei. Für einen Klassenstrom genügt ein
+Input-Mapping.
 
-=== Mehrklassenmodus: Eingänge zuordnen
+=== Eingänge zuordnen
 
 Verbinden Sie die aufbereiteten Klassenströme direkt mit einem Output. Stellen Sie
 Target XTF, Models und Model directories einmal ein. Mit `Add input…` wählen Sie
@@ -17,49 +17,19 @@ Strukturen verwenden Zielpfade wie `Adresse.Strasse`; das Hop-Quellfeld darf and
 heissen. Berechnungen und Typkonvertierungen gehören vor den Writer. TID-Feld
 (Standard `+_ili_tid+`), optionaler Objektträger und Operationsfeld werden pro
 Eingang eingestellt. Ohne Objektträger müssen die gemappten Werte ein gültiges
-Zielobjekt ergeben; der Writer erfindet keine Objektidentitäten.
+Zielobjekt ergeben. Klassenobjekte und identifizierbare Assoziationen benötigen eine TID. Für nicht identifizierbare Assoziationen entfällt das TID-Feld.
 
 `One basket per topic` erzeugt eine UUID-BID pro Topic, sofern dessen Basket-OID-
 Vorgaben dies erlauben. Andernfalls wählen Sie `From input BID fields` und ordnen
 pro Eingang ein BID-Feld zu. Unsortierte Eingänge und vorgelagerte Transform-Kopien
 sind erlaubt. Die gemeinsame Gruppierung lagert bei Bedarf auf Disk aus. Dieselbe
 BID für verschiedene Topics ist ein Fehler. Output selbst hat genau eine Kopie
-und im Mehrklassenmodus keinen nachgelagerten Zeilenstrom.
+und liefert keinen nachgelagerten Zeilenstrom.
 
-Neue Outputs haben Validierung vor Publikation eingeschaltet und Überschreiben
+Outputs haben Validierung vor Publikation eingeschaltet und Überschreiben
 ausgeschaltet. Buffer memory (64 MiB), Spill directory und Maximum spill
 (0 = unbegrenzt) gelten gemeinsam für die Teilpuffer des Writers. Ein einzelnes
 Objekt muss trotzdem in den Arbeitsspeicher passen.
-
-=== Bisheriger Einklassenmodus
-
-`Legacy single-class mode…` öffnet die bisherige Konfiguration. Deren Controls,
-Gruppierungsvoraussetzungen und Durchreichverhalten gelten weiterhin:
-
-=== Dialog und Zuordnung
-
-[cols="2,2,3"]
-|===
-| Control | Default | Bedeutung
-| XTF file | leer | Endgültige XTF-Zieldatei.
-| Overwrite existing file | aus | Vorhandenes Ziel nach erfolgreichem Abschluss atomar ersetzen.
-| Models | leer | Explizite Modellnamen; mit `;` trennen.
-| Model dirs | Standard-Modellverzeichnisse | Lokale Modelle oder Repositories; siehe Input.
-| Class | leer | Voll qualifizierte Zielklasse.
-| Object ID field | `+_ili_tid+` | String-Feld mit Objekt-TID.
-| BID field | `+_ili_bid+` | Feld mit Basket-ID; leer für den Default-BID.
-| Default BID | `b1` | Basket-ID, wenn kein nutzbarer BID-Feldwert vorliegt.
-| Source object field | leer | Technisches Quellobjekt für Overlay.
-| Operation field | leer | Optionales Feld mit `NONE`, `INSERT`, `UPDATE`, `DELETE`.
-|===
-
-Die Vorschau zeigt erwartete Zuordnungen. Felder mit anderen Namen müssen vorher umbenannt werden. Der Writer erzeugt keine Objekt-UUIDs; stellen Sie passende TIDs vor dem Writer bereit. Klassenobjekte und identifizierbare Assoziationen benötigen eine TID; nicht identifizierbare Assoziationen dürfen ohne TID geschrieben werden. Datentypen, Referenzen und Kardinalitäten müssen zum Modell passen.
-
-=== Baskets zusammenhängend liefern
-
-Beim BID-Wechsel wird der bisherige Basket geschlossen und der nächste begonnen. Alle Zeilen einer BID müssen zusammenhängend eintreffen. `B1 → B2 → B1` wird als Wiederverwendung eines abgeschlossenen Baskets abgelehnt. Eine lexikografische Sortierung ist nicht vorgeschrieben; Gruppierung nach BID genügt.
-
-Bei mehreren Kopien oder zusammengeführten Zweigen ist die Ankunftsreihenfolge nicht automatisch gruppiert. Stellen Sie diese Voraussetzung vor dem Writer her. Datei-Writer laufen mit genau einer Transform-Kopie.
 
 === Projektion oder Quellobjekt-Overlay
 
@@ -68,6 +38,9 @@ Ohne `Source object field` erzeugt der Writer ein Objekt aus den gemappten Felde
 Ein null-Wert überschreibt das projizierte Attribut; bei Referenzen entfernt null die Referenz. `+<Pfad>_ref_bid+` ohne `+<Pfad>_ref+` ist ein Fehler. Referenzen werden als echte IOM-Referenzen geschrieben. Die richtige TID/BID muss zum Zielobjekt und zum Modell passen.
 
 Mehrfachattribute werden vor dem Writer mit Collect in das Eltern-Quellobjekt zurückgeführt. Collect ersetzt die gewählte Sammlung vollständig. Für Strukturkinder steuert `PRESERVE` beziehungsweise `REBUILD`, welche nicht projizierten Inhalte erhalten bleiben; siehe <<structure-collect,Collect>>.
+
+Ein gemapptes Operationsfeld unterstützt `NONE`, `INSERT`, `UPDATE` und `DELETE`.
+Bei `DELETE` genügen die Identitätswerte der Zeile.
 
 === Vorbereiten, prüfen und veröffentlichen
 
@@ -84,13 +57,10 @@ Eine neue XTF-Datei kann erst nach Pipeline-Ende gelesen werden. Verwenden Sie `
 
 === Validierung vor Veröffentlichung
 
-Im bisherigen Einklassenmodus öffnet `Options…` folgende Einstellungen; im neuen
-Mehrklassenmodus stehen sie im Hauptdialog und die Validierung ist dort an:
-
 [cols="2,2,3"]
 |===
 | Control | Default | Wirkung
-| Validate before publication | aus | Vollständige temporäre Datei einschliesslich zweitem Validierungsdurchlauf prüfen.
+| Validate before publication | an | Vollständige temporäre Datei einschliesslich zweitem Validierungsdurchlauf prüfen.
 | Validation configuration | leer | Optionaler Pfad zu einer Validator-INI-Datei.
 |===
 

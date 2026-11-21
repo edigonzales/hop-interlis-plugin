@@ -79,10 +79,6 @@ public final class InterlisBasketProjectionBuffer<T> {
   private String bid;
   private boolean started;
 
-  public InterlisBasketProjectionBuffer(InterlisRowMappingPlan plan) {
-    this(plan, new JavaRecordCodec<>(), SpillOptions.defaults());
-  }
-
   public InterlisBasketProjectionBuffer(
       InterlisRowMappingPlan plan, RecordCodec<Entry<T>> codec, SpillOptions options) {
     this.plan = plan;

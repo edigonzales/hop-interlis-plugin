@@ -10,6 +10,7 @@ import ch.so.agi.hop.interlis.core.io.InterlisReadException;
 import ch.so.agi.hop.interlis.core.io.InterlisTransferReader;
 import ch.so.agi.hop.interlis.core.io.XtfTransferReader;
 import ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -57,7 +58,7 @@ class InterlisTransferInputPipelineTest {
   private Pipeline prepare(Path file, TransferInputMode mode) throws Exception {
     InterlisTransferInputMeta meta = new InterlisTransferInputMeta();
     meta.setFileName(file.toString());
-    meta.setModelNames(ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA);
+    meta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setMode(mode.name());
 

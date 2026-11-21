@@ -1,17 +1,17 @@
 package ch.so.agi.hop.interlis.transforms.rolejoin;
 
-import ch.so.agi.hop.interlis.core.model.InterlisAttributeDescriptor;
+import ch.so.agi.hop.interlis.core.io.InterlisEnvelopeRowLayout;
 import ch.so.agi.hop.interlis.transforms.InterlisPreviewRow;
 import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
-import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreviewSupport;
+import ch.so.agi.hop.interlis.transforms.mapping.InterlisFieldBinding;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import org.apache.hop.core.exception.HopTransformException;
+import org.apache.hop.core.row.RowMeta;
 import org.apache.hop.core.variables.IVariables;
 
-/**
- * SWT-free controller for the INTERLIS Role Join dialog: model probing and preview formatting.
- */
+/** SWT-free controller for the INTERLIS Role Join dialog: model probing and preview formatting. */
 public final class InterlisRoleJoinDialogController {
 
   /** Probes the current configuration; failures are returned as a friendly message. */
@@ -33,34 +33,12 @@ public final class InterlisRoleJoinDialogController {
         .toList();
   }
 
-  /** Formats a preview of the join configuration. */
-  public String formatPreview(InterlisRoleJoinMeta meta, InterlisRoleJoinProbeResult result) {
-    return String.join(
-        "\n",
-        "Role Join preview",
-        "----------------",
-        "Main class     " + result.mainClass().scopedName(),
-        "Role           " + result.role().name() + " -> " + result.target().scopedName()
-            + " " + result.role().cardinality(),
-        "Main ref field " + meta.resolvedMainReferenceField(result),
-        "Lookup TID     "
-            + (meta.getLookupTidField() == null ? "_ili_tid" : meta.getLookupTidField()),
-        "Fields added   "
-            + meta.effectiveLookupFields(result).stream()
-                .map(f -> meta.resolvedPrefix(result) + f)
-                .toList(),
-        "Target fields  " + result.target().attributes().stream()
-            .map(a -> a.name() + " (" + a.typeName() + ")").toList(),
-        "",
-        "The lookup stream is loaded into memory once (max "
-            + meta.getMaxLookupRows() + " rows).");
-  }
-
-  /** Builds the structured field/mapping preview shown by the dialog. */
+  /** Previews the key fields and the same target projection used by the runtime. */
   public InterlisSchemaPreview createSchemaPreview(
-      InterlisRoleJoinMeta meta, InterlisRoleJoinProbeResult result) {
-    String prefix = meta.resolvedPrefix(result);
-    List<InterlisPreviewRow> prefixRows =
+      InterlisRoleJoinMeta meta, InterlisRoleJoinProbeResult result, IVariables vars)
+      throws HopTransformException {
+    String reference = InterlisFieldBinding.resolve(vars, meta.resolvedMainReferenceField(result));
+    var rows =
         new ArrayList<>(
             List.of(
                 new InterlisPreviewRow("Main class", "", result.mainClass().scopedName()),
@@ -68,29 +46,24 @@ public final class InterlisRoleJoinDialogController {
                     "Role",
                     result.role().cardinality().toString(),
                     result.role().name() + " -> " + result.target().scopedName()),
+                new InterlisPreviewRow("Main BID field", "String", InterlisEnvelopeRowLayout.BID),
+                new InterlisPreviewRow("Main reference field", "String", reference),
                 new InterlisPreviewRow(
-                    "Main reference field", "", meta.resolvedMainReferenceField(result)),
+                    "Reference BID field",
+                    "String",
+                    reference
+                        + "_bid"
+                        + (result.role().external() ? " (required for EXTERNAL)" : " (optional)")),
+                new InterlisPreviewRow("Lookup BID field", "String", InterlisEnvelopeRowLayout.BID),
                 new InterlisPreviewRow(
-                    "Lookup TID field", "", safe(meta.getLookupTidField(), "_ili_tid"))));
-    List<String> warnings = new ArrayList<>();
-    List<ch.so.agi.hop.interlis.core.mapping.InterlisFieldPlan> fields = new ArrayList<>();
-    for (String name : meta.effectiveLookupFields(result)) {
-      InterlisAttributeDescriptor attribute =
-          result.target().attributes().stream()
-              .filter(candidate -> candidate.name().equals(name))
-              .findFirst()
-              .orElse(null);
-      if (attribute == null) {
-        warnings.add("Lookup field " + name + " was not found on " + result.target().scopedName());
-        continue;
-      }
-      fields.add(InterlisSchemaPreviewSupport.attributeFieldPlan(prefix + attribute.name(), attribute));
+                    "Lookup TID field",
+                    "String",
+                    InterlisFieldBinding.resolve(vars, meta.getLookupTidField()))));
+    for (var field :
+        InterlisRoleJoinBindings.output(new RowMeta(), result, meta, vars).getValueMetaList()) {
+      rows.add(new InterlisPreviewRow(field.getName(), field.getTypeDesc(), "lookup field"));
     }
-    return InterlisSchemaPreviewSupport.createFieldPreview(prefixRows, fields, warnings);
-  }
-
-  private static String safe(String value, String fallback) {
-    return value == null || value.isBlank() ? fallback : value;
+    return new InterlisSchemaPreview(rows, List.of(), null);
   }
 
   /** Parses a comma separated field list. */

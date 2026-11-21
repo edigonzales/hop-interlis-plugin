@@ -9,6 +9,7 @@ import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.output.InterlisOutputMeta;
 import java.nio.file.Path;
@@ -42,7 +43,7 @@ class InterlisInputOperationPipelineTest {
   void typed_input_exposes_delete_operations() throws Exception {
     InterlisInputMeta meta = new InterlisInputMeta();
     meta.setFileName(TestData.path("/data/HopIli_Associations_V1_delete.xtf").toString());
-    meta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    meta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setClassName("HopIli_Associations_V1.Data.Person");
     meta.setIncludeTid(true);
@@ -80,7 +81,7 @@ class InterlisInputOperationPipelineTest {
 
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(TestData.path("/data/HopIli_Associations_V1_delete.xtf").toString());
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(TestData.path("/models").toString());
     input.setClassName("HopIli_Associations_V1.Data.Person");
     input.setIncludeTid(true);
@@ -91,11 +92,12 @@ class InterlisInputOperationPipelineTest {
     output.setFileName(outputFile.toString());
     output.setModelNames("HopIli_Associations_V1");
     output.setModelDirectories(TestData.path("/models").toString());
-    output.setClassName("HopIli_Associations_V1.Data.Person");
-    output.setObjectIdField("_ili_tid");
-    output.setBasketIdField("_ili_bid");
-    output.setBasketId("b1");
-    output.setOperationField("_ili_operation");
+    var mapping = TestData.mappedInput("INTERLIS Input", "HopIli_Associations_V1.Data.Person");
+    mapping.setOperationField("_ili_operation");
+    output.setInputs(java.util.List.of(mapping));
+    output.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    output.setValidateBeforePublish(false);
+
     output.setOverwrite(true);
 
     PipelineMeta pipelineMeta = new PipelineMeta();

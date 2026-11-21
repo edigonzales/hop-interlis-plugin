@@ -216,6 +216,7 @@ public final class InterlisEnvelopeRowLayout {
             object == null ? null : object.getobjectoid(),
             operation == null ? InterlisObjectOperation.NONE : operation,
             object,
+            null,
             null);
     return toRow(envelope);
   }

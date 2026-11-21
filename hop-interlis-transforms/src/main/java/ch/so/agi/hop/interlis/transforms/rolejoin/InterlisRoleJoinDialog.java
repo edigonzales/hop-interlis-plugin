@@ -52,7 +52,7 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
   private TextVar wLookupFields;
   private TextVar wMaxLookupRows;
   private Button wFailOnMissingMandatoryReference;
-  private Button wFailOnDuplicateTid;
+  private Button wFailOnDuplicateKey;
   private InterlisDialogUiSupport.StatusArea wStatus;
   private Label wSummary;
   private Label wPreviewDiagnostics;
@@ -178,13 +178,13 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     fdMissing.top = new FormAttachment(wMaxLookupRows, margin);
     wFailOnMissingMandatoryReference.setLayoutData(fdMissing);
 
-    wFailOnDuplicateTid = new Button(shell, SWT.CHECK);
-    wFailOnDuplicateTid.setText("Fail on duplicate lookup TID");
-    PropsUi.setLook(wFailOnDuplicateTid);
+    wFailOnDuplicateKey = new Button(shell, SWT.CHECK);
+    wFailOnDuplicateKey.setText("Fail on duplicate lookup key (BID + TID)");
+    PropsUi.setLook(wFailOnDuplicateKey);
     FormData fdDuplicate = new FormData();
     fdDuplicate.left = new FormAttachment(props.getMiddlePct(), 0);
     fdDuplicate.top = new FormAttachment(wFailOnMissingMandatoryReference, margin);
-    wFailOnDuplicateTid.setLayoutData(fdDuplicate);
+    wFailOnDuplicateKey.setLayoutData(fdDuplicate);
 
     // Mapping summary, diagnostics and table
     wSummary = new Label(shell, SWT.LEFT | SWT.WRAP);
@@ -192,7 +192,7 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
     FormData fdSummary = new FormData();
     fdSummary.left = new FormAttachment(0, 0);
     fdSummary.right = new FormAttachment(100, 0);
-    fdSummary.top = new FormAttachment(wFailOnDuplicateTid, margin);
+    fdSummary.top = new FormAttachment(wFailOnDuplicateKey, margin);
     wSummary.setLayoutData(fdSummary);
 
     wPreviewDiagnostics = new Label(shell, SWT.LEFT | SWT.WRAP);
@@ -329,7 +329,7 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
           input.getLookupFields() == null ? "" : String.join(",", input.getLookupFields()));
       wMaxLookupRows.setText(Long.toString(input.getMaxLookupRows()));
       wFailOnMissingMandatoryReference.setSelection(input.isFailOnMissingMandatoryReference());
-      wFailOnDuplicateTid.setSelection(input.isFailOnDuplicateTid());
+      wFailOnDuplicateKey.setSelection(input.isFailOnDuplicateKey());
     } finally {
       suppressRefresh = false;
     }
@@ -367,18 +367,18 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
       populateClassCombo();
       populateRoleCombo(result);
       wSummary.setText(
-          "The lookup stream is loaded into memory once (max "
+          "The lookup uses BID + TID (maximum "
               + input.getMaxLookupRows()
               + " rows). Fields from the selected role target are added with the configured"
               + " prefix.");
-      InterlisSchemaPreview preview = controller.createSchemaPreview(input, result);
+      InterlisSchemaPreview preview = controller.createSchemaPreview(input, result, variables);
       wStatus.set(
           InterlisDialogUiSupport.statusSeverity(
               InterlisDialogUiSupport.StatusSeverity.SUCCESS, preview),
           "Model loaded; role " + result.role().name() + " -> " + result.target().scopedName());
       InterlisDialogUiSupport.populatePreviewTable(wPreview, preview.rows());
       InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, preview);
-    } catch (Exception e) {
+    } catch (Exception | LinkageError e) {
       wStatus.set(
           InterlisDialogUiSupport.StatusSeverity.ERROR,
           InterlisStructureDialogSupport.rootCauseMessage(e));
@@ -447,14 +447,14 @@ public class InterlisRoleJoinDialog extends BaseTransformDialog {
       input.setMaxLookupRows(
           parseLong(wMaxLookupRows.getText(), InterlisRoleJoinMeta.DEFAULT_MAX_LOOKUP_ROWS));
       input.setFailOnMissingMandatoryReference(wFailOnMissingMandatoryReference.getSelection());
-      input.setFailOnDuplicateTid(wFailOnDuplicateTid.getSelection());
+      input.setFailOnDuplicateKey(wFailOnDuplicateKey.getSelection());
     }
   }
 
   private static long parseLong(String value, long fallback) {
     try {
       return Long.parseLong(value.trim());
-    } catch (Exception e) {
+    } catch (NumberFormatException e) {
       return fallback;
     }
   }

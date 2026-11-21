@@ -25,12 +25,6 @@ class InterlisModelSourceSupportTest {
   }
 
   @Test
-  void keeps_comma_separated_model_names_for_backwards_compatibility() {
-    assertThat(InterlisModelSourceSupport.parseModelNames("ModelA, ModelB"))
-        .containsExactly("ModelA", "ModelB");
-  }
-
-  @Test
   void treats_data_placeholder_as_model_inference() {
     assertThat(InterlisModelSourceSupport.parseModelNames(" %DATA ")).isEmpty();
     assertThat(InterlisModelSourceSupport.parseModelNames(" ")).isEmpty();

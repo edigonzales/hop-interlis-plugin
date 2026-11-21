@@ -28,11 +28,18 @@ class InterlisRoleJoinDialogControllerTest {
     meta.setRoleName("Address");
 
     InterlisRoleJoinProbeResult result = controller.probe(meta, new Variables());
-    var preview = controller.createSchemaPreview(meta, result);
+    var preview = controller.createSchemaPreview(meta, result, new Variables());
 
     assertThat(preview.rows())
         .extracting(row -> row.fieldName())
-        .contains("Main class", "Role", "Main reference field", "Lookup TID field", "Address_Street");
+        .contains(
+            "Main class",
+            "Role",
+            "Main reference field",
+            "Main BID field",
+            "Lookup BID field",
+            "Lookup TID field",
+            "Address_Street");
     assertThat(preview.rows())
         .anyMatch(row -> row.fieldName().equals("Address_Street") && row.hopType().equals("String"));
     assertThat(preview.errorMessage()).isNull();

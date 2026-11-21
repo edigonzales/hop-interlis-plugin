@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.input;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import com.atolcd.hop.gis.geometry.curve.CircularString;
 import com.atolcd.hop.gis.geometry.curve.CompoundCurve;
@@ -36,7 +37,7 @@ class InterlisInputPipelineTest {
       throws Exception {
     InterlisInputMeta meta = new InterlisInputMeta();
     meta.setFileName(TestData.path(xtfFile).toString());
-    meta.setModelNames(modelsFromData ? InterlisInputMeta.MODELS_FROM_DATA : modelName);
+    meta.setModelNames(modelsFromData ? InterlisModelSourceSupport.MODELS_FROM_DATA : modelName);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setClassName(className);
     meta.setIncludeTid(true);

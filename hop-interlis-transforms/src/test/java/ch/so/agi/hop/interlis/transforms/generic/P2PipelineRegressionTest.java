@@ -143,6 +143,8 @@ class P2PipelineRegressionTest {
                 null,
                 null,
                 InterlisObjectOperation.NONE,
+                null,
+                null,
                 null)));
     var meta = new InterlisTransferOutputMeta();
     meta.setDefault();
@@ -176,7 +178,9 @@ class P2PipelineRegressionTest {
                     object ? ITEM : null,
                     object ? "i1" : null,
                     InterlisObjectOperation.NONE,
-                    object ? new Iom_jObject(ITEM, "i1") : null)));
+                    object ? new Iom_jObject(ITEM, "i1") : null,
+                    null,
+                    null)));
       }
       var meta = new InterlisTransferOutputMeta();
       meta.setDefault();
@@ -200,6 +204,7 @@ class P2PipelineRegressionTest {
       children.schema = new RowMeta();
       children.schema.addValueMeta(new ValueMetaString("_ili_parent_tid"));
       children.schema.addValueMeta(new ValueMetaInteger("_ili_index"));
+      children.schema.addValueMeta(new ValueMetaString("_ili_parent_bid"));
       children.schema.addValueMeta(new ValueMetaString("Code"));
       children.schema.addValueMeta(new ValueMetaString("Note"));
       children.schema.addValueMeta(
@@ -207,14 +212,12 @@ class P2PipelineRegressionTest {
               "Location",
               org.apache.hop.core.row.value.ValueMetaFactory.getIdForValueMeta("Geometry")));
       for (int i = 0; i < 100; i++)
-        children.rows.add(new Object[] {"absent", (long) i, "child", null, null});
+        children.rows.add(new Object[] {"absent", (long) i, "b1", "child", null, null});
       var collect = new ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta();
       collect.setDefault();
       collect.setCollectMode(
           ch.so.agi.hop.interlis.transforms.collect.InterlisStructureCollectMeta.CollectMode
               .REBUILD);
-      collect.setParentBidField("");
-      collect.setChildParentBidField("");
       collect.setModelNames(MODEL);
       collect.setModelDirectories(models);
       collect.setClassName(ITEM);

@@ -39,9 +39,8 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, InterlisInputData> {
 
   /** Placeholder used by the GUI for "detect models from the transfer file". */
-  public static final String MODELS_FROM_DATA = InterlisModelSourceSupport.MODELS_FROM_DATA;
-
   @HopMetadataProperty private boolean selectFields;
+
   @HopMetadataProperty private java.util.List<String> selectedFields = new java.util.ArrayList<>();
 
   public boolean isSelectFields() {
@@ -122,7 +121,7 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
     spillDirectory = "";
     maxSpillMiB = 0;
     fileName = "";
-    modelNames = MODELS_FROM_DATA;
+    modelNames = InterlisModelSourceSupport.MODELS_FROM_DATA;
     modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
     className = "";
     includeTid = true;
@@ -290,10 +289,9 @@ public class InterlisInputMeta extends BaseTransformMeta<InterlisInput, Interlis
         true,
         "_",
         resolvedDefaultSrid(variables).orElse(null),
-        selectFields ? java.util.Set.copyOf(selectedFields) : java.util.Set.of(),
+        selectFields ? java.util.Set.copyOf(selectedFields) : null,
         false,
-        true,
-        selectFields);
+        true);
   }
 
   /** Resolves the configured default SRID; empty or unparsable yields {@code null}. */

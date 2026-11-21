@@ -81,7 +81,7 @@ public class InterlisRoleJoinMeta
   @HopMetadataProperty private String prefix;
   @HopMetadataProperty private List<String> lookupFields;
   @HopMetadataProperty private boolean failOnMissingMandatoryReference;
-  @HopMetadataProperty private boolean failOnDuplicateTid;
+  @HopMetadataProperty private boolean failOnDuplicateKey;
   @HopMetadataProperty private long maxLookupRows;
 
   public InterlisRoleJoinMeta() {
@@ -104,7 +104,7 @@ public class InterlisRoleJoinMeta
     prefix = "";
     lookupFields = new java.util.ArrayList<>();
     failOnMissingMandatoryReference = true;
-    failOnDuplicateTid = true;
+    failOnDuplicateKey = true;
     maxLookupRows = DEFAULT_MAX_LOOKUP_ROWS;
   }
 
@@ -394,12 +394,12 @@ public class InterlisRoleJoinMeta
     this.failOnMissingMandatoryReference = failOnMissingMandatoryReference;
   }
 
-  public boolean isFailOnDuplicateTid() {
-    return failOnDuplicateTid;
+  public boolean isFailOnDuplicateKey() {
+    return failOnDuplicateKey;
   }
 
-  public void setFailOnDuplicateTid(boolean failOnDuplicateTid) {
-    this.failOnDuplicateTid = failOnDuplicateTid;
+  public void setFailOnDuplicateKey(boolean failOnDuplicateKey) {
+    this.failOnDuplicateKey = failOnDuplicateKey;
   }
 
   public long getMaxLookupRows() {

@@ -56,7 +56,7 @@
     <lookupFields>Name</lookupFields>
     <lookupFields>BFS_Nummer</lookupFields>
     <failOnMissingMandatoryReference>Y</failOnMissingMandatoryReference>
-    <failOnDuplicateTid>Y</failOnDuplicateTid>
+    <failOnDuplicateKey>Y</failOnDuplicateKey>
     <maxLookupRows>500000</maxLookupRows>
     <distribute>N</distribute>
     <copies>1</copies>

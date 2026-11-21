@@ -97,16 +97,16 @@ public class InterlisStructureCollectMeta
   }
 
   @HopMetadataProperty(key = "collect_mode")
-  private CollectMode collectMode;
+  private CollectMode collectMode = CollectMode.PRESERVE;
 
   @HopMetadataProperty(key = "parent_bid_field")
-  private String parentBidField;
+  private String parentBidField = "_ili_bid";
 
   @HopMetadataProperty(key = "child_parent_bid_field")
-  private String childParentBidField;
+  private String childParentBidField = "_ili_parent_bid";
 
   public CollectMode getCollectMode() {
-    return collectMode == null ? CollectMode.REBUILD : collectMode;
+    return collectMode;
   }
 
   public void setCollectMode(CollectMode value) {
@@ -127,17 +127,6 @@ public class InterlisStructureCollectMeta
 
   public void setChildParentBidField(String value) {
     childParentBidField = value;
-  }
-
-  @Override
-  public void loadXml(org.w3c.dom.Node node, IHopMetadataProvider provider)
-      throws org.apache.hop.core.exception.HopXmlException {
-    super.loadXml(node, provider);
-    if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "collect_mode") == null) {
-      collectMode = CollectMode.REBUILD;
-      parentBidField = "";
-      childParentBidField = "";
-    }
   }
 
   @HopMetadataProperty private String parentInputTransform;
@@ -220,7 +209,11 @@ public class InterlisStructureCollectMeta
         true,
         "_",
         null,
-        new java.util.LinkedHashSet<>(getSelectedChildFields()));
+        getSelectedChildFields().isEmpty()
+            ? null
+            : new java.util.LinkedHashSet<>(getSelectedChildFields()),
+        false,
+        true);
   }
 
   @Override

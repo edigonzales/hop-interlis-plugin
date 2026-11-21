@@ -3,7 +3,6 @@ package ch.so.agi.hop.interlis.core.mapping;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
-import ch.so.agi.hop.interlis.core.structures.InterlisStructureLocator;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -54,7 +53,7 @@ class InterlisRowSchemaBuilderAssociationTest {
         builder.build(
             schema, AssociationsTestSupport.root(schema, AssociationsTestSupport.ASSOC_MEMBERSHIP),
             new ProjectionOptions(
-                true, true, false, false, false, true, "_", null, java.util.Set.of(), true, true));
+                true, true, false, false, false, true, "_", null, null, true, true));
 
     assertThat(plan.fields())
         .extracting(InterlisFieldPlan::hopFieldName)
@@ -104,7 +103,7 @@ class InterlisRowSchemaBuilderAssociationTest {
         builder.build(
             schema, AssociationsTestSupport.root(schema, AssociationsTestSupport.CLASS_PERSON),
             new ProjectionOptions(
-                true, true, false, false, false, true, "_", null, java.util.Set.of(), false, false));
+                true, true, false, false, false, true, "_", null, null, false, false));
 
     assertThat(plan.fields())
         .extracting(InterlisFieldPlan::hopFieldName)

@@ -129,9 +129,10 @@ public final class InterlisStructureLocator {
               ch.so.agi.hop.interlis.core.mapping.InterlisPropertyPath.root(target.name()),
               target,
               null,
-              null));
+              null,
+              java.util.List.of()));
       return new InterlisStructurePlan(
-          classDescriptor, pathAttributes, target, null, fields, List.of());
+          classDescriptor, pathAttributes, target, null, fields, List.of(), java.util.Set.of());
     }
     String structureScopedName = target.structureScopedName();
     String targetName = target.name();

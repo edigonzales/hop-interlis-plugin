@@ -11,6 +11,8 @@ import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
+import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
 import ch.so.agi.hop.interlis.transforms.output.InterlisOutputMeta;
 import java.nio.file.Path;
@@ -76,7 +78,7 @@ class LargeTransferStreamingTest {
 
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(inputFile.toString());
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(
         ch.so.agi.hop.interlis.transforms.TestData.path("/models").toString());
     input.setClassName("HopIli_Associations_V1.Data.Person");
@@ -88,10 +90,11 @@ class LargeTransferStreamingTest {
     output.setModelNames("HopIli_Associations_V1");
     output.setModelDirectories(
         ch.so.agi.hop.interlis.transforms.TestData.path("/models").toString());
-    output.setClassName("HopIli_Associations_V1.Data.Person");
-    output.setObjectIdField("_ili_tid");
-    output.setBasketIdField("_ili_bid");
-    output.setBasketId("b1");
+    var mapping = TestData.mappedInput("INTERLIS Input", "HopIli_Associations_V1.Data.Person");
+    output.setInputs(java.util.List.of(mapping));
+    output.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    output.setValidateBeforePublish(false);
+
     output.setOverwrite(true);
 
     PipelineMeta pipelineMeta = new PipelineMeta();

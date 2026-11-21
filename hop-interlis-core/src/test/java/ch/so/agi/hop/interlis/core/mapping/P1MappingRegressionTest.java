@@ -31,7 +31,7 @@ class P1MappingRegressionTest {
                     List.of(TestResources.path("/models").toString())),
                 "HopIli_P1_V1.Data.Item",
                 new ProjectionOptions(
-                    true, true, false, false, false, true, "_", null, Set.of(), true, true));
+                    true, true, false, false, false, true, "_", null, null, true, true));
     plan = projection.plan();
   }
 

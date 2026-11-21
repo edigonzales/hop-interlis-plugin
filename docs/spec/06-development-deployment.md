@@ -230,7 +230,7 @@ zwischen Threads geteilt. File-Transforms sind auf eine Kopie begrenzt.
 ## 8. Handbuch und Abschluss
 
 Fixtures liegen einmalig unter `docs/biblios/user/examples/`. Ausführbare neue
-Tutorials liegen in `examples/`; alte Regressionspipelines bleiben unter `e2e/`.
+Tutorials liegen in `examples/`; installierte Regressionspipelines liegen unter `e2e/`.
 Die zugehörigen Fachabschnitte und GUI-Controls werden gemeinsam aktualisiert.
 
 Rendering erfolgt mit einer einmal aufgelösten thoth-biblios-JAR aus dem aktuellen

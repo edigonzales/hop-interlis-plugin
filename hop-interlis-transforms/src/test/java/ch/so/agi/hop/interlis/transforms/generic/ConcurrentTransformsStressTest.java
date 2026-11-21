@@ -2,6 +2,7 @@ package ch.so.agi.hop.interlis.transforms.generic;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta;
 import ch.so.agi.hop.interlis.transforms.validate.InterlisValidateMeta;
@@ -82,7 +83,7 @@ class ConcurrentTransformsStressTest {
   private static TransformMeta input(String name, String fixture) {
     InterlisInputMeta meta = new InterlisInputMeta();
     meta.setFileName(TestData.path(fixture).toString());
-    meta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    meta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setClassName("HopIli_Associations_V1.Data.Person");
     meta.setIncludeTid(true);
@@ -95,7 +96,7 @@ class ConcurrentTransformsStressTest {
   private static TransformMeta validate(String name, String fixture) {
     InterlisValidateMeta meta = new InterlisValidateMeta();
     meta.setFileName(TestData.path(fixture).toString());
-    meta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    meta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     TransformMeta transform = new TransformMeta(name, meta);
     transform.setLocation(100, 100);
@@ -103,8 +104,8 @@ class ConcurrentTransformsStressTest {
   }
 
   /**
-   * Runs the engine in a daemon thread bounded by {@link #PIPELINE_TIMEOUT_MS} so a deadlock
-   * fails the test instead of hanging the build forever.
+   * Runs the engine in a daemon thread bounded by {@link #PIPELINE_TIMEOUT_MS} so a deadlock fails
+   * the test instead of hanging the build forever.
    */
   private static void runEngineWithTimeout(IPipelineEngine<PipelineMeta> engine)
       throws Exception {

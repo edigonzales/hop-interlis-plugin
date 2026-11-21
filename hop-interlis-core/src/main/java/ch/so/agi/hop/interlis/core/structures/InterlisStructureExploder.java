@@ -81,9 +81,5 @@ public final class InterlisStructureExploder {
     };
   }
 
-  public record ExplodedChild(int index, Object[] values, IomObject source) {
-    public ExplodedChild(int index, Object[] values) {
-      this(index, values, null);
-    }
-  }
+  public record ExplodedChild(int index, Object[] values, IomObject source) {}
 }

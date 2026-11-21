@@ -70,24 +70,10 @@ Die Vorschau erklärt die unterschiedlichen Zusagen von Projektion,
 Quellobjekt-Overlay und vollständigem Ereignisstrom. Ein Quellobjekt erhält
 Objektinhalte; ein Klasseninput selektiert genau die konfigurierte Klasse.
 
-## 4. INTERLIS Output: bisheriger Einklassenmodus
+## 4. INTERLIS Output
 
-| Control | Default |
-|---|---|
-| XTF file / Overwrite existing file | leer / aus |
-| Models / Model dirs / Class + Reload model | leer / Standardverzeichnisse / leer |
-| Object ID field | `_ili_tid` |
-| BID field / Default BID | `_ili_bid` / `b1` |
-| Source object field / Operation field | leer / leer |
-| Options… | Validierung vor Veröffentlichung |
-
-Die Vorschau zeigt erwartete Mappingfelder. Die Bindung erfolgt über Namen; es
-existieren weder `Auto-map by name` noch `Get incoming fields` als editierbare
-Mappingaktionen. UUID-Erzeugung und Basket-Policy-Auswahl sind keine Controls.
-
-TIDs müssen bereitstehen. BIDs müssen zusammenhängend gruppiert sein. Ausgabe wird
-auf einer temporären Datei vorbereitet und am erfolgreichen Pipeline-Ende
-veröffentlicht. Ein Reader derselben Pipeline kann nicht die neue Ausgabe prüfen.
+Der Dialog bindet einen oder mehrere Klassenströme über explizite Input-Mappings.
+Globale Einstellungen und Eingangszuordnung siehe Abschnitt 12.
 
 ## 5. Transfer Input/Output und Object↔Row
 
@@ -147,18 +133,17 @@ Attribute. REBUILD erzeugt ein Kind aus projizierten Werten. Collect ersetzt die
 gewählte Sammlung vollständig; Filtern entfernt Kinder. Die Vorschau erläutert
 Träger, Kardinalität und die Erwartung sortierter Eltern-/Kindschlüssel.
 
-Beim Laden alter XML-Dateien ohne neue Optionen gilt: kein Explode-Kindträger,
-Collect REBUILD und bisherige Schlüsselwahl ohne BID. Neue Defaults gelten beim
-Anlegen neuer Konfigurationen, nicht als stille Migration alter Dateien.
+Collect benötigt die beiden BID-Felder und sortierte Schlüsselpaare. Explode
+liefert standardmässig den Kind-Carrier und die Update-Referenz.
 
 ## 8. Role Join
 
 Controls: Main input, Lookup input, Models, Model dirs, Class + Reload, Role,
 Main ref field, Lookup TID field (`_ili_tid`), Output prefix, Fields to add,
 Max lookup rows (500000), Fail on missing mandatory reference (an) und
-Fail on duplicate lookup TID (an). Options… bietet Puffer-Einstellungen.
+Fail on duplicate lookup key (BID + TID) (an). Options… bietet Puffer-Einstellungen.
 
-Die modellbasierte Vorschau zeigt hinzugefügte Zielfelder. Lookup-Überschreitung ist
+Die modellbasierte Vorschau zeigt BID- und Referenzfelder sowie die hinzugefügten Zielfelder. Lookup-Überschreitung ist
 ein Fehler; 0 bedeutet unbegrenzt. Beide Eingänge werden fair bedient, bis Lookup
 vollständig ist. Die erste Ausgabe kann deshalb warten.
 
@@ -199,15 +184,14 @@ Historische Abnahmeberichte dokumentieren weiterhin ihren damaligen Prüfstand.
 
 ## 12. Prio-3-Dialoge
 
-Neue Outputs öffnen `INTERLIS Output — class inputs`. Globale Controls sind
+Output öffnet `INTERLIS Output — class inputs`. Globale Controls sind
 Target XTF, Models, Model directories, Overwrite (aus), Validate before publication
 (an), Validation configuration, Buffer memory (64 MiB), Spill directory (leer),
 Maximum spill (0 = unbegrenzt) und Basket assignment (One basket per topic).
 Die Eingangstabelle zeigt Transform, Klasse und Anzahl Feldzuordnungen. Add/Edit
 öffnet eine Tabelle `INTERLIS target path` / `Hop source field`; Map same-named
 fields ergänzt sichtbare Zuordnungen. TID/BID sowie optionale Operation und
-Quellobjekt sind pro Eingang einstellbar. Legacy single-class mode wechselt
-explizit zum bisherigen Dialog; dessen Class inputs-Schaltfläche führt zurück.
+Quellobjekt sind pro Eingang einstellbar.
 
 Update verwendet denselben Tabellenaufbau mit zusätzlichem Original XTF (Models
 standardmässig `%DATA`). Ein leerer Structure path bedeutet Objektpatch,

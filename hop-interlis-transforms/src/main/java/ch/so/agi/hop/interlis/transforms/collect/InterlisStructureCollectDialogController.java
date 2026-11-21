@@ -30,78 +30,23 @@ public final class InterlisStructureCollectDialogController {
         meta.projectionOptions());
   }
 
-  /** Formats a description of the collected structure for the preview area. */
-  public String formatCollectPreview(
-      InterlisStructurePlan plan,
-      String parentTransform,
-      String childTransform,
-      String parentKeyField,
-      String childParentKeyField) {
-    return String.join(
-        "\n",
-        "Collect preview",
-        "--------------",
-        "Parent stream  "
-            + (parentTransform == null ? "" : parentTransform)
-            + "  (key "
-            + parentKeyField
-            + ")",
-        "Child stream   "
-            + (childTransform == null ? "" : childTransform)
-            + "  (parent key "
-            + childParentKeyField
-            + ")",
-        "Structure      "
-            + plan.attributeName()
-            + " : "
-            + (plan.ordered() ? "LIST OF " : "BAG OF ")
-            + plan.childTypeName(),
-        "Child fields   " + plan.childFields().stream().map(f -> f.hopFieldName()).toList(),
-        "Output         parent rows with updated "
-            + InterlisStructureCollectMeta.DEFAULT_SOURCE_OBJECT_FIELD,
-        "",
-        "Both input streams must be sorted: the parent stream by parent key ascending and the",
-        "child stream by (parent key, index) ascending.");
-  }
-
   /** Builds the structured mapping preview shown below the collect configuration. */
   public InterlisSchemaPreview createSchemaPreview(
       InterlisStructurePlan plan,
       String parentTransform,
       String childTransform,
       String parentKeyField,
-      String childParentKeyField) {
-    List<InterlisPreviewRow> prefixRows =
-        new ArrayList<>(
-            List.of(
-                new InterlisPreviewRow(
-                    "Parent input",
-                    "",
-                    (parentTransform == null ? "" : parentTransform)
-                        + " (key "
-                        + safe(parentKeyField)
-                        + ")"),
-                new InterlisPreviewRow(
-                    "Child input",
-                    "",
-                    (childTransform == null ? "" : childTransform)
-                        + " (parent key "
-                        + safe(childParentKeyField)
-                        + ")"),
-                new InterlisPreviewRow(
-                    "Structure", plan.ordered() ? "LIST" : "BAG", plan.childTypeName())));
-    return InterlisSchemaPreviewSupport.createFieldPreview(
-        prefixRows, plan.childFields(), plan.warnings());
-  }
-
-  public InterlisSchemaPreview createSchemaPreview(
-      InterlisStructurePlan plan,
-      String parent,
-      String child,
-      String parentKey,
-      String childKey,
+      String childParentKeyField,
       InterlisStructureCollectMeta meta) {
-    var preview = createSchemaPreview(plan, parent, child, parentKey, childKey);
+    var prefixRows =
+        List.of(
+            new InterlisPreviewRow("Parent input", "", safe(parentTransform)),
+            new InterlisPreviewRow("Child input", "", safe(childTransform)),
+            new InterlisPreviewRow(
+                "Structure", plan.ordered() ? "LIST" : "BAG", plan.childTypeName()));
+    var preview =
+        InterlisSchemaPreviewSupport.createFieldPreview(
+            prefixRows, plan.childFields(), plan.warnings());
     var rows = new ArrayList<>(preview.rows());
     var warnings = new ArrayList<>(preview.warnings());
     if (!plan.primitive()
@@ -118,13 +63,18 @@ public final class InterlisStructureCollectDialogController {
             + " removed.");
     warnings.add(
         "Parent identity: "
-            + (safe(meta.getParentBidField()).isBlank()
-                ? safe(parentKey)
-                : "(" + meta.getParentBidField() + ", " + parentKey + ")")
+            + "("
+            + safe(meta.getParentBidField())
+            + ", "
+            + parentKeyField
+            + ")"
             + "; child identity: "
-            + (safe(meta.getChildParentBidField()).isBlank()
-                ? safe(childKey)
-                : "(" + meta.getChildParentBidField() + ", " + childKey + ")"));
+            + "("
+            + safe(meta.getChildParentBidField())
+            + ", "
+            + childParentKeyField
+            + ")");
+    warnings.add("Sort both inputs by basket and parent key, and ordered children by index.");
     return new InterlisSchemaPreview(rows, warnings, preview.errorMessage());
   }
 

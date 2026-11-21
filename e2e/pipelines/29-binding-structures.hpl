@@ -109,6 +109,8 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <emit_update_reference>N</emit_update_reference>
+    <keep_child_source_object>N</keep_child_source_object>
   </transform>
   <transform>
     <type>SelectValues</type>
@@ -197,6 +199,9 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <collect_mode>REBUILD</collect_mode>
+    <parent_bid_field>basket_key</parent_bid_field>
+    <child_parent_bid_field>_ili_parent_bid</child_parent_bid_field>
   </transform>
   <transform>
     <type>INTERLIS_STRUCTURE_EXPLODE</type>
@@ -225,6 +230,8 @@
       <schema_name/>
     </partitioning>
     <attributes/>
+    <emit_update_reference>N</emit_update_reference>
+    <keep_child_source_object>N</keep_child_source_object>
   </transform>
   <transform>
     <type>SelectValues</type>

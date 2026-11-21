@@ -56,7 +56,8 @@ class BindingPipelineRegressionTest {
       meta.setSourceObjectField("carrier");
       meta.setParentTidField("key");
       meta.setEmitParentBid(false);
-      meta.setEmitUpdateReference(false); // This legacy projection intentionally has no BID.
+      meta.setEmitUpdateReference(
+          false); // This projection emits standalone child rows without basket identity.
       meta.setIncludeParentFields(List.of("context"));
       var expected = source.schema.clone();
       meta.getFields(expected, "explode", null, null, new Variables(), null);
@@ -87,15 +88,17 @@ class BindingPipelineRegressionTest {
       main.schema.addValueMeta(
           new ValueMetaString(fault.equals("collision") ? "Address_Street" : "context"));
       main.schema.addValueMeta(new ValueMetaString("reference"));
-      main.rows.add(new Object[] {"keep", "a1"});
+      main.schema.addValueMeta(new ValueMetaString("_ili_bid"));
+      main.rows.add(new Object[] {"keep", "a1", "b1"});
       var lookup = new RegressionRowsMeta();
       lookup.schema = new RowMeta();
       lookup.schema.addValueMeta(lazy(fault.equals("missing-field") ? "wrong" : "Street"));
       lookup.schema.addValueMeta(
           fault.equals("numeric-key") ? new ValueMetaInteger("key") : lazy("key"));
+      lookup.schema.addValueMeta(new ValueMetaString("_ili_bid"));
       lookup.rows.add(
           new Object[] {
-            "Main Street".getBytes(), fault.equals("numeric-key") ? 1L : "a1".getBytes()
+            "Main Street".getBytes(), fault.equals("numeric-key") ? 1L : "a1".getBytes(), "b1"
           });
       var meta = new InterlisRoleJoinMeta();
       meta.setDefault();
@@ -154,8 +157,8 @@ class BindingPipelineRegressionTest {
         meta.getFields(expected, "join", null, null, new Variables(), null);
         var row = engine.getResultRows().getFirst();
         assertThat(row.getRowMeta().getFieldNames()).containsExactly(expected.getFieldNames());
-        assertThat(row.getData()).containsExactly("keep", "a1", "Main Street");
-        assertThat(row.getRowMeta().getValueMeta(2).getStorageType())
+        assertThat(row.getData()).containsExactly("keep", "a1", "b1", "Main Street");
+        assertThat(row.getRowMeta().getValueMeta(3).getStorageType())
             .isEqualTo(IValueMeta.STORAGE_TYPE_NORMAL);
       }
     }

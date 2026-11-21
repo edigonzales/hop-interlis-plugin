@@ -19,8 +19,8 @@ import org.apache.hop.pipeline.transform.BaseTransformMeta;
 import org.apache.hop.pipeline.transform.TransformMeta;
 
 /**
- * Metadata of the INTERLIS Validate transform: validates an XTF file with the iox-ili validator
- * and emits one error row per finding.
+ * Metadata of the INTERLIS Validate transform: validates an XTF file with the iox-ili validator and
+ * emits one error row per finding.
  */
 @Transform(
     id = "INTERLIS_VALIDATE",
@@ -53,7 +53,7 @@ public class InterlisValidateMeta
   @Override
   public void setDefault() {
     fileName = "";
-    modelNames = ch.so.agi.hop.interlis.transforms.input.InterlisInputMeta.MODELS_FROM_DATA;
+    modelNames = InterlisModelSourceSupport.MODELS_FROM_DATA;
     modelDirectories = InterlisModelSourceSupport.DEFAULT_MODEL_DIRECTORIES;
     configFile = "";
     validateMultiplicity = true;

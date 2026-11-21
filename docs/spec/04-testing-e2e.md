@@ -874,7 +874,7 @@ Diese Pipelines erfüllen zwei Zwecke:
 
 Kanonische INTERLIS-2.4-Fixtures liegen einmalig unter `docs/biblios/user/examples/` und werden als Testressourcen übernommen. `DocsExamplesTest` kompiliert alle neun Modelle, prüft vollständige Validierung der acht gültigen Transfers sowie die absichtlich ungültige Validierungsfixture, und vergleicht dokumentierte Eltern-, primitive Kind-, Carrier- und Referenzschemas.
 
-`scripts/run-e2e.sh` führt die sechs bisherigen Handbuchpipelines 33–38 und die neuen Dateien direkt unter `examples/` aus: primitive-collections, child-preserve, reference-fields, reference-roundtrip, reference-check und xtf-to-gpkg. Legacy-Regressionspipelines bleiben separat erhalten. Das LIST-Handbuchbeispiel verwendet ausdrücklich Kind-Carrier, PRESERVE und BID plus Elternschlüssel.
+`scripts/run-e2e.sh` führt die sechs bisherigen Handbuchpipelines 33–38 und die neuen Dateien direkt unter `examples/` aus: primitive-collections, child-preserve, reference-fields, reference-roundtrip, reference-check und xtf-to-gpkg. Die weiteren installierten Regressionspipelines liegen unter `e2e/`. Das LIST-Handbuchbeispiel verwendet ausdrücklich Kind-Carrier, PRESERVE und BID plus Elternschlüssel.
 
 `scripts/check-doc-examples-output.py` vergleicht BAG-Duplikate, LIST-Reihenfolge, leere Sammlungen, konkreten verbleibenden Untertyp, unprojizierte Attribute, verschachtelte Liste, Objekt-/Basket-Zuordnung und Referenz-TIDs/BIDs. Die Referenzausgabe wird mit Dateivalidierung vorbereitet und erst in einer getrennten Pipeline erneut gelesen. GeoPackage wird auf Attribute, Geometriemetadaten, SRID und sämtliche Polygonkoordinaten gegen das kanonische Fixture geprüft; `REQUIRE_VECTOR_RASTER_E2E=true` macht beide GeoPackage-Pfade verpflichtend.
 
@@ -1823,7 +1823,7 @@ mehrere physische Transform-Kopien, Objekt-/Struktur-/primitive Patches,
 unbekannte/doppelte/veraltete Schlüssel, mandatory/null, Herkunftspositionen,
 Symlink-/Hardlink-Gleichheit und Publikation nach späten Fehlern/Stop bzw.
 Originaländerungen. `Prio3MetadataTest` prüft echte Hop-XML-Serialisierung,
-Legacy-Defaults, technische Leerprojektion, Umbenennung/Entfernung und tiefe
+Metadaten-Defaults, technische Leerprojektion, Umbenennung/Entfernung und tiefe
 Dialogkopien. Core-Tests prüfen kanonische Schlüssel und erzwungenes Grouping-Spill.
 
 Die Paket-Pipelines 43–48 ergänzen Mehrklassenexport mit Eingangskopien und Baskets,

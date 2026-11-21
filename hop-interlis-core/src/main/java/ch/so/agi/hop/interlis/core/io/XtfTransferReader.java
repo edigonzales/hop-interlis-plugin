@@ -138,7 +138,8 @@ public final class XtfTransferReader implements InterlisTransferReader {
             null,
             InterlisObjectOperation.NONE,
             null,
-            currentBasketMetadata);
+            currentBasketMetadata,
+            null);
       }
       if (event instanceof ObjectEvent objectEvent) {
         IomObject object = references.repair(objectEvent.getIomObject());
@@ -153,7 +154,8 @@ public final class XtfTransferReader implements InterlisTransferReader {
                 ? InterlisObjectOperation.NONE
                 : InterlisObjectOperation.fromIom(object.getobjectoperation()),
             object,
-            currentBasketMetadata);
+            currentBasketMetadata,
+            null);
       }
       if (event instanceof EndBasketEvent) {
         InterlisBasketMetadata basketMetadata = currentBasketMetadata;
@@ -166,7 +168,8 @@ public final class XtfTransferReader implements InterlisTransferReader {
             null,
             InterlisObjectOperation.NONE,
             null,
-            basketMetadata);
+            basketMetadata,
+            null);
       }
       if (event instanceof EndTransferEvent) {
         transferEnded = true;
@@ -178,6 +181,8 @@ public final class XtfTransferReader implements InterlisTransferReader {
             null,
             null,
             InterlisObjectOperation.NONE,
+            null,
+            null,
             null);
       }
       throw new InterlisReadException(

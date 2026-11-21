@@ -12,15 +12,12 @@ public final class InterlisModelSourceSupport {
 
   private InterlisModelSourceSupport() {}
 
-  /**
-   * Parses explicit model names. Semicolons are the documented separator; commas remain accepted
-   * for backwards compatibility with existing pipeline metadata.
-   */
+  /** Parses the semicolon-separated INTERLIS model names. */
   public static List<String> parseModelNames(String value) {
     if (value == null || value.isBlank() || MODELS_FROM_DATA.equals(value.trim())) {
       return List.of();
     }
-    return Arrays.stream(value.split("[;,]"))
+    return Arrays.stream(value.split(";"))
         .map(String::trim)
         .filter(name -> !name.isEmpty())
         .toList();

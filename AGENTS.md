@@ -17,6 +17,14 @@ The authoritative implementation specification lives in `docs/spec/` (or, while 
 
 Read the relevant specification documents before making architectural changes. Do not replace the architecture described there without a concrete technical reason and an accompanying specification update.
 
+## Pre-production plugin contracts
+
+Maintain one current plugin configuration and API. Change repository tests and
+example pipelines together with that contract. Remove superseded plugin
+metadata, defaults, aliases, and code paths during pre-production development.
+Keep supported INTERLIS formats and the model migration transform. See
+[the implementation specification](docs/spec/02-java-hop-implementation.md#32-pre-production-plugin-contracts).
+
 ## INTERLIS library versions (pinned)
 
 The INTERLIS libraries form a matching pair and are pinned in the parent POM

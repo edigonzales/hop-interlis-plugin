@@ -239,34 +239,50 @@ public final class SpillStore<T> implements AutoCloseable {
       public boolean hasNext() {
         if (next != null) return true;
         if (exhausted) return false;
-        String condition = sorted ? "(sort_order>? OR (sort_order=? AND id>?))" : "id>?";
-        String order = sorted ? "sort_order,id" : "id";
-        try (var query =
-            connection.prepareStatement(
-                "SELECT id,sort_order,payload FROM records WHERE "
-                    + condition
-                    + " AND id<? ORDER BY "
-                    + order
-                    + " LIMIT 1")) {
-          int n = 1;
+        // Separate the two seeks so H2 can use the index on (sort_order, id).
+        // A disjunction here makes repeated reads scan and materialize many payloads.
+        try {
           if (sorted) {
-            query.setLong(n++, lastOrder);
-            query.setLong(n++, lastOrder);
-          }
-          query.setLong(n++, lastId);
-          query.setLong(n, boundary);
-          try (var rows = query.executeQuery()) {
-            if (!rows.next()) {
-              exhausted = true;
-              return false;
+            if (seek(
+                "SELECT id,sort_order,payload FROM records USE INDEX (records_order)"
+                    + " WHERE sort_order=? AND id>? AND id<? ORDER BY sort_order,id LIMIT 1",
+                lastOrder,
+                lastId,
+                boundary)) {
+              return true;
             }
+            exhausted =
+                !seek(
+                    "SELECT id,sort_order,payload FROM records USE INDEX (records_order)"
+                        + " WHERE sort_order>? AND id<? ORDER BY sort_order,id LIMIT 1",
+                    lastOrder,
+                    boundary);
+          } else {
+            exhausted =
+                !seek(
+                    "SELECT id,sort_order,payload FROM records"
+                        + " WHERE id>? AND id<? ORDER BY id LIMIT 1",
+                    lastId,
+                    boundary);
+          }
+          return !exhausted;
+        } catch (SQLException e) {
+          throw failure(e);
+        }
+      }
+
+      private boolean seek(String sql, long... parameters) throws SQLException {
+        try (var query = connection.prepareStatement(sql)) {
+          for (int i = 0; i < parameters.length; i++) {
+            query.setLong(i + 1, parameters[i]);
+          }
+          try (var rows = query.executeQuery()) {
+            if (!rows.next()) return false;
             nextId = rows.getLong(1);
             nextOrder = rows.getLong(2);
             next = rows.getBytes(3);
             return true;
           }
-        } catch (SQLException e) {
-          throw failure(e);
         }
       }
 

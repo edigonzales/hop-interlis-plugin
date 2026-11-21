@@ -22,7 +22,9 @@ class InterlisEnvelopeRowLayoutTest {
             "Model.Topic.ClassA",
             "t1",
             InterlisObjectOperation.DELETE,
-            object);
+            object,
+            null,
+            null);
 
     Object[] row = InterlisEnvelopeRowLayout.toRow(envelope);
 

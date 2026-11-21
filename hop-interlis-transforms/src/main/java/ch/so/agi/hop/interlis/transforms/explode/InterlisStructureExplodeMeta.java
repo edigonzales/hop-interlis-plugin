@@ -50,7 +50,7 @@ public class InterlisStructureExplodeMeta
   public static final String DEFAULT_INDEX_FIELD = "_ili_index";
 
   @HopMetadataProperty(key = "emit_update_reference")
-  private boolean emitUpdateReference;
+  private boolean emitUpdateReference = true;
 
   public boolean isEmitUpdateReference() {
     return emitUpdateReference;
@@ -61,7 +61,7 @@ public class InterlisStructureExplodeMeta
   }
 
   @HopMetadataProperty(key = "keep_child_source_object")
-  private boolean keepChildSourceObject;
+  private boolean keepChildSourceObject = true;
 
   public boolean isKeepChildSourceObject() {
     return keepChildSourceObject;
@@ -69,16 +69,6 @@ public class InterlisStructureExplodeMeta
 
   public void setKeepChildSourceObject(boolean value) {
     keepChildSourceObject = value;
-  }
-
-  @Override
-  public void loadXml(org.w3c.dom.Node node, IHopMetadataProvider provider)
-      throws org.apache.hop.core.exception.HopXmlException {
-    super.loadXml(node, provider);
-    if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "emit_update_reference") == null)
-      emitUpdateReference = false;
-    if (org.apache.hop.core.xml.XmlHandler.getTagValue(node, "keep_child_source_object") == null)
-      keepChildSourceObject = false;
   }
 
   @HopMetadataProperty private String modelNames;
@@ -160,7 +150,11 @@ public class InterlisStructureExplodeMeta
         true,
         "_",
         null,
-        new LinkedHashSet<>(selectedChildFields == null ? List.of() : selectedChildFields));
+        selectedChildFields == null || selectedChildFields.isEmpty()
+            ? null
+            : new LinkedHashSet<>(selectedChildFields),
+        false,
+        true);
   }
 
   @Override

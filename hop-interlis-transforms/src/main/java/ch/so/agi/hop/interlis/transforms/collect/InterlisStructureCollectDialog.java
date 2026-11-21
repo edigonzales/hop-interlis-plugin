@@ -55,7 +55,6 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
   private Button wFailOnDuplicateIndex;
   private Button wFailOnChildWithoutParent;
   private InterlisDialogUiSupport.StatusArea wStatus;
-  private Label wSummary;
   private Label wPreviewDiagnostics;
   private Table wPreview;
 
@@ -219,21 +218,12 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
     fdOrphan.top = new FormAttachment(wFailOnDuplicateIndex, margin);
     wFailOnChildWithoutParent.setLayoutData(fdOrphan);
 
-    // Mapping summary, diagnostics and table
-    wSummary = new Label(shell, SWT.LEFT | SWT.WRAP);
-    PropsUi.setLook(wSummary);
-    FormData fdSummary = new FormData();
-    fdSummary.left = new FormAttachment(0, 0);
-    fdSummary.right = new FormAttachment(100, 0);
-    fdSummary.top = new FormAttachment(wFailOnChildWithoutParent, margin);
-    wSummary.setLayoutData(fdSummary);
-
     wPreviewDiagnostics = new Label(shell, SWT.LEFT | SWT.WRAP);
     PropsUi.setLook(wPreviewDiagnostics);
     FormData fdPreviewDiagnostics = new FormData();
     fdPreviewDiagnostics.left = new FormAttachment(0, 0);
     fdPreviewDiagnostics.right = new FormAttachment(100, 0);
-    fdPreviewDiagnostics.top = new FormAttachment(wSummary, margin);
+    fdPreviewDiagnostics.top = new FormAttachment(wFailOnChildWithoutParent, margin);
     wPreviewDiagnostics.setLayoutData(fdPreviewDiagnostics);
 
     wPreview = InterlisDialogUiSupport.createPreviewTable(shell);
@@ -417,13 +407,6 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
 
   private void refreshPreview(InterlisStructureProbeResult result) {
     if (result.ok() && result.projection() != null) {
-      wSummary.setText(
-          controller.formatCollectPreview(
-              result.projection().plan(),
-              wParentInputTransform.getText(),
-              wChildInputTransform.getText(),
-              wParentKeyField.getText(),
-              wChildParentKeyField.getText()));
       InterlisSchemaPreview preview =
           controller.createSchemaPreview(
               result.projection().plan(),
@@ -441,7 +424,6 @@ public class InterlisStructureCollectDialog extends BaseTransformDialog {
     } else {
       wStatus.set(
           InterlisDialogUiSupport.StatusSeverity.valueOf(result.status().name()), result.message());
-      wSummary.setText("");
       InterlisDialogUiSupport.populatePreviewTable(wPreview, List.of());
       InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, "");
     }

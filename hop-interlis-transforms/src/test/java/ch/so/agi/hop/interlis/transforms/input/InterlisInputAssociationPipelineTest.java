@@ -10,6 +10,7 @@ import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
+import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import ch.so.agi.hop.interlis.transforms.TestData;
 import ch.so.agi.hop.interlis.transforms.output.InterlisOutputMeta;
 import java.nio.file.Path;
@@ -42,7 +43,7 @@ class InterlisInputAssociationPipelineTest {
   private List<RowMetaAndData> runInput(String className) throws Exception {
     InterlisInputMeta meta = new InterlisInputMeta();
     meta.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
-    meta.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    meta.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     meta.setModelDirectories(TestData.path("/models").toString());
     meta.setClassName(className);
     meta.setIncludeTid(true);
@@ -117,7 +118,7 @@ class InterlisInputAssociationPipelineTest {
 
     InterlisInputMeta input = new InterlisInputMeta();
     input.setFileName(TestData.path("/data/HopIli_Associations_V1_mapping.xtf").toString());
-    input.setModelNames(InterlisInputMeta.MODELS_FROM_DATA);
+    input.setModelNames(InterlisModelSourceSupport.MODELS_FROM_DATA);
     input.setModelDirectories(TestData.path("/models").toString());
     input.setClassName("HopIli_Associations_V1.Data.Person");
     input.setIncludeTid(true);
@@ -127,10 +128,11 @@ class InterlisInputAssociationPipelineTest {
     output.setFileName(outputFile.toString());
     output.setModelNames("HopIli_Associations_V1");
     output.setModelDirectories(TestData.path("/models").toString());
-    output.setClassName("HopIli_Associations_V1.Data.Person");
-    output.setObjectIdField("_ili_tid");
-    output.setBasketIdField("_ili_bid");
-    output.setBasketId("b1");
+    var mapping = TestData.mappedInput("INTERLIS Input", "HopIli_Associations_V1.Data.Person");
+    output.setInputs(java.util.List.of(mapping));
+    output.setBasketMode(InterlisOutputMeta.BasketMode.FROM_FIELD);
+    output.setValidateBeforePublish(false);
+
     output.setOverwrite(true);
 
     PipelineMeta pipelineMeta = new PipelineMeta();
