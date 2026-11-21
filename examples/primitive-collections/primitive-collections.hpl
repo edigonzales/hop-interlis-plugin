@@ -388,7 +388,6 @@
     </GUI>
     <validateBeforePublish>Y</validateBeforePublish>
     <basketMode>FROM_FIELD</basketMode>
-    <validateBeforePublish>N</validateBeforePublish>
     <inputs>
       <input>
         <transformName>collect3</transformName>
