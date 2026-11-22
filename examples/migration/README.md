@@ -11,8 +11,6 @@ The example migrates two classes and their reference from `MigrationDemo_V1` to
 `MigrationDemo_V2`. It renames an attribute, supplies a new mandatory value, translates
 an enumeration, trims structure values and copies a curve, XYZ coordinate and nested
 structure occurrences. Source and target model definitions share `MigrationDemo.ili`.
-The model source fingerprint in the mapping is intentional: changing this file requires
-reviewing the mapping and preparing/confirming a new fingerprint.
 
 Run `migrate.hwf` with a distinct, nonexistent `OUTPUT_XTF`:
 
@@ -32,8 +30,10 @@ A valid sample does not establish that a different production input is valid.
 
 For a new migration use **Prepare migration**: select models, directories and XTF paths.
 The draft contains compatible copies and review comments for unresolved changes or
-potential information loss. Check these, supply missing rules, then **Confirm review**.
-Execution never infers new mappings. A changed model fingerprint blocks execution.
+potential information loss. Review these decisions and add missing mappings or
+declare intentional losses. The workflow compiles the current source and target
+models and checks the typed mapping against them. The global review confirmation
+has been removed.
 
 Current limits: one XTF input and output, local mapping files, one editable collection
 level in the graphical view. Deeper explicit mappings and advanced expressions remain

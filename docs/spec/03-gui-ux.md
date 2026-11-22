@@ -225,9 +225,10 @@ and syntax error underlines. No browser editor or Eclipse workbench dependency i
 Model probing, checking and previews run off the SWT thread; stale results and results
 after disposal are discarded. Cancelled action dialogs do not mutate their metadata.
 
-Prepared drafts contain explicit mappings, review comments, source-model fingerprints
-and a pending review flag. A user confirms the draft after resolving changes/losses;
-execution does not update mappings or fingerprints. Static mapping checks, complete
+Prepared drafts contain explicit mapping proposals and review comments for open
+decisions. Users resolve them by supplying mappings or declaring intentional losses.
+The mapping check and workflow action compile the current models and check the typed
+mapping. The editor has no global review confirmation. Static mapping checks, complete
 sample previews and full production validation have separate states. Preview executes
 a chosen complete small file; its display limit does not truncate migration input.
 Saving detects external edits and uses an atomic replacement of the mapping file.

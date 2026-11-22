@@ -3,6 +3,9 @@
 Stand: 3. Oktober 2026. Änderungen betreffen dieses Repository und das separate
 Repository `ilitransformer`. Vorhandene INTERLIS-, Hop- und CI-Pins sind unverändert.
 
+Nachtrag P4.4: Modellfingerprints und die globale Review-Bestätigung wurden entfernt.
+Das aktuelle Verhalten beschreibt der [Migrationsabschnitt der GUI-Spezifikation](../spec/03-gui-ux.md#ilimap-mapping-editor).
+
 ## Gelieferter Umfang
 
 - Nativer `.ilimap`-Dateityp im Hop Explorer. Klassen- und Attributzuordnung per
