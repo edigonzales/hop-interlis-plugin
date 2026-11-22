@@ -127,7 +127,7 @@ For iterative development, focused module tests are fine, but the complete `veri
 The intended local feedback loop is:
 
 ```bash
-bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
+bash scripts/dev-install-and-run.sh "$HOP_HOME"
 ```
 
 The script should:

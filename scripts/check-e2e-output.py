@@ -380,8 +380,6 @@ for filename in ("primitive-collections.xtf","child-preserve.xtf","reference-eve
         assert baskets == {"b1": ["t1", "i1"], "b2": ["t2"]}, baskets
         assert item.find(q("InternalRef")).attrib == {ili + "ref": "t1"}, filename
         assert item.find(q("ExternalRef")).attrib == {ili + "ref": "t2", ili + "bid": "b2"}, filename
-assert not list(output_dir.glob("hop-interlis-spill-*")),"spill directories were not cleaned up"
-assert not list(output_dir.glob("*.pending.xtf")),"prepared outputs were not cleaned up"
 print("Priority 1/2 E2E values OK")
 
 
@@ -413,8 +411,8 @@ xyz.find(".//m:Item/m:Name", ns).text = "updated"
 assert semantic(xyz.getroot()) == semantic(ET.parse(output_dir / "prio3-update.xtf").getroot()), "XYZ or untouched structures changed"
 assert semantic(ET.parse(original_dir / "bogen-transfer.xtf").getroot()) == semantic(ET.parse(output_dir / "prio3-arc.xtf").getroot()), "Arc update changed unselected geometry"
 assert semantic(ET.parse(original_dir / "HopIli_Collections_V1_valid.xtf").getroot()) == semantic(ET.parse(output_dir / "prio3-texts.xtf").getroot()), "Primitive update changed transfer contents"
-assert not list(output_dir.glob("hop-interlis-spill-*"))
-assert not list(output_dir.glob("*.pending.xtf"))
+assert not list(output_dir.glob("hop-interlis-spill-*")), "spill directories were not cleaned up"
+assert not list(output_dir.glob("*.pending.xtf")), "prepared outputs were not cleaned up"
 print("Priority 3 E2E: multiple input copies/baskets, disk spooling, selected XYZ/structure/primitive updates, ARC preservation and failed-publication cleanup OK")
 
 # User-facing examples execute against the small fixtures, with the same result checks.

@@ -82,7 +82,6 @@ Status: **abgeschlossen** (Stand 2026-08-26)
 - `InterlisOutputDialogControllerTest` (4): Probe, Mapping-Grid
   (technische Felder/Attribute/Rollen mit Auto-Map-Status)
 - `InterlisOutputPluginContractTest` (2): Plugin-ID, Classloader-Group, Icon
-- `E2ePipelineGeneratorTest`: erzeugt zusätzlich 05/06 (parameterisiert)
 
 E2E (frische Apache-Hop-2.18.1-Distribution):
 

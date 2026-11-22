@@ -308,7 +308,7 @@ Mindestens ein E2E-Test enthält Geometrie, mindestens einer einen Kreisbogen.
 Implementiere früh:
 
 ```bash
-bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
+bash scripts/dev-install-and-run.sh "$HOP_HOME"
 ```
 
 Das Script soll ungefähr:

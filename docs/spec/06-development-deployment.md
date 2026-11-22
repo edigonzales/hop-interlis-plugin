@@ -102,10 +102,10 @@ Klassen, Sources und sonstige Fremddateien.
 ## 4. Lokaler Feedback-Workflow
 
 ```bash
-bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
+bash scripts/dev-install-and-run.sh "$HOP_HOME"
 ```
 
-Der Einstieg delegiert an `scripts/dev-install-and-run.sh`. Dieses Skript:
+Das Skript führt diese Schritte aus.
 
 1. wählt einen geeigneten JDK;
 2. baut und testet das benachbarte Geometry-Plugin (`clean install`);
@@ -136,10 +136,7 @@ Vor Abschluss eines Laufs:
 python3 scripts/check-distribution.py
 ```
 
-Tests werden nicht übersprungen. `scripts/check-env.sh` zeigt Java, Maven,
-Hop-Verzeichnis und den Geometry-Checkout als Diagnose, ersetzt jedoch keine
-vollständige Abnahme. Weitere manuelle Copy-/Installationsskripte sind kein
-zweiter Standardweg.
+Tests werden nicht übersprungen.
 
 ## 5. Installierte Hop-E2E
 
@@ -260,5 +257,5 @@ before pushing the dependent Hop revision to CI. No sibling source checkout is n
 for normal consumers once the matching snapshot has been published.
 
 For a single local development loop, set `ILITRANSFORMER_REPO` to the sibling checkout
-before running `scripts/dev-sync-hop-plugin.sh "$HOP_HOME"`. This explicitly enables
+before running `scripts/dev-install-and-run.sh "$HOP_HOME"`. This explicitly enables
 Gradle `check publishCorePublicationToMavenLocal` before the usual plugin build.

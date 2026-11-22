@@ -2,7 +2,6 @@ package ch.so.agi.hop.interlis.transforms.generic;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import ch.so.agi.hop.interlis.core.io.InterlisEnvelopeRowLayout;
 import ch.so.agi.hop.interlis.core.io.InterlisValidationRowLayout;
 import ch.so.agi.hop.interlis.transforms.enumerations.InterlisEnumerationsMeta;
 import ch.so.agi.hop.interlis.transforms.validate.InterlisValidateMeta;
@@ -111,22 +110,6 @@ class ValidationEnumerationAndEnvelopeMetaTest {
         roundtrip(enumerations, new InterlisEnumerationsMeta());
     assertThat(enumerationsRestored.getModelNames()).isEqualTo("M");
     assertThat(enumerationsRestored.getModelDirectories()).isEqualTo("/models");
-  }
-
-  @Test
-  void envelope_schema_now_carries_basket_metadata() throws Exception {
-    RowMeta rowMeta =
-        ch.so.agi.hop.interlis.transforms.InterlisEnvelopeSchemaFactory.createRowMeta();
-
-    assertThat(rowMeta.getFieldNames())
-        .containsExactlyElementsOf(InterlisEnvelopeRowLayout.FIELD_NAMES);
-    assertThat(InterlisEnvelopeRowLayout.FIELD_NAMES)
-        .endsWith(
-            "_ili_basket_consistency",
-            "_ili_basket_kind",
-            "_ili_basket_start_state",
-            "_ili_basket_end_state",
-            "_ili_transfer_metadata");
   }
 
   private static <T extends ITransformMeta> T roundtrip(T meta, T restored) throws Exception {

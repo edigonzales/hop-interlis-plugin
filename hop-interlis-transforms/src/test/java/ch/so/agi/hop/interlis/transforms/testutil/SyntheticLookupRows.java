@@ -11,8 +11,6 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 public class SyntheticLookupRows
     extends BaseTransform<SyntheticLookupRowsMeta, SyntheticLookupRowsData> {
 
-  private boolean first = true;
-
   public SyntheticLookupRows(
       TransformMeta transformMeta,
       SyntheticLookupRowsMeta meta,
@@ -25,13 +23,10 @@ public class SyntheticLookupRows
 
   @Override
   public boolean processRow() throws HopException {
-    if (first) {
-      first = false;
-      RowMeta outputRowMeta = new RowMeta();
-      meta.getFields(outputRowMeta, getTransformName(), null, null, this, metadataProvider);
-      for (Object[] row : meta.getRows()) {
-        putRow(outputRowMeta, row.clone());
-      }
+    RowMeta outputRowMeta = new RowMeta();
+    meta.getFields(outputRowMeta, getTransformName(), null, null, this, metadataProvider);
+    for (Object[] row : meta.getRows()) {
+      putRow(outputRowMeta, row.clone());
     }
     setOutputDone();
     return false;

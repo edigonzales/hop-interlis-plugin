@@ -82,7 +82,7 @@ Noch kein umfassender Benutzertransform, aber bereits ein **vollständiger techn
 Nach Phase 0 muss funktionieren:
 
 ```bash
-bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
+bash scripts/dev-install-and-run.sh "$HOP_HOME"
 ```
 
 Das Script:
@@ -237,7 +237,6 @@ mit kleinen XTF-Fixtures.
 Anlegen:
 
 ```text
-scripts/dev-sync-hop-plugin.sh
 scripts/dev-install-and-run.sh
 scripts/check-distribution.py
 ```

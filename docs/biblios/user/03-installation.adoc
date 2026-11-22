@@ -63,7 +63,7 @@ Für den lokalen Entwicklungszyklus:
 
 [source,bash]
 ----
-bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
+bash scripts/dev-install-and-run.sh "$HOP_HOME"
 ----
 
 Das Skript baut und prüft die Distribution, installiert sie und startet die Hop-GUI neu. Verwenden Sie eine eigene Entwicklungsinstallation.

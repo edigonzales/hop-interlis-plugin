@@ -80,8 +80,6 @@ Status: **abgeschlossen** (Stand 2026-08-26)
   - `e2e/pipelines/02-interlis-input-to-csv.hpl` (Geometry-XTF → CSV, inkl. ARC)
   - `e2e/pipelines/03-interlis-input-structures.hpl` (Struktur/Rolle/Vererbung → CSV)
   - `e2e/pipelines/04-interlis-to-gpkg.hpl` (Arc-XTF → GeoTools Vector Writer → GeoPackage)
-- Regenerierung der generierten Pipelines: `E2ePipelineGeneratorTest` mit
-  `-De2e.parameterized=true -De2e.outputDir=e2e/pipelines`.
 
 ## Tests
 
@@ -104,7 +102,6 @@ Status: **abgeschlossen** (Stand 2026-08-26)
 - `InterlisInputDialogControllerTest` (6): Probe-Ergebnisse, freundliche Fehlermeldungen,
   Schema-Preview mit Warnings
 - `InterlisInputPluginContractTest` (2): Plugin-ID, Classloader-Group, Icon
-- `E2ePipelineGeneratorTest` (2): Pipeline-Generierung (parameterisiert/absolut)
 
 E2E (echte Hop-2.18.1-Distribution, `scripts/run-e2e.sh`):
 
@@ -121,7 +118,7 @@ E2E (echte Hop-2.18.1-Distribution, `scripts/run-e2e.sh`):
 
 - `scripts/run-e2e.sh <HOP_HOME>` gegen frische Apache-Hop-2.18.1-Distribution: alle
   drei Pipelines grün, Assertions grün (inkl. GeoPackage via hop-vector-raster-plugin).
-- `scripts/dev-sync-hop-plugin.sh` installiert das Plugin und startet Hop GUI
+- `scripts/dev-install-and-run.sh` installiert das Plugin und startet Hop GUI
   (Desktop-Verifikation durch den Entwickler; der Dialog wird in Hop GUI aus der
   Geospatial-Kategorie geöffnet).
 

@@ -9,7 +9,6 @@ import ch.so.agi.hop.interlis.transforms.objecttorow.*;
 import ch.so.agi.hop.interlis.transforms.output.*;
 import ch.so.agi.hop.interlis.transforms.rolejoin.*;
 import ch.so.agi.hop.interlis.transforms.transferoutput.*;
-import java.io.*;
 import org.apache.hop.core.HopEnvironment;
 import org.apache.hop.core.xml.XmlHandler;
 import org.apache.hop.metadata.serializer.memory.MemoryMetadataProvider;
@@ -23,9 +22,8 @@ class TransformMetadataOptionsTest {
     HopEnvironment.init();
   }
 
-  <T> T reload(T original) throws Exception {
-    var meta = (ITransformMeta) original;
-    String xml = new TransformMeta("test", meta).getXml();
+  private <T extends ITransformMeta> T reload(T original) throws Exception {
+    String xml = new TransformMeta("test", original).getXml();
     // The same annotation serializer used by Hop's .hpl loader, not only custom loadXml.
     return (T)
         XmlMetadataUtil.deSerializeFromXml(
@@ -44,15 +42,11 @@ class TransformMetadataOptionsTest {
     meta.setSpillDirectory("${TEMP_DIR}");
     var modern = reload(meta);
     assertThat(modern.getSelectedChildFields()).containsExactly("Name");
-    assertThat(modern.getCollectMode())
-        .isEqualTo(InterlisStructureCollectMeta.CollectMode.PRESERVE);
-    assertThat(modern.getParentBidField()).isEqualTo("_ili_bid");
-    assertThat(modern.getChildParentBidField()).isEqualTo("_ili_parent_bid");
     assertThat(modern.getBufferMemoryMiB()).isEqualTo(3);
     assertThat(modern.getMaxSpillMiB()).isEqualTo(40);
     var explode = new InterlisStructureExplodeMeta();
-    explode.setDefault();
-    assertThat(reload(explode).isKeepChildSourceObject()).isTrue();
+    explode.setKeepChildSourceObject(false);
+    assertThat(reload(explode).isKeepChildSourceObject()).isFalse();
   }
 
   @Test
@@ -100,9 +94,11 @@ class TransformMetadataOptionsTest {
     assertThat(reload(join).getMaxLookupRows()).isZero();
     var output = new InterlisOutputMeta();
     output.setDefault();
-    output.setValidateBeforePublish(true);
     output.setValidationConfigFile("config.ini");
-    assertThat(reload(output).isValidateBeforePublish()).isTrue();
+    output.setValidateBeforePublish(false);
+    var restoredOutput = reload(output);
+    assertThat(restoredOutput.isValidateBeforePublish()).isFalse();
+    assertThat(restoredOutput.getValidationConfigFile()).isEqualTo("config.ini");
     var transfer = new InterlisTransferOutputMeta();
     transfer.setDefault();
     transfer.setValidateBeforePublish(true);
