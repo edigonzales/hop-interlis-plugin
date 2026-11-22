@@ -2,7 +2,13 @@ package ch.so.agi.hop.interlis.migration;
 
 import static org.assertj.core.api.Assertions.*;
 
+import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
+import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
+import ch.so.agi.hop.interlis.core.model.ModelSource;
+import java.io.IOException;
 import java.nio.file.*;
+import java.util.List;
+import java.util.regex.Pattern;
 import org.apache.hop.core.HopEnvironment;
 import org.apache.hop.core.Result;
 import org.apache.hop.core.annotations.Action;
@@ -88,5 +94,95 @@ class MigrationIntegrationTest {
     try (var files = Files.list(dir)) {
       assertThat(files.toList()).containsExactly(path);
     }
+  }
+
+  @Test
+  void previewShowsBasketAndExplicitReferenceBidForAssociationWithoutTid() throws Exception {
+    Path fixtures = Path.of("../hop-interlis-core/src/test/resources/fixtures");
+    Path input = fixtures.resolve("data/2.4/HopIli_Associations_V1_extref.xtf");
+    var model =
+        new InterlisModelServiceImpl()
+            .compile(
+                new ModelSource(
+                    List.of(fixtures.resolve("models/2.4/HopIli_Associations_V1.ili")),
+                    List.of(),
+                    List.of()),
+                ModelCompileOptions.defaults())
+            .transferDescription();
+
+    assertThat(MigrationPreview.compare(input, model, input, model))
+        .contains(
+            "HopIli_Associations_V1.Data.PersonTask BID=b1\n",
+            "Task[0] = REF t2 BID=b2\n",
+            "Task[0] = REF t1\n")
+        .doesNotContain("TID=null");
+  }
+
+  @Test
+  void previewFailsForMappingAndValidationErrors() throws Exception {
+    Path example = Path.of("../examples/migration").toAbsolutePath();
+    Path mapping = dir.resolve("migration.ilimap");
+    Files.copy(example.resolve("MigrationDemo.ili"), dir.resolve("MigrationDemo.ili"));
+    String text = Files.readString(example.resolve("migration.ilimap"));
+    Path source = example.resolve("source.xtf");
+
+    Files.writeString(mapping, text.replace("s.Label", "s.Missing"));
+    assertThatThrownBy(() -> MigrationPreview.run(mapping, source)).hasMessageContaining("s.Missing");
+
+    Files.writeString(
+        mapping,
+        text.replace("migrated", "destination")
+            .replace("\"migration\"", "\"" + "x".repeat(100) + "\""));
+    var failure = catchThrowableOfType(IOException.class, () -> MigrationPreview.run(mapping, source));
+    assertThat(failure)
+        .hasMessageContaining("Validator reported errors for output destination")
+        .hasMessageContaining("Attribute Origin is length restricted to 30");
+    var transfer = Pattern.compile("dataFile <([^>]+)>").matcher(failure.getMessage());
+    assertThat(transfer.find()).isTrue();
+    assertThat(Path.of(transfer.group(1)).getParent()).doesNotExist();
+  }
+
+  @Test
+  void successfulPreviewShowsOnlyWarningsProducedByMigration() throws Exception {
+    Path example = Path.of("../examples/migration").toAbsolutePath();
+    Path mapping = Files.copy(example.resolve("migration.ilimap"), dir.resolve("migration.ilimap"));
+    Files.copy(example.resolve("MigrationDemo.ili"), dir.resolve("MigrationDemo.ili"));
+    Path source = example.resolve("source.xtf");
+    assertThat(MigrationPreview.run(mapping, source)).doesNotContain("\nWARNINGS\n");
+
+    Path unresolved = dir.resolve("unresolved.xtf");
+    Files.writeString(
+        unresolved, Files.readString(source).replace("ili:ref=\"f1\"", "ili:ref=\"missing\""));
+    assertThat(MigrationPreview.run(mapping, unresolved))
+        .contains(
+            "Complete preview file validated.",
+            "\nWARNINGS\nILITRF-RUN-REF-UNRESOLVED: Optional reference unresolved for ");
+  }
+
+  @Test
+  void previewIncludesLossReportOnlyForActualLosses() throws Exception {
+    Path example = Path.of("../examples/migration").toAbsolutePath();
+    Path mapping = dir.resolve("migration.ilimap");
+    Files.copy(example.resolve("MigrationDemo.ili"), dir.resolve("MigrationDemo.ili"));
+    String text = Files.readString(example.resolve("migration.ilimap"));
+    Path source = example.resolve("source.xtf");
+
+    Files.writeString(mapping, text);
+    assertThat(MigrationPreview.run(mapping, source)).doesNotContain("INFORMATION LOSS");
+
+    Files.writeString(
+        mapping,
+        text.substring(0, text.lastIndexOf("  rule "))
+            + """
+                rule discardLines {
+                  source s from original class "MigrationDemo_V1.Data.Line";
+                  loss { sourcePath s; reasonCode "CLASS_REMOVED"; description "Lines retired"; }
+                }
+              }
+              """);
+    assertThat(MigrationPreview.run(mapping, source))
+        .contains(
+            "INFORMATION LOSS",
+            "| discardLines | MigrationDemo_V1.Data.Line | l1 | s | CLASS_REMOVED | Lines retired |");
   }
 }
