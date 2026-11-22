@@ -25,8 +25,10 @@ to the mapping file. Hop variables belong in the action's file/model-directory f
 the `.ilimap` language itself does not expand Hop variables.
 
 **Preview complete XTF** runs and validates the entire selected small sample in a
-temporary output. The display shows up to 100 objects; processing is not truncated.
-A valid sample does not establish that a different production input is valid.
+temporary output. Each of the source and target sections shows up to 100 objects
+with their classes, basket IDs and any TIDs. References show their TIDs and any
+explicit BIDs. If the migration produces a loss report, the preview shows it under
+**INFORMATION LOSS**. A separate run validates the production input.
 
 For a new migration use **Prepare migration**: select models, directories and XTF paths.
 The draft contains compatible copies and review comments for unresolved changes or

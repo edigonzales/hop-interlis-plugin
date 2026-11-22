@@ -897,44 +897,7 @@ public final class IlimapEditor {
             withSnapshot(
                 base,
                 snapshot,
-                file -> {
-                  Path work = Files.createTempDirectory("ilimap-preview-");
-                  try {
-                    Path output = work.resolve("preview.xtf");
-                    var request =
-                        new MigrationService.Request(
-                            file, Path.of(selected), output, List.of(), true, false, work);
-                    var prepared = new MigrationService().prepare(request);
-                    var result = new MigrationService().execute(request, ignored -> {});
-                    if (result.hasErrors()) return result.all().toString();
-                    return "Complete preview file validated. This does not validate another"
-                        + " production input.\n\n"
-                        + MigrationPreview.compare(
-                            Path.of(selected),
-                            prepared
-                                .job()
-                                .plan()
-                                .inputsById()
-                                .values()
-                                .iterator()
-                                .next()
-                                .transferDescription(),
-                            output,
-                            prepared
-                                .job()
-                                .plan()
-                                .outputsById()
-                                .values()
-                                .iterator()
-                                .next()
-                                .transferDescription());
-                  } finally {
-                    try (var paths = Files.walk(work)) {
-                      for (Path p : paths.sorted(java.util.Comparator.reverseOrder()).toList())
-                        Files.deleteIfExists(p);
-                    }
-                  }
-                }),
+                file -> MigrationPreview.run(file, Path.of(selected))),
         result -> {
           preview.setText(result);
           tabs.setSelection(2);
