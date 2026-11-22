@@ -5,8 +5,10 @@ import static org.assertj.core.api.Assertions.*;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
+import java.io.IOException;
 import java.nio.file.*;
 import java.util.List;
+import java.util.regex.Pattern;
 import org.apache.hop.core.HopEnvironment;
 import org.apache.hop.core.Result;
 import org.apache.hop.core.annotations.Action;
@@ -127,9 +129,34 @@ class MigrationIntegrationTest {
     Files.writeString(mapping, text.replace("s.Label", "s.Missing"));
     assertThatThrownBy(() -> MigrationPreview.run(mapping, source)).hasMessageContaining("s.Missing");
 
-    Files.writeString(mapping, text.replace("\"migration\"", "\"" + "x".repeat(100) + "\""));
-    assertThatThrownBy(() -> MigrationPreview.run(mapping, source))
-        .hasMessageContaining("Validator reported errors");
+    Files.writeString(
+        mapping,
+        text.replace("migrated", "destination")
+            .replace("\"migration\"", "\"" + "x".repeat(100) + "\""));
+    var failure = catchThrowableOfType(IOException.class, () -> MigrationPreview.run(mapping, source));
+    assertThat(failure)
+        .hasMessageContaining("Validator reported errors for output destination")
+        .hasMessageContaining("Attribute Origin is length restricted to 30");
+    var transfer = Pattern.compile("dataFile <([^>]+)>").matcher(failure.getMessage());
+    assertThat(transfer.find()).isTrue();
+    assertThat(Path.of(transfer.group(1)).getParent()).doesNotExist();
+  }
+
+  @Test
+  void successfulPreviewShowsOnlyWarningsProducedByMigration() throws Exception {
+    Path example = Path.of("../examples/migration").toAbsolutePath();
+    Path mapping = Files.copy(example.resolve("migration.ilimap"), dir.resolve("migration.ilimap"));
+    Files.copy(example.resolve("MigrationDemo.ili"), dir.resolve("MigrationDemo.ili"));
+    Path source = example.resolve("source.xtf");
+    assertThat(MigrationPreview.run(mapping, source)).doesNotContain("\nWARNINGS\n");
+
+    Path unresolved = dir.resolve("unresolved.xtf");
+    Files.writeString(
+        unresolved, Files.readString(source).replace("ili:ref=\"f1\"", "ili:ref=\"missing\""));
+    assertThat(MigrationPreview.run(mapping, unresolved))
+        .contains(
+            "Complete preview file validated.",
+            "\nWARNINGS\nILITRF-RUN-REF-UNRESOLVED: Optional reference unresolved for ");
   }
 
   @Test
