@@ -12,9 +12,9 @@ Diese Transforms ergänzen die typisierte Klassenverarbeitung. Die generischen O
 
 Die DSL bleibt massgebend. Änderungen in beiden Ansichten sind mit `Undo` und `Redo` rückgängig zu machen. Syntax-Highlighting, Zeilennummern, Einrückung und Klammermarkierungen unterstützen die Texteingabe. Bei unvollständiger Syntax bleiben Text und Farben sichtbar, während grafische Änderungen pausieren. Kommentare und nicht grafisch unterstützte Definitionen bleiben erhalten. Beim Speichern erkennt der Editor zwischenzeitliche Änderungen durch andere Programme.
 
-`Prepare migration` fragt Quellmodell, Zielmodell, Modellverzeichnisse und Dateipfade ab. Es erzeugt explizite Übernahmevorschläge und weist auf offene Unterschiede hin. Prüfen Sie neue Pflichtattribute, Umbenennungen und nicht zugeordnete Quellinhalte und bestätigen Sie die Entscheidungen mit `Confirm review`. Geänderte Modelldateien werden anhand ihrer Prüfsumme erkannt und verlangen eine erneute Prüfung; die Ausführung ergänzt keine stillen Zuordnungen.
+`Prepare migration` fragt Quellmodell, Zielmodell, Modellverzeichnisse und Dateipfade ab. Es erzeugt explizite Übernahmevorschläge und weist auf offene Unterschiede hin. Prüfen Sie neue Pflichtattribute, Umbenennungen und nicht zugeordnete Quellinhalte. Ergänzen Sie fehlende Zuordnungen oder deklarieren Sie beabsichtigte Verluste. Die globale Review-Bestätigung entfällt.
 
-`Check mapping` prüft die Definition ohne Datenausführung. `Preview complete XTF` verarbeitet und validiert eine vollständige kleine Beispieldatei in einem temporären Verzeichnis. Die Anzeige ist auf 100 Objekte begrenzt; die Verarbeitung liest die vollständige Datei einschliesslich der Referenzziele. Die Prüfung eines Beispiels ersetzt die Validierung des produktiven Bestands nicht.
+`Check mapping` und die Workflow-Action kompilieren die aktuellen Quell- und Zielmodelle und prüfen die Zuordnungen gegen diese Modelle. `Preview complete XTF` verarbeitet und validiert eine vollständige kleine Beispieldatei in einem temporären Verzeichnis. Die Anzeige ist auf 100 Objekte begrenzt; die Verarbeitung liest die vollständige Datei einschliesslich der Referenzziele. Die Prüfung eines Beispiels ersetzt die Validierung des produktiven Bestands nicht.
 
 Für den produktiven Lauf verwenden Sie die Workflow-Action `INTERLIS Migration`:
 
@@ -29,7 +29,7 @@ Für den produktiven Lauf verwenden Sie die Workflow-Action `INTERLIS Migration`
 | `Overwrite existing target` | Standardmässig ausgeschaltet.
 |===
 
-Hop-Variablen werden in diesen Action-Feldern aufgelöst. Relative Pfade innerhalb der DSL beziehen sich auf deren Datei; die DSL selbst expandiert keine Hop-Variablen. Original und Ziel müssen verschiedene Dateien sein. Die Action führt den gesamten Java-Migrationsjob aus, validiert die temporäre Ausgabe und veröffentlicht sie erst bei Erfolg. Fehler und Abbruch verhindern die Veröffentlichung.
+Hop-Variablen werden in diesen Action-Feldern aufgelöst. Relative Pfade innerhalb der DSL beziehen sich auf deren Datei; die DSL selbst expandiert keine Hop-Variablen. Original und Ziel müssen verschiedene Dateien sein. Die Action prüft vor der Veröffentlichung, ob sich die Quelldatei geändert hat. Bei aktivierter Validierung prüft sie die temporäre Ausgabe. Fehler und Abbruch verhindern die atomare Veröffentlichung.
 
 Die erste Version unterstützt eine XTF-Quelle und ein XTF-Ziel. Eine Sammlungsebene lässt sich grafisch bearbeiten; tiefere explizite Strukturregeln bleiben über die DSL zugänglich. Joins, Aufteilungen und Hop-Unterpipelines haben noch keine grafischen Bedienelemente. Die Engine hält ihre Indizes und Zielobjekte im Speicher. Sie verwendet nicht die Spill-Budgets von `INTERLIS Output` und `Update`. Ein lauffähiges Beispiel steht im Repository unter `examples/migration/`.
 

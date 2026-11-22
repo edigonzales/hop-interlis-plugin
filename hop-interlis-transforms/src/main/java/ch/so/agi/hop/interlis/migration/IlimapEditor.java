@@ -66,7 +66,6 @@ public final class IlimapEditor {
     button(toolbar, "Prepare migration…", this::prepareDraft);
     button(toolbar, "Load models", this::loadModels);
     button(toolbar, "Check mapping", this::checkMapping);
-    button(toolbar, "Confirm review", this::confirmReview);
     button(toolbar, "Preview complete XTF…", this::preview);
     button(toolbar, "Stop", this::stop);
     button(toolbar, "Undo", this::undo);
@@ -807,8 +806,7 @@ public final class IlimapEditor {
                               + "\n  "
                               + d.detail())
                   .collect(java.util.stream.Collectors.joining("\n")));
-          state.setText(
-              "Draft prepared — review mappings and all information losses before confirming");
+          state.setText("Draft prepared — review mappings and potential information loss");
           tabs.setSelection(1);
         });
   }
@@ -845,27 +843,6 @@ public final class IlimapEditor {
           state.setText(
               "Models loaded — drag classes or attributes; double-click an assignment to edit");
         });
-  }
-
-  private void confirmReview() {
-    var doc = document.document();
-    if (doc.inputs().size() != 1) throw new IllegalArgumentException("One input required");
-    if (!MigrationUi.confirm(
-        root.getShell(),
-        "Confirm that you have reviewed the mappings, new mandatory attributes, and unmapped source"
-            + " contents. Only explicitly mapped contents will be migrated. Full target validation"
-            + " remains required.")) return;
-    var input = doc.inputs().getFirst();
-    String block =
-        document.text().substring(input.range().start().offset(), input.range().end().offset());
-    if (block.contains("migrationReviewed false"))
-      mutate(
-          () ->
-              document.edit(
-                  document.revision(),
-                  input.range().start().offset(),
-                  input.range().end().offset(),
-                  block.replace("migrationReviewed false", "migrationReviewed true")));
   }
 
   private void checkMapping() {
