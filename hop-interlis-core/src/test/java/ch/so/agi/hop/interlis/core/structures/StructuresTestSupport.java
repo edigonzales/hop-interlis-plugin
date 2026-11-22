@@ -6,7 +6,6 @@ import ch.so.agi.hop.interlis.core.io.InterlisObjectEnvelope;
 import ch.so.agi.hop.interlis.core.io.XtfTransferReader;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor;
@@ -15,18 +14,16 @@ import ch.so.agi.hop.interlis.core.model.ModelSource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /** Compiles the structures test model and reads its XTF fixture. */
 final class StructuresTestSupport {
 
-  static final String MODEL_NAME = "HopIli_Structures_V1";
   static final String CLASS_PERSON = "HopIli_Structures_V1.Data.Person";
 
   private StructuresTestSupport() {}
 
-  static CompiledInterlisModel compileModel() throws Exception {
+  private static CompiledInterlisModel compileModel() throws Exception {
     return new InterlisModelServiceImpl()
         .compile(
             new ModelSource(
@@ -62,13 +59,5 @@ final class StructuresTestSupport {
       return objects.stream()
           .collect(Collectors.toMap(InterlisObjectEnvelope::objectId, InterlisObjectEnvelope::object));
     }
-  }
-
-  static <T> T personValue(Map<String, IomObject> persons, String tid, Function<IomObject, T> f) {
-    IomObject person = persons.get(tid);
-    if (person == null) {
-      throw new IllegalStateException("No person with TID " + tid + " in fixture");
-    }
-    return f.apply(person);
   }
 }

@@ -7,29 +7,23 @@ import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.transforms.mapping.InterlisFieldAssignment;
 import ch.so.agi.hop.interlis.transforms.mapping.InterlisMappedInput;
 import ch.so.agi.hop.interlis.transforms.mapping.MappedClassPlan;
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /** Locates committed test resources of the transforms module. */
 public final class TestData {
 
   private static final List<String> MODEL_VERSIONS = List.of("2.3", "2.4");
   private static volatile Path allModels;
-  private static volatile Path allData;
 
   private TestData() {}
 
   public static Path path(String resource) {
     if ("/models".equals(resource)) {
       return allModelsDirectory();
-    }
-    if ("/data".equals(resource)) {
-      return allDataDirectory();
     }
     if (resource.startsWith("/models/")) {
       return modelPath(resource.substring("/models/".length()));
@@ -40,28 +34,18 @@ public final class TestData {
     return resourcePath(resource);
   }
 
-  public static Path modelDirectory(String version) {
+  private static Path modelDirectory(String version) {
     if (!MODEL_VERSIONS.contains(version)) {
       throw new IllegalArgumentException("Unsupported INTERLIS model version: " + version);
     }
     return resourcePath("/fixtures/models/" + version);
   }
 
-  public static Path dataDirectory(String version) {
+  private static Path dataDirectory(String version) {
     if (!MODEL_VERSIONS.contains(version)) {
       throw new IllegalArgumentException("Unsupported XTF version: " + version);
     }
     return resourcePath("/fixtures/data/" + version);
-  }
-
-  public static List<Path> modelDirectories() {
-    return MODEL_VERSIONS.stream().map(TestData::modelDirectory).toList();
-  }
-
-  public static String modelDirectoriesValue() {
-    return modelDirectories().stream()
-        .map(Path::toString)
-        .collect(Collectors.joining(File.pathSeparator));
   }
 
   public static InterlisMappedInput mappedInput(String source, String className) {
@@ -128,22 +112,6 @@ public final class TestData {
         }
       }
       return allModels;
-    }
-  }
-
-  private static Path allDataDirectory() {
-    Path result = allData;
-    if (result != null) {
-      return result;
-    }
-    synchronized (TestData.class) {
-      if (allData == null) {
-        allData = createAggregateDirectory("hop-interlis-data");
-        for (String version : MODEL_VERSIONS) {
-          copyDirectory(dataDirectory(version), allData);
-        }
-      }
-      return allData;
     }
   }
 

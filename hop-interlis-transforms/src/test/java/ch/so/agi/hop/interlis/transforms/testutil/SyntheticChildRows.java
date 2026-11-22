@@ -11,8 +11,6 @@ import org.apache.hop.pipeline.transform.TransformMeta;
 public class SyntheticChildRows
     extends BaseTransform<SyntheticChildRowsMeta, SyntheticChildRowsData> {
 
-  private boolean first = true;
-
   public SyntheticChildRows(
       TransformMeta transformMeta,
       SyntheticChildRowsMeta meta,
@@ -25,14 +23,11 @@ public class SyntheticChildRows
 
   @Override
   public boolean processRow() throws HopException {
-    if (first) {
-      first = false;
-      RowMeta outputRowMeta = new RowMeta();
-      meta.getFields(outputRowMeta, getTransformName(), null, null, this, metadataProvider);
-      for (Object[] row : meta.getRows()) {
-        putRow(
-            outputRowMeta, new Object[] {row[0], row[1], row[2], row[3], null, null, null, "b1"});
-      }
+    RowMeta outputRowMeta = new RowMeta();
+    meta.getFields(outputRowMeta, getTransformName(), null, null, this, metadataProvider);
+    for (Object[] row : meta.getRows()) {
+      putRow(
+          outputRowMeta, new Object[] {row[0], row[1], row[2], row[3], null, null, null, "b1"});
     }
     setOutputDone();
     return false;

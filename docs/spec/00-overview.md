@@ -151,7 +151,6 @@ hop-interlis-plugin/
 |       `-- src/assembly/assembly.xml
 |
 |-- scripts/
-|   |-- dev-sync-hop-plugin.sh
 |   |-- dev-install-and-run.sh
 |   |-- run-e2e.sh
 |   `-- check-distribution.py

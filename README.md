@@ -179,17 +179,11 @@ git clone https://github.com/edigonzales/hop-geometry-type-plugin
 git clone https://github.com/edigonzales/hop-interlis-plugin
 
 cd hop-interlis-plugin
-bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
+bash scripts/dev-install-and-run.sh "$HOP_HOME"
 ```
 
 This builds the geometry type plugin and this plugin, runs all tests, checks the distribution,
 installs both plugins into `$HOP_HOME` and restarts Hop GUI. The Hop startup log is printed at the end.
-
-Environment checks:
-
-```bash
-bash scripts/check-env.sh "$HOP_HOME"
-```
 
 Build without installing:
 

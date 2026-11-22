@@ -54,7 +54,14 @@ class GenericEnvelopeMetaTest {
 
     meta.getFields(rowMeta, "origin", null, null, new Variables(), null);
 
-    assertThat(rowMeta.getFieldNames()).containsExactlyElementsOf(InterlisEnvelopeRowLayout.FIELD_NAMES);
+    assertThat(rowMeta.getFieldNames())
+        .containsExactlyElementsOf(InterlisEnvelopeRowLayout.FIELD_NAMES)
+        .endsWith(
+            "_ili_basket_consistency",
+            "_ili_basket_kind",
+            "_ili_basket_start_state",
+            "_ili_basket_end_state",
+            "_ili_transfer_metadata");
     assertThat(rowMeta.getValueMeta(InterlisEnvelopeRowLayout.OBJECT_INDEX).getType())
         .isEqualTo(
             ch.so.agi.hop.interlis.transforms.value.ValueMetaInterlisObject

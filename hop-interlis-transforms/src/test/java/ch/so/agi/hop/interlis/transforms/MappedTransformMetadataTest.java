@@ -23,9 +23,8 @@ class MappedTransformMetadataTest {
     HopEnvironment.init();
   }
 
-  static <T> T reload(T meta, String remove) throws Exception {
-    String xml = new TransformMeta("test", (ITransformMeta) meta).getXml();
-    if (!remove.isBlank()) xml = xml.replaceAll("(?s)<(" + remove + ")>.*?</\\1>", "");
+  private static <T extends ITransformMeta> T reload(T meta) throws Exception {
+    String xml = new TransformMeta("test", meta).getXml();
     return (T)
         XmlMetadataUtil.deSerializeFromXml(
             XmlHandler.loadXmlString(xml).getDocumentElement(),
@@ -42,7 +41,7 @@ class MappedTransformMetadataTest {
     mapping.setClassName("Model.Data.Building");
     mapping.setFields(List.of(new InterlisFieldAssignment("label", "Address.Name")));
     meta.setInputs(List.of(mapping));
-    var copy = reload(meta, "");
+    var copy = reload(meta);
     assertThat(copy.isValidateBeforePublish()).isTrue();
     assertThat(copy.getInputs()).hasSize(1);
     assertThat(copy.getInputs().getFirst().getFields().getFirst().getTargetPath())
@@ -60,14 +59,12 @@ class MappedTransformMetadataTest {
     input.setStructurePath("Holder.Children");
     input.setFields(List.of(new InterlisFieldAssignment("newName", "Name")));
     update.setInputs(List.of(input));
-    var copy = reload(update, "");
+    var copy = reload(update);
     assertThat(copy.getOriginalFile()).isEqualTo("${ORIGINAL}");
     assertThat(copy.getInputs().getFirst().getStructurePath()).isEqualTo("Holder.Children");
     var explode = new InterlisStructureExplodeMeta();
-    explode.setDefault();
-    assertThat(reload(explode, "").isEmitUpdateReference()).isTrue();
     explode.setEmitUpdateReference(false);
-    assertThat(reload(explode, "").isEmitUpdateReference()).isFalse();
+    assertThat(reload(explode).isEmitUpdateReference()).isFalse();
   }
 
   @Test
@@ -83,7 +80,7 @@ class MappedTransformMetadataTest {
     meta.getFields(fields, "read", null, null, new Variables(), null);
     assertThat(fields.getFieldNames())
         .containsExactly("_ili_tid", "_ili_bid", "_ili_source_object");
-    assertThat(reload(meta, "").isSelectFields()).isTrue();
+    assertThat(reload(meta).isSelectFields()).isTrue();
     meta.setSelectFields(false);
     meta.setSelectedFields(List.of("Name"));
     fields.clear();

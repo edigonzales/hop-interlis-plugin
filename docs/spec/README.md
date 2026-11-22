@@ -212,7 +212,7 @@ Phase 8  Hardening + Performance + Compatibility
 Zielworkflow:
 
 ```bash
-bash scripts/dev-sync-hop-plugin.sh "$HOP_HOME"
+bash scripts/dev-install-and-run.sh "$HOP_HOME"
 ```
 
 Der Befehl soll:

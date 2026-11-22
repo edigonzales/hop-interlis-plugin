@@ -1,28 +1,22 @@
 package ch.so.agi.hop.interlis.core;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /** Locates committed test resources. */
 public final class TestResources {
 
   private static final List<String> MODEL_VERSIONS = List.of("2.3", "2.4");
   private static volatile Path allModels;
-  private static volatile Path allData;
 
   private TestResources() {}
 
   public static Path path(String resource) {
     if ("/models".equals(resource)) {
       return allModelsDirectory();
-    }
-    if ("/data".equals(resource)) {
-      return allDataDirectory();
     }
     if (resource.startsWith("/models/")) {
       return modelPath(resource.substring("/models/".length()));
@@ -33,26 +27,18 @@ public final class TestResources {
     return resourcePath(resource);
   }
 
-  public static Path modelDirectory(String version) {
+  private static Path modelDirectory(String version) {
     if (!MODEL_VERSIONS.contains(version)) {
       throw new IllegalArgumentException("Unsupported INTERLIS model version: " + version);
     }
     return resourcePath("/fixtures/models/" + version);
   }
 
-  public static Path dataDirectory(String version) {
+  private static Path dataDirectory(String version) {
     if (!MODEL_VERSIONS.contains(version)) {
       throw new IllegalArgumentException("Unsupported XTF version: " + version);
     }
     return resourcePath("/fixtures/data/" + version);
-  }
-
-  public static List<Path> modelDirectories() {
-    return MODEL_VERSIONS.stream().map(TestResources::modelDirectory).toList();
-  }
-
-  public static String modelDirectoriesValue() {
-    return modelDirectories().stream().map(Path::toString).collect(Collectors.joining(File.pathSeparator));
   }
 
   private static Path modelPath(String fileName) {
@@ -92,22 +78,6 @@ public final class TestResources {
         copyDirectory(resourcePath("/fixtures/models/repository"), allModels.resolve("repo"));
       }
       return allModels;
-    }
-  }
-
-  private static Path allDataDirectory() {
-    Path result = allData;
-    if (result != null) {
-      return result;
-    }
-    synchronized (TestResources.class) {
-      if (allData == null) {
-        allData = createAggregateDirectory("hop-interlis-data");
-        for (String version : MODEL_VERSIONS) {
-          copyDirectory(dataDirectory(version), allData);
-        }
-      }
-      return allData;
     }
   }
 
