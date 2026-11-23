@@ -11,7 +11,6 @@ import ch.interlis.iox_j.validator.ValidationConfig;
 import ch.so.agi.hop.interlis.core.io.InterlisValidationService;
 import ch.so.agi.hop.interlis.core.io.XtfTransferReader;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
@@ -115,7 +114,7 @@ public class InterlisValidate extends BaseTransform<InterlisValidateMeta, Interl
               d -> "%XTF_DIR".equals(d) ? file.toAbsolutePath().getParent().toString() : d);
         }
 
-        InterlisModelService modelService = new InterlisModelServiceImpl();
+        InterlisModelServiceImpl modelService = new InterlisModelServiceImpl();
         CompiledInterlisModel model =
             modelService.compile(
                 new ModelSource(List.of(), modelNames, modelDirectories),

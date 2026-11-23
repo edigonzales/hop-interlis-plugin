@@ -6,7 +6,7 @@ import ch.interlis.iom.IomObject;
 import ch.interlis.iom_j.Iom_jObject;
 import ch.so.agi.hop.interlis.core.TestResources;
 import ch.so.agi.hop.interlis.core.geometry.InterlisGeometryMapper;
-import ch.so.agi.hop.interlis.core.mapping.DefaultInterlisObjectToRowMapper;
+import ch.so.agi.hop.interlis.core.mapping.InterlisObjectToRowMapper;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowMappingPlan;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowSchemaBuilder;
 import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
@@ -15,7 +15,6 @@ import ch.so.agi.hop.interlis.core.mapping.RowWriteOptions;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisGeometryEncoding;
 import ch.so.agi.hop.interlis.core.model.InterlisGeometryKind;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor;
@@ -41,7 +40,7 @@ class Chlv95GeometryMappingTest {
 
   @BeforeAll
   static void compileModels() throws Exception {
-    InterlisModelService service = new InterlisModelServiceImpl();
+    InterlisModelServiceImpl service = new InterlisModelServiceImpl();
     v1Model = compile(service, "HopIli_CHLV95_V1.ili", ModelCompileOptions.defaults());
     v1Plan = plan(v1Model, "HopIli_CHLV95_V1.Data.TestObject");
     v2Model = compile(service, "HopIli_CHLV95_V2.ili", new ModelCompileOptions("2.4"));
@@ -107,7 +106,7 @@ class Chlv95GeometryMappingTest {
         .isEqualTo("GeometryCHLV95_V1.MultiDirectedLine");
 
     Object[] row =
-        new DefaultInterlisObjectToRowMapper()
+        new InterlisObjectToRowMapper()
             .map(envelope(object.object()), v1Plan);
     assertThat(row[field(v1Plan, "MPoly").outputIndex()]).isInstanceOf(MultiSurface.class);
     assertThat(row[field(v1Plan, "MLine").outputIndex()]).isInstanceOf(MultiCurve.class);
@@ -152,7 +151,7 @@ class Chlv95GeometryMappingTest {
     assertThat(object.object().getattrobj("Points3D", 0).getobjecttag()).isEqualTo("MULTICOORD");
     assertThat(object.object().getattrobj("MPoly", 0).getobjecttag()).isEqualTo("MULTISURFACE");
     assertThat(object.object().getattrobj("MLine", 0).getobjecttag()).isEqualTo("MULTIPOLYLINE");
-    Object[] row = new DefaultInterlisObjectToRowMapper().map(envelope(object.object()), v2Plan);
+    Object[] row = new InterlisObjectToRowMapper().map(envelope(object.object()), v2Plan);
     assertThat(((Geometry) row[field(v2Plan, "Points3D").outputIndex()]).getCoordinate().getZ())
         .isEqualTo(10.0);
     assertThat(row[field(v2Plan, "MPoly").outputIndex()]).isInstanceOf(MultiSurface.class);
@@ -160,7 +159,7 @@ class Chlv95GeometryMappingTest {
   }
 
   private static CompiledInterlisModel compile(
-      InterlisModelService service, String fileName, ModelCompileOptions options) throws Exception {
+      InterlisModelServiceImpl service, String fileName, ModelCompileOptions options) throws Exception {
     return service.compile(
         new ModelSource(List.of(TestResources.path("/models/" + fileName)), List.of(), List.of()),
         options);

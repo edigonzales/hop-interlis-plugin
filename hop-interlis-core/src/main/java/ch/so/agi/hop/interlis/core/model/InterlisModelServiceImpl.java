@@ -28,7 +28,7 @@ import java.util.Optional;
  * treated as immutable afterwards and may be shared freely (verified: its getters return fresh deep
  * copies or are pure reads).
  */
-public final class InterlisModelServiceImpl implements InterlisModelService {
+public final class InterlisModelServiceImpl {
 
   /**
    * Central serialization point for every ili2c use in the plugin. ili2c uses shared static state
@@ -41,7 +41,7 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
 
   private final InterlisSchemaExtractor schemaExtractor = new InterlisSchemaExtractor();
 
-  @Override
+  /** Compiles and resolves the requested models under the shared compiler lock. */
   public CompiledInterlisModel compile(ModelSource source, ModelCompileOptions options)
       throws InterlisModelException {
     synchronized (MODEL_LOCK) {
@@ -283,12 +283,12 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
     }
   }
 
-  @Override
+  /** Lists the transferable non-structure classes of all compiled models. */
   public List<InterlisClassDescriptor> listTransferableClasses(CompiledInterlisModel model) {
     return schemaExtractor.extract(model.transferDescription()).selectableClasses();
   }
 
-  @Override
+  /** Finds a transferable class by its qualified name. */
   public Optional<InterlisClassDescriptor> findClass(
       CompiledInterlisModel model, String qualifiedName) {
     if (qualifiedName == null) {
@@ -297,8 +297,8 @@ public final class InterlisModelServiceImpl implements InterlisModelService {
     return schemaExtractor.extract(model.transferDescription()).findClass(qualifiedName);
   }
 
-  @Override
-  public java.util.List<String> detectModelNames(java.nio.file.Path transferFile)
+  /** Reads the declared model names from the transfer header in header order. */
+  public List<String> detectModelNames(Path transferFile)
       throws InterlisModelException {
     try (ch.so.agi.hop.interlis.core.io.XtfTransferReader reader =
         ch.so.agi.hop.interlis.core.io.XtfTransferReader.open(transferFile)) {

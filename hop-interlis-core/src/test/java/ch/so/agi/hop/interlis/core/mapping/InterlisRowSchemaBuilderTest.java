@@ -7,7 +7,6 @@ import ch.so.agi.hop.interlis.core.TestResources;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisModelException;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor;
@@ -27,7 +26,7 @@ class InterlisRowSchemaBuilderTest {
 
   @BeforeAll
   static void compile() throws InterlisModelException {
-    InterlisModelService service = new InterlisModelServiceImpl();
+    InterlisModelServiceImpl service = new InterlisModelServiceImpl();
     InterlisSchemaExtractor extractor = new InterlisSchemaExtractor();
     geometry = extractor.extract(compile(service, "HopIli_Geometry_V1.ili", "2.4").transferDescription());
     spike = extractor.extract(compile(service, "HopIli_Spike_V1.ili", "2.3").transferDescription());
@@ -35,7 +34,7 @@ class InterlisRowSchemaBuilderTest {
   }
 
   private static CompiledInterlisModel compile(
-      InterlisModelService service, String modelFile, String iliVersion)
+      InterlisModelServiceImpl service, String modelFile, String iliVersion)
       throws InterlisModelException {
     return service.compile(
         new ModelSource(List.of(TestResources.path("/models/" + modelFile)), List.of(), List.of()),

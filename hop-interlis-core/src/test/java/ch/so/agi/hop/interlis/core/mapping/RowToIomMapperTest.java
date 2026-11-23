@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import ch.interlis.iom.IomObject;
 import ch.so.agi.hop.interlis.core.TestResources;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor;
@@ -32,7 +31,7 @@ class RowToIomMapperTest {
 
   @BeforeAll
   static void compile() throws Exception {
-    InterlisModelService service = new InterlisModelServiceImpl();
+    InterlisModelServiceImpl service = new InterlisModelServiceImpl();
     InterlisSchemaExtractor extractor = new InterlisSchemaExtractor();
     spike =
         extractor.extract(

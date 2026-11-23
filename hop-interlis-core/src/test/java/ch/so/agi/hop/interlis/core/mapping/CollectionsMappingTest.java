@@ -185,7 +185,7 @@ class CollectionsMappingTest {
   void references_read_write_clear_and_overlay_preserves_collections() throws Exception {
     var source = item();
     var plan = projection.plan();
-    var row = new DefaultInterlisObjectToRowMapper().map(envelope(source), plan);
+    var row = new InterlisObjectToRowMapper().map(envelope(source), plan);
     int tid = index(plan, "ExternalRef_ref"), bid = index(plan, "ExternalRef_ref_bid");
     assertThat(row[tid]).isEqualTo("t2");
     assertThat(row[bid]).isEqualTo("b2");

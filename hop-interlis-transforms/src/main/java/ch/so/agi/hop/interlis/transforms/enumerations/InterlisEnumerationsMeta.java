@@ -1,7 +1,6 @@
 package ch.so.agi.hop.interlis.transforms.enumerations;
 
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
 import ch.so.agi.hop.interlis.core.model.ModelSource;
@@ -87,7 +86,7 @@ public class InterlisEnumerationsMeta
     if (modelNames.isEmpty()) {
       throw new InterlisModelMissingException("No INTERLIS models configured");
     }
-    InterlisModelService modelService = new InterlisModelServiceImpl();
+    InterlisModelServiceImpl modelService = new InterlisModelServiceImpl();
     return modelService.compile(
         new ModelSource(List.of(), modelNames, resolveModelDirectories(variables)),
         ModelCompileOptions.defaults());

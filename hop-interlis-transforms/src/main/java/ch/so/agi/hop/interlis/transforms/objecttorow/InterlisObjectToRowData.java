@@ -1,6 +1,6 @@
 package ch.so.agi.hop.interlis.transforms.objecttorow;
 
-import ch.so.agi.hop.interlis.core.mapping.DefaultInterlisObjectToRowMapper;
+import ch.so.agi.hop.interlis.core.mapping.InterlisObjectToRowMapper;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
 import ch.so.agi.hop.interlis.core.mapping.InterlisRowMappingPlan;
 import java.util.Iterator;
@@ -15,7 +15,7 @@ public class InterlisObjectToRowData extends BaseTransformData {
   boolean initialized;
   InterlisProjectionResult projection;
   InterlisRowMappingPlan plan;
-  DefaultInterlisObjectToRowMapper mapper;
+  InterlisObjectToRowMapper mapper;
   IRowMeta outputRowMeta;
   InterlisObjectToRowOutputPlan outputPlan;
 

@@ -3,7 +3,7 @@ package ch.so.agi.hop.interlis.transforms.input;
 import ch.so.agi.hop.interlis.core.io.InterlisEventType;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectEnvelope;
 import ch.so.agi.hop.interlis.core.io.XtfTransferReader;
-import ch.so.agi.hop.interlis.core.mapping.DefaultInterlisObjectToRowMapper;
+import ch.so.agi.hop.interlis.core.mapping.InterlisObjectToRowMapper;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
@@ -200,7 +200,7 @@ public class InterlisInput extends BaseTransform<InterlisInputMeta, InterlisInpu
       if (data.reader instanceof XtfTransferReader transferReader) {
         transferReader.setModel(data.projection.model().transferDescription());
       }
-      data.mapper = new DefaultInterlisObjectToRowMapper();
+      data.mapper = new InterlisObjectToRowMapper();
       data.keepSourceObject = meta.isKeepSourceObject();
       data.outputRowMeta = new HopRowSchemaFactory().createRowMeta(data.plan);
       if (data.keepSourceObject) {

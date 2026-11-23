@@ -20,7 +20,7 @@ class InterlisSchemaExtractorTest {
 
   @BeforeAll
   static void extract() throws Exception {
-    InterlisModelService service = new InterlisModelServiceImpl();
+    InterlisModelServiceImpl service = new InterlisModelServiceImpl();
     InterlisSchemaExtractor extractor = new InterlisSchemaExtractor();
     primitives =
         extractor.extract(
@@ -331,7 +331,7 @@ class InterlisSchemaExtractorTest {
 
   @Test
   void structures_are_not_listed_as_transferable_classes() {
-    InterlisModelService service = new InterlisModelServiceImpl();
+    InterlisModelServiceImpl service = new InterlisModelServiceImpl();
     CompiledInterlisModel model;
     try {
       model =

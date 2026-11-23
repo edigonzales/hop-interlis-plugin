@@ -11,7 +11,7 @@ import org.locationtech.jts.geom.Geometry;
  * Reads attribute field values from an IOM owner object.
  *
  * <p>This is the single implementation shared by the class row mapper ({@link
- * DefaultInterlisObjectToRowMapper}) and the structure exploder: both map {@link
+ * InterlisObjectToRowMapper}) and the structure exploder: both map {@link
  * InterlisFieldPlan}s to Hop values, the only difference being the owner object (class object vs.
  * structure child). Geometry values go through the SQL/MM WKB bridge, so arcs are preserved.
  */

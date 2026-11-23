@@ -13,7 +13,7 @@ class InterlisModelServiceTest {
 
   private static final Path MODELS = TestResources.path("/models");
 
-  private final InterlisModelService service = new InterlisModelServiceImpl();
+  private final InterlisModelServiceImpl service = new InterlisModelServiceImpl();
 
   /** HopIli_Primitives_V1 uses XMLDate/XMLTime, which exist since INTERLIS 2.4. */
   private static ModelCompileOptions primitivesOptions() {

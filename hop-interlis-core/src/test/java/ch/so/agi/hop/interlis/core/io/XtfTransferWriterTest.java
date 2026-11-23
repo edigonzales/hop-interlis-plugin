@@ -12,7 +12,6 @@ import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.core.mapping.RowToIomMapper;
 import ch.so.agi.hop.interlis.core.mapping.RowWriteOptions;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor;
@@ -34,7 +33,7 @@ class XtfTransferWriterTest {
 
   @BeforeAll
   static void compile() throws Exception {
-    InterlisModelService service = new InterlisModelServiceImpl();
+    InterlisModelServiceImpl service = new InterlisModelServiceImpl();
     model =
         service.compile(
             new ModelSource(

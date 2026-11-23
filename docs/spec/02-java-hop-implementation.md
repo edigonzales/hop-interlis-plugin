@@ -102,17 +102,11 @@ public record InterlisModelContext(
 UI- und Mapping-Sicht. `modelNames` enthält die tatsächlich kompilierten
 Modellnamen und nicht bloss den zuletzt eingegebenen Text im Dialog.
 
-## 3.3 `InterlisModelService`
+## 3.3 `InterlisModelServiceImpl`
 
-```java
-public interface InterlisModelService {
-  CompiledInterlisModel compile(ModelSource source, ModelCompileOptions options)
-      throws InterlisModelException;
-
-  List<String> detectModelNames(Path transferFile)
-      throws InterlisModelException;
-}
-```
+Der konkrete Dienst kompiliert Modelle über `compile(ModelSource, ModelCompileOptions)`
+und liest die deklarierten Modelle aus dem Transferheader über `detectModelNames(Path)`.
+Beide Methoden melden Fehler als `InterlisModelException`.
 
 ### Verantwortlichkeiten
 
@@ -1662,7 +1656,7 @@ Die konfigurierte Kopienzahl wird vor der Ausgabe geprüft, auch in Kopie 0.
 Die betroffenen Transforms lehnen auch Partitionierung ab. Die Meldung nennt
 den konkreten Grund und verlangt eine Kopie. Zentrale Hilfsklasse: `InterlisParallelCopies`.
 
-`InterlisModelService` serialisiert Compileraufrufe unter `MODEL_LOCK`.
+`InterlisModelServiceImpl` serialisiert Compileraufrufe unter `MODEL_LOCK`.
 Mapper und Pläne sind nach der Initialisierung unveränderlich. Reader und
 Writer bleiben bei ihrer jeweiligen Transform-Kopie.
 

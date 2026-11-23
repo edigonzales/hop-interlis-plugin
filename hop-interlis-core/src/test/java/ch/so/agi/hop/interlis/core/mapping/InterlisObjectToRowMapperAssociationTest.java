@@ -16,7 +16,7 @@ class InterlisObjectToRowMapperAssociationTest {
   private static Map<String, List<InterlisObjectEnvelope>> objects;
 
   private final InterlisRowSchemaBuilder builder = new InterlisRowSchemaBuilder();
-  private final DefaultInterlisObjectToRowMapper mapper = new DefaultInterlisObjectToRowMapper();
+  private final InterlisObjectToRowMapper mapper = new InterlisObjectToRowMapper();
 
   @BeforeAll
   static void setUp() throws Exception {
