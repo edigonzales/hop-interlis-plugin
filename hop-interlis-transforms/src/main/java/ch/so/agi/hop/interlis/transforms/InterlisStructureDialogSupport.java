@@ -1,9 +1,9 @@
 package ch.so.agi.hop.interlis.transforms;
 
+import ch.so.agi.hop.interlis.core.mapping.InterlisModelContext;
 import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor;
@@ -48,7 +48,7 @@ public final class InterlisStructureDialogSupport {
           InterlisProbeStatus.INFO);
     }
     try {
-      InterlisModelService modelService = new InterlisModelServiceImpl();
+      InterlisModelServiceImpl modelService = new InterlisModelServiceImpl();
       CompiledInterlisModel model =
           modelService.compile(
               new ModelSource(List.of(), modelNames, modelDirectories),
@@ -96,8 +96,7 @@ public final class InterlisStructureDialogSupport {
           new ch.so.agi.hop.interlis.core.structures.InterlisStructureProjectionService(
                   modelService, locator)
               .project(
-                  new ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest(
-                      null, modelNames, modelDirectories),
+                  new InterlisModelContext(model, schema, modelNames),
                   className,
                   structurePath,
                   options);

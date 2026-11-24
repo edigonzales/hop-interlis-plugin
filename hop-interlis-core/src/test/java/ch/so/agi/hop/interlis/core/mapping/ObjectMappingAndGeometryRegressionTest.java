@@ -178,7 +178,7 @@ class ObjectMappingAndGeometryRegressionTest {
         envelope = reader.next();
       } while (envelope.eventType() != InterlisEventType.OBJECT);
     }
-    var actual = new DefaultInterlisObjectToRowMapper().map(envelope, plan);
+    var actual = new InterlisObjectToRowMapper().map(envelope, plan);
     for (var field : plan.fields())
       if (values[field.outputIndex()] instanceof Geometry expected) {
         assertThat(field.attributeDescriptor().coordDimension()).isEqualTo(3);

@@ -9,7 +9,6 @@ import ch.so.agi.hop.interlis.core.io.InterlisEventType;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectEnvelope;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectOperation;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor;
@@ -29,11 +28,11 @@ class InterlisObjectToRowMapperTest {
   private static InterlisSchemaDescriptor geometry;
 
   private final InterlisRowSchemaBuilder builder = new InterlisRowSchemaBuilder();
-  private final InterlisObjectToRowMapper mapper = new DefaultInterlisObjectToRowMapper();
+  private final InterlisObjectToRowMapper mapper = new InterlisObjectToRowMapper();
 
   @BeforeAll
   static void compile() throws Exception {
-    InterlisModelService service = new InterlisModelServiceImpl();
+    InterlisModelServiceImpl service = new InterlisModelServiceImpl();
     InterlisSchemaExtractor extractor = new InterlisSchemaExtractor();
     spike =
         extractor.extract(

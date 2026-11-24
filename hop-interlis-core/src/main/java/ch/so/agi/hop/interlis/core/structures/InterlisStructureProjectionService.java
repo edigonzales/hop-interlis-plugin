@@ -6,7 +6,6 @@ import ch.so.agi.hop.interlis.core.mapping.ProjectionOptions;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisModelException;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor;
@@ -42,7 +41,7 @@ public final class InterlisStructureProjectionService {
         context.modelNames());
   }
 
-  private final InterlisModelService modelService;
+  private final InterlisModelServiceImpl modelService;
   private final InterlisStructureLocator structureLocator;
 
   public InterlisStructureProjectionService() {
@@ -50,7 +49,7 @@ public final class InterlisStructureProjectionService {
   }
 
   public InterlisStructureProjectionService(
-      InterlisModelService modelService, InterlisStructureLocator structureLocator) {
+      InterlisModelServiceImpl modelService, InterlisStructureLocator structureLocator) {
     this.modelService = modelService;
     this.structureLocator = structureLocator;
   }

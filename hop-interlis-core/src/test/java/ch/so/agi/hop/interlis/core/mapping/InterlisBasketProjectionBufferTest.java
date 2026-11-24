@@ -264,7 +264,7 @@ class InterlisBasketProjectionBufferTest {
           for (var entry : batch.rows()) {
             if (first == 0) first = System.nanoTime();
             var values =
-                new DefaultInterlisObjectToRowMapper()
+                new InterlisObjectToRowMapper()
                     .map(entry.envelope(), mapping, batch.lookup());
             if (values.length == 0 || entry.context().length != payloadSize)
               throw new AssertionError("projection data lost");

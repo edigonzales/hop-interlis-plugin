@@ -3,7 +3,6 @@ package ch.so.agi.hop.interlis.core.mapping;
 import ch.so.agi.hop.interlis.core.model.CompiledInterlisModel;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisModelException;
-import ch.so.agi.hop.interlis.core.model.InterlisModelService;
 import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.InterlisPlanRoot;
 import ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor;
@@ -25,7 +24,7 @@ public final class InterlisProjectionService {
 
   private static final String XTF_DIR_PLACEHOLDER = "%XTF_DIR";
 
-  private final InterlisModelService modelService;
+  private final InterlisModelServiceImpl modelService;
   private final InterlisRowSchemaBuilder schemaBuilder;
 
   public InterlisProjectionService() {
@@ -33,7 +32,7 @@ public final class InterlisProjectionService {
   }
 
   public InterlisProjectionService(
-      InterlisModelService modelService, InterlisRowSchemaBuilder schemaBuilder) {
+      InterlisModelServiceImpl modelService, InterlisRowSchemaBuilder schemaBuilder) {
     this.modelService = modelService;
     this.schemaBuilder = schemaBuilder;
   }

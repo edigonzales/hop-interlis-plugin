@@ -2,7 +2,7 @@ package ch.so.agi.hop.interlis.transforms.objecttorow;
 
 import ch.so.agi.hop.interlis.core.io.InterlisEventType;
 import ch.so.agi.hop.interlis.core.io.InterlisObjectEnvelope;
-import ch.so.agi.hop.interlis.core.mapping.DefaultInterlisObjectToRowMapper;
+import ch.so.agi.hop.interlis.core.mapping.InterlisObjectToRowMapper;
 import ch.so.agi.hop.interlis.core.mapping.InterlisAssociationLinkLookup;
 import ch.so.agi.hop.interlis.core.mapping.InterlisModelRequest;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
@@ -141,7 +141,7 @@ public class InterlisObjectToRow
                   resolve(meta.getClassName()),
                   meta.projectionOptions(this));
       data.plan = data.projection.plan();
-      data.mapper = new DefaultInterlisObjectToRowMapper();
+      data.mapper = new InterlisObjectToRowMapper();
 
       IRowMeta inputRowMeta = getInputRowMeta();
       data.envelopeBindings =
