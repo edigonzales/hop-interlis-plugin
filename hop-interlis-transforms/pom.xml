@@ -64,6 +64,20 @@
       <version>0.9.2</version><scope>test</scope>
     </dependency>
 
+    <!-- Native Hop GUI implementation for the SWT dialog regression test. -->
+    <dependency>
+      <groupId>org.apache.hop</groupId>
+      <artifactId>hop-ui-rcp</artifactId>
+      <version>${hop.version}</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>*</groupId>
+          <artifactId>*</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
     <!-- Test-only: base Hop transforms to run programmatic pipeline tests against. -->
     <dependency>
       <groupId>org.apache.hop</groupId>

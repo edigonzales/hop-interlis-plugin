@@ -1,12 +1,18 @@
 package ch.so.agi.hop.interlis.transforms.objecttorow;
 
+import ch.so.agi.hop.interlis.core.mapping.InterlisMappingException;
 import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionResult;
+import ch.so.agi.hop.interlis.core.mapping.InterlisProjectionService;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
-import ch.so.agi.hop.interlis.transforms.HopRowSchemaFactory;
+import ch.so.agi.hop.interlis.core.model.InterlisModelException;
+import ch.so.agi.hop.interlis.transforms.InterlisDialogMetadata;
 import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport;
+import ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport.StatusSeverity;
 import ch.so.agi.hop.interlis.transforms.InterlisOptionsDialog;
 import ch.so.agi.hop.interlis.transforms.InterlisOptionsDialog.Option;
-import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
+import ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator;
+import ch.so.agi.hop.interlis.transforms.InterlisProbeResult;
+import ch.so.agi.hop.interlis.transforms.InterlisProbeStatus;
 import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreviewSupport;
 import ch.so.agi.hop.interlis.transforms.InterlisStructureDialogSupport;
 import java.util.List;
@@ -33,7 +39,6 @@ import org.eclipse.swt.widgets.Text;
 public class InterlisObjectToRowDialog extends BaseTransformDialog {
 
   private final InterlisObjectToRowMeta input;
-  private final HopRowSchemaFactory schemaFactory = new HopRowSchemaFactory();
   private InterlisObjectToRowMeta draft;
 
   private TextVar wModelNames;
@@ -48,10 +53,8 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
   private Label wPreviewDiagnostics;
   private Table wPreview;
 
-  private List<InterlisClassDescriptor> classes = List.of();
   private boolean suppressRefresh;
-  private boolean forceReload;
-  private ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator probeCoordinator;
+  private InterlisProbeCoordinator probeCoordinator;
 
   public InterlisObjectToRowDialog(
       Shell parent,
@@ -68,7 +71,7 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
     PropsUi.setLook(shell);
     var display = shell.getDisplay();
     probeCoordinator =
-        new ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator(
+        new InterlisProbeCoordinator(
             action -> {
               if (!display.isDisposed())
                 display.asyncExec(
@@ -79,9 +82,7 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
     shell.addListener(SWT.Dispose, e -> probeCoordinator.close());
     setShellImage(shell, input);
     shell.setText("INTERLIS Object to Row");
-    shell.setMinimumSize(860, 560);
 
-    changed = input.hasChanged();
     draft = (InterlisObjectToRowMeta) input.clone();
     FormLayout layout = new FormLayout();
     layout.marginWidth = PropsUi.getFormMargin();
@@ -117,27 +118,23 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
     fdTransformName.right = new FormAttachment(advanced, -margin);
     advanced.addListener(
         SWT.Selection,
-        e -> {
-          if (InterlisOptionsDialog.open(
-              shell,
-              variables,
-              List.of(
-                  new Option(
-                      "Buffer memory (MiB)",
-                      Long.toString(draft.getBufferMemoryMiB()),
-                      v -> draft.setBufferMemoryMiB(Long.parseLong(v))),
-                  new Option(
-                      "Spill directory (empty: system temp)",
-                      draft.getSpillDirectory(),
-                      draft::setSpillDirectory),
-                  new Option(
-                      "Maximum spill (MiB, 0: unlimited)",
-                      Long.toString(draft.getMaxSpillMiB()),
-                      v -> draft.setMaxSpillMiB(Long.parseLong(v)))))) {
-            input.setChanged();
-            refresh();
-          }
-        });
+        e ->
+            InterlisOptionsDialog.open(
+                shell,
+                variables,
+                List.of(
+                    new Option(
+                        "Buffer memory (MiB)",
+                        Long.toString(draft.getBufferMemoryMiB()),
+                        v -> draft.setBufferMemoryMiB(Long.parseLong(v))),
+                    new Option(
+                        "Spill directory (empty: system temp)",
+                        draft.getSpillDirectory(),
+                        draft::setSpillDirectory),
+                    new Option(
+                        "Maximum spill (MiB, 0: unlimited)",
+                        Long.toString(draft.getMaxSpillMiB()),
+                        v -> draft.setMaxSpillMiB(Long.parseLong(v))))));
 
     wModelNames = addTextRow("Models", wTransformName, 0);
     wModelDirectories = addTextRow("Model dirs", wModelNames, 0);
@@ -191,7 +188,7 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
     fdPreview.left = new FormAttachment(0, 0);
     fdPreview.right = new FormAttachment(100, 0);
     fdPreview.top = new FormAttachment(wPreviewDiagnostics, margin);
-    fdPreview.bottom = new FormAttachment(wOk, -2 * margin);
+    fdPreview.height = 160;
     wPreview.setLayoutData(fdPreview);
 
     // OK / Cancel
@@ -202,6 +199,7 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
     fdOk.left = new FormAttachment(50, -2 * margin);
     fdOk.bottom = new FormAttachment(100, 0);
     wOk.setLayoutData(fdOk);
+    fdPreview.bottom = new FormAttachment(wOk, -2 * margin);
 
     wCancel = new Button(shell, SWT.PUSH);
     wCancel.setText("Cancel");
@@ -211,34 +209,19 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
     fdCancel.bottom = new FormAttachment(100, 0);
     wCancel.setLayoutData(fdCancel);
 
-    wReload.addListener(
-        SWT.Selection,
-        e -> {
-          forceReload = true;
-          refresh();
-        });
-    wClassName.addModifyListener(
-        e -> {
-          input.setChanged();
-          if (!suppressRefresh) {
-            refresh();
-          }
-        });
+    wReload.addListener(SWT.Selection, e -> refresh(true));
+    wClassName.addModifyListener(e -> refresh(false));
     wOk.addListener(SWT.Selection, e -> ok());
     wCancel.addListener(SWT.Selection, e -> cancel());
 
-    wModelNames.addModifyListener(
-        e -> {
-          if (!suppressRefresh) refresh();
-        });
-    wModelDirectories.addModifyListener(
-        e -> {
-          if (!suppressRefresh) refresh();
-        });
+    wModelNames.addModifyListener(e -> refresh(false));
+    wModelDirectories.addModifyListener(e -> refresh(false));
+    wDefaultSrid.addModifyListener(e -> refresh(false));
+    wIncludeTid.addListener(SWT.Selection, e -> refresh(false));
+    wIncludeBid.addListener(SWT.Selection, e -> refresh(false));
     getData();
-    refresh();
-    input.setChanged(changed);
-    BaseDialog.defaultShellHandling(shell, c -> ok(), c -> cancel());
+    refresh(false);
+    BaseDialog.defaultShellHandling(shell, c -> ok(), c -> cancel(), false);
     return transformName;
   }
 
@@ -302,103 +285,120 @@ public class InterlisObjectToRowDialog extends BaseTransformDialog {
     wTransformName.setFocus();
   }
 
-  private void refresh() {
+  private void refresh(boolean immediate) {
     if (suppressRefresh) return;
-    syncMetaFromWidgets(draft);
+    readWidgets();
     var snapshot = (InterlisObjectToRowMeta) draft.clone();
-    var vars = ch.so.agi.hop.interlis.transforms.InterlisProbeCoordinator.snapshot(variables);
-    boolean immediate = forceReload;
-    forceReload = false;
+    var vars = InterlisProbeCoordinator.snapshot(variables);
     probeCoordinator.submit(
         immediate,
-        () -> snapshot.tryProject(vars).orElse(null),
+        () -> probe(snapshot, vars),
         this::applyRefresh,
         this::probeFailed);
   }
 
-  private void applyRefresh(InterlisProjectionResult result) {
+  private static InterlisProbeResult probe(InterlisObjectToRowMeta snapshot, IVariables vars)
+      throws InterlisModelException {
+    var request = snapshot.modelRequest(vars);
+    if (request.isEmpty()) {
+      return new InterlisProbeResult(
+          false, "Configure the INTERLIS models and model directories.", null,
+          List.of(), List.of(), InterlisProbeStatus.INFO);
+    }
+    var service = new InterlisProjectionService();
+    var model = service.loadModel(request.get());
+    var classes = model.schema().selectableClasses();
+    String selectedClass = snapshot.resolvedClassName(vars);
+    if (selectedClass.isBlank() || selectedClass.contains("${")) {
+      return new InterlisProbeResult(
+          true, "Model loaded. Select an INTERLIS class for the schema preview.", null,
+          classes, List.of(), InterlisProbeStatus.INFO);
+    }
     try {
-      classes = result == null ? List.of() : result.schema().selectableClasses();
-      populateClassCombo();
-      if (result == null) {
-        wStatus.set(
-            InterlisDialogUiSupport.StatusSeverity.INFO,
-            "Schema preview unavailable: configuration incomplete or models unresolved.");
-        InterlisDialogUiSupport.populatePreviewTable(wPreview, List.of());
-        InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, "");
-      } else {
-        InterlisSchemaPreview preview =
-            InterlisSchemaPreviewSupport.create(result.plan(), schemaFactory::createRowMeta);
-        wStatus.set(
-            InterlisDialogUiSupport.statusSeverity(
-                InterlisDialogUiSupport.StatusSeverity.SUCCESS, preview),
-            "Model loaded; " + result.plan().fieldCount() + " fields projected");
-        InterlisDialogUiSupport.populatePreviewTable(wPreview, preview.rows());
-        InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, preview);
-      }
-    } catch (Exception e) {
-      wStatus.set(
-          InterlisDialogUiSupport.StatusSeverity.ERROR,
-          InterlisStructureDialogSupport.rootCauseMessage(e));
+      var projection = service.project(model, selectedClass, snapshot.projectionOptions(vars));
+      return new InterlisProbeResult(
+          true, "Model loaded; " + projection.plan().fieldCount() + " fields projected",
+          projection, classes, List.of(), InterlisProbeStatus.SUCCESS);
+    } catch (InterlisModelException | InterlisMappingException e) {
+      return new InterlisProbeResult(
+          true, InterlisStructureDialogSupport.rootCauseMessage(e), null,
+          classes, List.of(), InterlisProbeStatus.ERROR);
+    }
+  }
+
+  private void applyRefresh(InterlisProbeResult result) {
+    populateClassCombo(result.classes());
+    renderPreview(
+        StatusSeverity.valueOf(result.status().name()), result.message(), result.projection());
+  }
+
+  private void renderPreview(
+      StatusSeverity severity, String message, InterlisProjectionResult projection) {
+    if (projection == null) {
+      wStatus.set(severity, message);
       InterlisDialogUiSupport.populatePreviewTable(wPreview, List.of());
       InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, "");
+    } else {
+      var preview = InterlisSchemaPreviewSupport.create(projection.plan());
+      wStatus.set(InterlisDialogUiSupport.statusSeverity(severity, preview), message);
+      InterlisDialogUiSupport.populatePreviewTable(wPreview, preview.rows());
+      InterlisDialogUiSupport.setPreviewDiagnostics(wPreviewDiagnostics, preview);
     }
     shell.layout(true, true);
   }
 
-  private void populateClassCombo() {
+  private void populateClassCombo(List<InterlisClassDescriptor> classes) {
     suppressRefresh = true;
     try {
       String current = wClassName.getText();
-      wClassName.removeAll();
-      for (InterlisClassDescriptor descriptor : classes) {
-        if (!descriptor.isAbstract()) {
-          wClassName.add(descriptor.scopedName());
-        }
-      }
-      if (classes.stream().anyMatch(c -> !c.isAbstract() && c.scopedName().equals(current))) {
-        wClassName.setText(current);
-      }
+      wClassName.setItems(
+          classes.stream().filter(c -> !c.isAbstract()).map(InterlisClassDescriptor::scopedName)
+              .toArray(String[]::new));
+      wClassName.setText(current);
     } finally {
       suppressRefresh = false;
     }
   }
 
-  private void syncMetaFromWidgets(InterlisObjectToRowMeta meta) {
-    if (wModelNames != null) {
-      meta.setModelNames(wModelNames.getText());
-      meta.setModelDirectories(wModelDirectories.getText());
-      meta.setClassName(wClassName.getText());
-      meta.setObjectFieldName(wObjectField.getText());
-      meta.setIncludeTid(wIncludeTid.getSelection());
-      meta.setIncludeBid(wIncludeBid.getSelection());
-      meta.setAppendEnvelopeFields(wAppendEnvelopeFields.getSelection());
-      meta.setDefaultSrid(wDefaultSrid.getText());
-    }
+  private void readWidgets() {
+    draft.setModelNames(wModelNames.getText());
+    draft.setModelDirectories(wModelDirectories.getText());
+    draft.setClassName(wClassName.getText());
+    draft.setObjectFieldName(wObjectField.getText());
+    draft.setIncludeTid(wIncludeTid.getSelection());
+    draft.setIncludeBid(wIncludeBid.getSelection());
+    draft.setAppendEnvelopeFields(wAppendEnvelopeFields.getSelection());
+    draft.setDefaultSrid(wDefaultSrid.getText());
   }
 
   private void probeFailed(Exception error) {
-    wStatus.set(
-        ch.so.agi.hop.interlis.transforms.InterlisDialogUiSupport.StatusSeverity.ERROR,
-        InterlisStructureDialogSupport.rootCauseMessage(error));
-    shell.layout(true, true);
+    populateClassCombo(List.of());
+    renderPreview(StatusSeverity.ERROR, InterlisStructureDialogSupport.rootCauseMessage(error), null);
   }
 
   private void ok() {
     if (Utils.isEmpty(wTransformName.getText())) {
       return;
     }
-    transformName = wTransformName.getText();
-    syncMetaFromWidgets(input);
-    input.setBufferMemoryMiB(draft.getBufferMemoryMiB());
-    input.setSpillDirectory(draft.getSpillDirectory());
-    input.setMaxSpillMiB(draft.getMaxSpillMiB());
+    readWidgets();
+    try {
+      if (!input.getXml().equals(draft.getXml())) {
+        InterlisDialogMetadata.commit(input, draft, metadataProvider);
+      }
+    } catch (Exception e) {
+      wStatus.set(StatusSeverity.ERROR, InterlisStructureDialogSupport.rootCauseMessage(e));
+      shell.layout(true, true);
+      return;
+    }
+    if (!transformName.equals(wTransformName.getText())) {
+      input.setChanged();
+      transformName = wTransformName.getText();
+    }
     dispose();
   }
 
   private void cancel() {
     transformName = null;
-    input.setChanged(changed);
     dispose();
   }
 }
