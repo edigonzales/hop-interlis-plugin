@@ -110,6 +110,17 @@ public class InterlisObjectToRowMeta
    */
   public Optional<InterlisProjectionResult> tryProject(IVariables variables)
       throws InterlisModelException, InterlisMappingException {
+    var request = modelRequest(variables);
+    String selectedClass = resolvedClassName(variables);
+    if (request.isEmpty() || selectedClass.isBlank()) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        new InterlisProjectionService()
+            .project(request.get(), selectedClass, projectionOptions(variables)));
+  }
+
+  Optional<InterlisModelRequest> modelRequest(IVariables variables) {
     List<String> resolvedModels = resolveModelNames(variables);
     if (resolvedModels.isEmpty()) {
       return Optional.empty();
@@ -118,15 +129,11 @@ public class InterlisObjectToRowMeta
     if (resolvedDirs.stream().anyMatch(d -> d.contains("${"))) {
       return Optional.empty();
     }
-    if (resolve(variables, className).isBlank()) {
-      return Optional.empty();
-    }
-    return Optional.of(
-        new InterlisProjectionService()
-            .project(
-                new InterlisModelRequest(null, resolvedModels, resolvedDirs),
-                resolve(variables, className),
-                projectionOptions(variables)));
+    return Optional.of(new InterlisModelRequest(null, resolvedModels, resolvedDirs));
+  }
+
+  String resolvedClassName(IVariables variables) {
+    return resolve(variables, className);
   }
 
   /** Builds the projection options from the persisted configuration. */
