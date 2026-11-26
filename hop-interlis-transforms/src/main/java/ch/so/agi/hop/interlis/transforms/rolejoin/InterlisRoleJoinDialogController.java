@@ -1,7 +1,11 @@
 package ch.so.agi.hop.interlis.transforms.rolejoin;
 
 import ch.so.agi.hop.interlis.core.io.InterlisEnvelopeRowLayout;
+import ch.so.agi.hop.interlis.core.mapping.InterlisMappingException;
+import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
+import ch.so.agi.hop.interlis.core.model.InterlisModelException;
 import ch.so.agi.hop.interlis.transforms.InterlisPreviewRow;
+import ch.so.agi.hop.interlis.transforms.InterlisProbeStatus;
 import ch.so.agi.hop.interlis.transforms.InterlisSchemaPreview;
 import ch.so.agi.hop.interlis.transforms.mapping.InterlisFieldBinding;
 import java.util.ArrayList;
@@ -14,15 +18,53 @@ import org.apache.hop.core.variables.IVariables;
 /** SWT-free controller for the INTERLIS Role Join dialog: model probing and preview formatting. */
 public final class InterlisRoleJoinDialogController {
 
-  /** Probes the current configuration; failures are returned as a friendly message. */
-  public InterlisRoleJoinProbeResult probe(InterlisRoleJoinMeta meta, IVariables variables)
-      throws Exception {
-    return meta.probeRole(variables);
+  record DialogProbe(
+      List<String> classes,
+      List<String> roles,
+      InterlisRoleJoinProbeResult selectedRole,
+      InterlisProbeStatus status,
+      String message) {}
+
+  DialogProbe probe(InterlisRoleJoinMeta meta, IVariables variables) throws InterlisModelException {
+    var context = meta.loadModel(variables);
+    var classes = context.schema().selectableClasses().stream()
+        .filter(descriptor -> !descriptor.isAbstract())
+        .map(InterlisClassDescriptor::scopedName)
+        .toList();
+
+    String className = meta.resolvedMainClassName(variables);
+    if (className.isBlank()) {
+      return new DialogProbe(
+          classes, List.of(), null, InterlisProbeStatus.INFO, "Model loaded. Select a main class.");
+    }
+    InterlisClassDescriptor mainClass;
+    try {
+      mainClass = InterlisRoleJoinMeta.requireMainClass(context, className);
+    } catch (InterlisModelException e) {
+      return new DialogProbe(classes, List.of(), null, InterlisProbeStatus.ERROR, e.getMessage());
+    }
+
+    var roles = roleNames(mainClass);
+    String role = meta.resolvedRoleName(variables);
+    if (role.isBlank()) {
+      String message = roles.isEmpty()
+          ? "No roles are available on class " + className + "."
+          : "Model loaded. Select a role.";
+      return new DialogProbe(classes, roles, null, InterlisProbeStatus.INFO, message);
+    }
+    try {
+      var selected = InterlisRoleJoinMeta.probeRole(context, mainClass, role);
+      return new DialogProbe(
+          classes, roles, selected, InterlisProbeStatus.SUCCESS,
+          "Model loaded; role " + selected.role().name() + " -> " + selected.target().scopedName());
+    } catch (InterlisModelException | InterlisMappingException e) {
+      return new DialogProbe(classes, roles, null, InterlisProbeStatus.ERROR, e.getMessage());
+    }
   }
 
   /** All roles available on the configured main class, with their targets. */
-  public List<String> roleNames(InterlisRoleJoinProbeResult result) {
-    return result.mainClass().roles().stream()
+  private List<String> roleNames(InterlisClassDescriptor mainClass) {
+    return mainClass.roles().stream()
         .map(
             role ->
                 role.name()

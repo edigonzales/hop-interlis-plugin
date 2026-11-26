@@ -31,7 +31,7 @@ class InterlisRoleJoinDialogControllerTest {
     meta.setMainClassName("HopIli_Associations_V1.Data.Person");
 
     var result = controller.probe(meta, new Variables());
-    var choices = controller.roleNames(result);
+    var choices = result.roles();
     String selection = controller.selectedRoleLabel(choices, meta.getRoleName());
     assertThat(selection).startsWith("Address -> ");
     assertThat(controller.selectedRoleLabel(choices, selection)).isEqualTo(selection);
@@ -52,8 +52,8 @@ class InterlisRoleJoinDialogControllerTest {
     meta.setMainClassName("HopIli_Associations_V1.Data.Person");
     meta.setRoleName("Address");
 
-    InterlisRoleJoinProbeResult result = controller.probe(meta, new Variables());
-    var preview = controller.createSchemaPreview(meta, result, new Variables());
+    var result = controller.probe(meta, new Variables());
+    var preview = controller.createSchemaPreview(meta, result.selectedRole(), new Variables());
 
     assertThat(preview.rows())
         .extracting(row -> row.fieldName())

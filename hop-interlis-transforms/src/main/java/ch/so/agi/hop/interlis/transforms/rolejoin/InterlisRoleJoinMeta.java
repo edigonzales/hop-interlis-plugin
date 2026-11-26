@@ -1,9 +1,14 @@
 package ch.so.agi.hop.interlis.transforms.rolejoin;
 
 import ch.so.agi.hop.interlis.core.mapping.InterlisMappingException;
+import ch.so.agi.hop.interlis.core.mapping.InterlisModelContext;
 import ch.so.agi.hop.interlis.core.model.InterlisClassDescriptor;
 import ch.so.agi.hop.interlis.core.model.InterlisModelException;
+import ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl;
 import ch.so.agi.hop.interlis.core.model.InterlisRoleDescriptor;
+import ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor;
+import ch.so.agi.hop.interlis.core.model.ModelCompileOptions;
+import ch.so.agi.hop.interlis.core.model.ModelSource;
 import ch.so.agi.hop.interlis.transforms.InterlisModelSourceSupport;
 import java.util.List;
 import org.apache.hop.core.annotations.Transform;
@@ -124,31 +129,47 @@ public class InterlisRoleJoinMeta
    */
   public InterlisRoleJoinProbeResult probeRole(IVariables variables)
       throws InterlisModelException, InterlisMappingException {
+    var context = loadModel(variables);
+    return probeRole(
+        context, requireMainClass(context, resolvedMainClassName(variables)),
+        resolvedRoleName(variables));
+  }
+
+  InterlisModelContext loadModel(IVariables variables) throws InterlisModelException {
     List<String> modelNames = resolveModelNames(variables);
     if (modelNames.isEmpty()) {
       throw new InterlisModelException("No INTERLIS models configured");
     }
-    ch.so.agi.hop.interlis.core.model.CompiledInterlisModel model =
-        new ch.so.agi.hop.interlis.core.model.InterlisModelServiceImpl()
+    var model =
+        new InterlisModelServiceImpl()
             .compile(
-                new ch.so.agi.hop.interlis.core.model.ModelSource(
-                    List.of(), modelNames, resolveModelDirectories(variables)),
-                ch.so.agi.hop.interlis.core.model.ModelCompileOptions.defaults());
-    ch.so.agi.hop.interlis.core.model.InterlisSchemaDescriptor schema =
-        new ch.so.agi.hop.interlis.core.model.InterlisSchemaExtractor()
-            .extract(model.transferDescription());
-    String mainClass = resolve(variables, mainClassName);
+                new ModelSource(List.of(), modelNames, resolveModelDirectories(variables)),
+                ModelCompileOptions.defaults());
+    return new InterlisModelContext(
+        model, new InterlisSchemaExtractor().extract(model.transferDescription()), modelNames);
+  }
+
+  String resolvedMainClassName(IVariables variables) {
+    return resolve(variables, mainClassName);
+  }
+
+  String resolvedRoleName(IVariables variables) {
+    return resolve(variables, roleName);
+  }
+
+  static InterlisClassDescriptor requireMainClass(InterlisModelContext context, String mainClass)
+      throws InterlisModelException {
     if (mainClass.isBlank()) {
       throw new InterlisModelException("No INTERLIS class selected");
     }
-    InterlisClassDescriptor classDescriptor =
-        schema
-            .findClass(mainClass)
-            .orElseThrow(
-                () ->
-                    new InterlisModelException(
-                        "Class " + mainClass + " was not found in models " + modelNames));
-    String role = resolve(variables, roleName);
+    return context.schema().findClass(mainClass).orElseThrow(
+        () -> new InterlisModelException(
+            "Class " + mainClass + " was not found in models " + context.modelNames()));
+  }
+
+  static InterlisRoleJoinProbeResult probeRole(
+      InterlisModelContext context, InterlisClassDescriptor classDescriptor, String role)
+      throws InterlisModelException, InterlisMappingException {
     InterlisRoleDescriptor roleDescriptor =
         classDescriptor.roles().stream()
             .filter(r -> r.name().equals(role))
@@ -159,13 +180,13 @@ public class InterlisRoleJoinMeta
                         "Role "
                             + role
                             + " not found on class "
-                            + mainClass
+                            + classDescriptor.scopedName()
                             + "; available roles: "
                             + classDescriptor.roles().stream()
                                 .map(InterlisRoleDescriptor::name)
                                 .toList()));
     InterlisClassDescriptor target =
-        schema
+        context.schema()
             .findClass(roleDescriptor.targetClassScopedName())
             .orElseThrow(
                 () ->
@@ -175,8 +196,9 @@ public class InterlisRoleJoinMeta
                             + " of role "
                             + role
                             + " was not found in models "
-                            + modelNames));
-    return new InterlisRoleJoinProbeResult(model, schema, classDescriptor, roleDescriptor, target);
+                            + context.modelNames()));
+    return new InterlisRoleJoinProbeResult(
+        context.model(), context.schema(), classDescriptor, roleDescriptor, target);
   }
 
   @Override
